@@ -37,6 +37,7 @@
         nav ul li a {
             color: #fff;
             text-decoration: none;
+    
         }
 
         section {
@@ -53,30 +54,75 @@
             padding: 1px 0;
         }
 
+        /*Personalización*/
 
+        #logo {
+            font-size: large;
+            color: rgb(229, 229, 1);
+        }
+
+        .tilde{
+            color: rgb(229, 229, 1);
+        }
+
+        .dollar{
+            color: rgb(229, 229, 1);
+            font-size: small;
+        }
+
+        nav ul li a:hover {
+            color: #fff;
+            text-decoration: none;
+            position: relative; /* Agregamos posición relativa */
+        }
+
+nav ul li a:hover::after {
+            content: ''; /* Agrega contenido */
+            position: absolute; /* Posición absoluta */
+            left: 0; /* Alinea con el inicio del texto */
+            bottom: -2px; /* Coloca la línea debajo del texto */
+            width: 100%; /* Ancho del elemento */
+            height: 1px; /* Grosor de la línea */
+            background-color: rgb(229, 229, 1); /* Color de la línea */
+        }
         </style>
     </head>
     <body>
         <header>
             <nav>
                 <ul>
-                    <li><a href="#inicio">Inicio</a></li>
-                    <li><a href="#biografia">Biografía</a></li>
-                    <li><a href="#contacto">Contacto</a></li>
+                    <li><a href="#inicio" id="logo">~</a></li>
+                    <li><a href="#biografia">blog</a></li>
+                    <li><a href="#contacto">git</a></li>
+                    <li><a href="#contacto">contact</a></li>
                 </ul>
             </nav>
         </header>
     
         <section id="inicio">
-            <h1>Daniel Fenoll</h1>
-            <p>software engineer</p>
+            <h1>Daniel<span class="tilde">~</span>Fenoll</h1>
+            <p><span class="dollar">$ ▌ </span>software engineer</p>
         </section>
     
-        <!-- <section id="biografia">
-            <h2>Biografía</h2>
-            <p>Escribe aquí tu biografía.</p>
-        </section> -->
-    
+        <section>
+            <pre>
+                 ________
+                /\       \
+               /  \       \
+              /    \       \
+             /      \_______\ 
+             \      /       /
+           ___\    /   ____/___
+          /\   \  /   /\       \
+         /  \   \/___/  \       \
+        /    \       \   \       \
+       /      \_______\   \_______\
+       \      /       /   /       /
+        \    /       /   /       /
+         \  /       /\  /       /
+          \/_______/  \/_______/
+            </pre>
+        </section>
         <footer id="contacto">
             <p>ddanielfenoll@gmail.com</p>
         </footer>
