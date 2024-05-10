@@ -38,7 +38,9 @@
         nav ul li a {
             color: #fff;
             text-decoration: none;
+            cursor: default; 
         }
+
 
         section {
             text-align: center;
@@ -48,6 +50,10 @@
             height: 80vh; /* Establece la altura del section al 80% del viewport */
         }
 
+        .bio p {
+            line-height:170%; 
+        }
+        
         footer {
             background-color: #333;
             color: #fff;
@@ -68,6 +74,31 @@
            
         } */
 
+
+        /* botones decorados */
+        a.link {
+            color: rgb(229, 229, 1);
+            text-decoration: none;
+            /* padding: 5px 10px; /* Ajusta el padding según sea necesario */
+            /* border-radius: 5px; Bordes redondeados */
+        }
+
+        a.link:hover {
+            color: rgb(229, 229, 1);
+            text-decoration: none;
+            position: relative;
+        }
+
+        a.link:hover::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 1px;
+            width: 100%;
+            height: 1px;
+            background-color: rgb(229, 229, 1);
+        }
+
         /*Personalización section*/
         #logo {
             font-size: large;
@@ -83,6 +114,7 @@
             font-size: small;
         }
 
+        
         /* subrayados de la barra nav */
         nav ul li a:hover {
             color: #fff;
@@ -116,13 +148,18 @@
 <section id="inicio">
     <h1>Daniel<span class="tilde">~</span>Fenoll</h1>
     <p><span class="dollar">$ ▌ </span>software engineer</p>
+    <div class="bio">
+        <p>Based in Spain, near Mediterranean Sea, Daniel is a software engineer who learned first <br> Python and Javascript but enjoys low-level programming as a kinky secret. Currently working <br> as fullstack engineer at <a href="https://en.wikipedia.org/wiki/TUI_Group" class="link">TUI group</a>, a german company focused on leisure and holidays.</p>
+        <p>Spends his time having quality time with family and friends, sharing great meals and <br> wandering around coastal spots taking <a href="https://www.instagram.com/fenollcastro/" class="link">photos with his Leica.</a></p>
+        <!-- <p>sadfdsfdshfsdnfv adfa sfa sdf asdsadas das das das dsa</p>
+        <p>sadfdsfdshfsdnfv adfa sfa sdf asdsadas das das das dsa</p>
+        <p>sadfdsfdshfsdnfv adfa sfa sdf asdsadas das das das dsa</p> -->
+    </div>
 </section>
+
 
 <footer id="footer">
     <p>ddanielfenoll@gmail.com</p>
 </footer>
 </body>
-<script>
-
-</script>
 </html>
