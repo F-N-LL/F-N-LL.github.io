@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daniel Fenoll</title>
+    <title>Blog</title>
     <link rel="icon" href="tilde.png" type="image/x-icon">
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -12,11 +12,12 @@
             margin: 0;
             padding: 0;
             overflow-x: hidden;
-            min-height: 100vh;
+            color: #ebebeb;
+            background-color: #1a1a1a;
             display: flex;
             flex-direction: column;
+            min-height: 100vh;
         }
-
 
         header {
             background-color: #333;
@@ -44,63 +45,6 @@
             text-decoration: none;
         }
 
-        section {
-            text-align: center;
-            padding: 40px 0;
-            color: #ebebeb;
-            background-color: #1a1a1a;
-            height: 80vh; /* Establece la altura del section al 80% del viewport */
-        }
-
-        footer {
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            padding: 10px 0;
-            height: px;
-        }
-
-        #inicio {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 80vh;
-        }
-        #mailme {
-            color: rgb(229, 229, 1);
-            text-decoration: underline;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        /* #footer {
-           
-        } */
-
-        /*Personalización section*/
-        #logo {
-            font-size: large;
-            color: rgb(229, 229, 1);
-        }
-
-        .tilde {
-            color: rgb(229, 229, 1);
-        }
-
-        .dollar {
-            color: rgb(229, 229, 1);
-            font-size: small;
-        }
-
-        /* subrayados de la barra nav */
-        nav ul li a:hover {
-            color: #fff;
-            text-decoration: none;
-            position: relative;
-        }
-
         nav ul li a:hover::after {
             content: '';
             position: absolute;
@@ -110,9 +54,79 @@
             height: 1px;
             background-color: rgb(229, 229, 1);
         }
+
+        .container {
+            flex: 1;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: rgb(246, 246, 137);;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .post-list {
+            list-style: none; /* Elimina los bullets por defecto */
+            padding: 0;
+        }
+
+        .post-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            position: relative;
+        }
+
+        .post-list li::before {
+            content: '•'; /* Bullet point personalizado */
+            color: rgb(229, 229, 1);
+            font-size: 1.5rem;
+            position: absolute;
+            left: -25px;
+        }
+
+        .post-list a {
+            color: rgb(246, 246, 137);;
+            text-decoration: none;
+            font-size: 1.0rem;
+        }
+
+        .post-list a:hover {
+            text-decoration: underline;
+        }
+
+        .post-date {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-left: 50px;
+        }
+
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        #logo {
+            font-size: large;
+            color: rgb(229, 229, 1);
+        }
+        
+        #mailme {
+            color: rgb(229, 229, 1);
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
+
 <header>
     <nav>
         <ul>
@@ -124,13 +138,27 @@
     </nav>
 </header>
 
-<section id="inicio">
-    <h1>Working<span class="tilde"> on</span> this one</h1>
-    <p><span class="dollar">$ ▌ </span>pls, come back soon...</p>
-</section>
+<div class="container">
+    <h1>Writing:</h1>
+    <ul class="post-list">
+        <li>
+            <a href="digital-minimalism.html">On Digital Minimalism</a>
+            <span class="post-date">Aug. 3 2024</span>
+        </li>
+        <!-- Añade más posts aquí -->
+        <!-- Ejemplo de otro post:
+        <li>
+            <a href="otro-post.html">Título del Otro Post</a>
+            <span class="post-date">Publicado el [Fecha]</span>
+        </li>
+        -->
+    </ul>
+</div>
 
-<footer id="footer">
+<footer>
     <a href="mailto:ddanielfenoll@gmail.com" id="mailme">email me</a>
 </footer>
+
 </body>
 </html>
+
