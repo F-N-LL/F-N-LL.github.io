@@ -6,99 +6,6 @@
     <title>Daniel Fenoll</title>
     <link rel="icon" href="tilde.png" type="image/x-icon">
     <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-            color: #ebebeb;
-            background-color: #222222;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
-        header {
-            background-color: #333;
-            padding: 15px 0;
-        }
-
-        nav {
-            text-align: left;
-            padding-left: 20px;
-        }
-
-        nav ul {
-            list-style-type: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        nav ul li {
-            display: inline;
-            margin-right: 20px;
-            position: relative;
-        }
-
-        nav ul li a {
-            color: #fff;
-            text-decoration: none;
-        }
-
-        nav ul li a:hover::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -2px;
-            width: 100%;
-            height: 1px;
-            background-color: rgb(229, 229, 1);
-        }
-
-        main {
-            flex: 1;
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        h1 {
-            font-size: 2rem;
-            color: #ebebeb;
-            margin-bottom: 10px;
-        }
-
-        .dollar {
-            color: rgb(229, 229, 1);
-            font-size: small;
-        }
-
-        footer {
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            padding: 10px 0;
-        }
-
-        #mailme {
-            color: rgb(229, 229, 1);
-            text-decoration: underline;
-        }
-
-        .tilde {
-            color: rgb(229, 229, 1);
-        }
-
-        #logo {
-            font-size: large;
-            color: rgb(229, 229, 1);
-        }
-    </style>
 </head>
 <body>
 
@@ -114,8 +21,10 @@
 </header>
 
 <main>
-    <h1>Daniel<span class="tilde">~</span>Fenoll</h1>
+    <div class="facade">
+        <h1>Daniel<span class="tilde">~</span>Fenoll</h1>
     <p><span class="dollar">$ ▌</span>software engineer</p>
+</div>
 </main>
 
 <footer>
