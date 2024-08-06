@@ -121,13 +121,14 @@ h1 {
 }
 
 .post-meta {
+    text-align: center;
     font-size: 0.9rem;
     color: #aaa;
 }
 
 .post-content {
     line-height: 1.8;
-    text-align: justify;
+    text-align: left;
     font-size: 1.2rem;
 }
 
@@ -137,14 +138,13 @@ h1 {
 
 .post-content img {
     max-width: calc(100% - 20px);
-    max-height: 300px;
-    width: auto;
-    height: auto;
-    border-radius: 5px;
+    max-height: 500px;
+    border-radius: 45px;
     margin: 20px 0;
     display: block;
     margin-left: auto;
     margin-right: auto;
+    padding: 35px;
 }
 
 .post-content h3, .post-content h4 {
