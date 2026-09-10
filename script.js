@@ -1,0 +1,10 @@
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
+const canvas=document.querySelector('#scene'), scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.1,100);camera.position.z=6;
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+const group=new THREE.Group();scene.add(group);const material=new THREE.MeshStandardMaterial({color:0xb45b3f,metalness:.8,roughness:.25,wireframe:true});
+const torus=new THREE.Mesh(new THREE.TorusKnotGeometry(1.25,.035,180,12,2,3),material);group.add(torus);
+const brass=new THREE.MeshStandardMaterial({color:0xc29b61,metalness:.9,roughness:.3});const ring=new THREE.Mesh(new THREE.TorusGeometry(1.75,.012,8,80),brass);group.add(ring);
+scene.add(new THREE.AmbientLight(0xb8a68b,.7));const light=new THREE.PointLight(0xc45b3d,18,10);light.position.set(3,2,4);scene.add(light);const light2=new THREE.PointLight(0x557b8c,10,8);light2.position.set(-3,-2,2);scene.add(light2);
+function animate(){requestAnimationFrame(animate);group.rotation.x+=.0015;group.rotation.y+=.003;ring.rotation.z-=.002;renderer.render(scene,camera)}animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
