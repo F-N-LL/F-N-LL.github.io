@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="The captain’s logbook of Daniel Fenoll-Castro: notes on software, data, AI, and space discovery."
+    />
+    <title>Logbook · Daniel Fenoll-Castro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=DM+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="compass.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="blog-page">
+    <a class="skip-link" href="#main">Skip to content</a
+    ><canvas id="scene" aria-hidden="true"></canvas>
+    <div class="paper-grain" aria-hidden="true"></div>
+    <header class="masthead">
+      <a class="wordmark" href="index.html#home"
+        ><span class="rose">✥</span
+        ><span
+          >D. Fenoll-Castro<small>SOFTWARE ENGINEER &amp; EXPLORER</small></span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="index.html#about">The engineer</a
+        ><a href="index.html#cv">Voyages</a
+        ><a class="active" href="blog.html">Logbook</a
+        ><a href="index.html#contact">Correspondence ↗</a>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="folio blog-hero">
+        <p class="eyebrow">III. THE CAPTAIN’S LOGBOOK · INDEX OF DISPATCHES</p>
+        <h1>Notes from<br /><em>the frontier.</em></h1>
+        <p class="blog-intro">
+          A working record of software, data, artificial intelligence, and the
+          stars beyond the chart.
+        </p>
+        <div
+          class="blog-hero-instrument instrument"
+          data-instrument="globe"
+          role="img"
+          aria-label="Antique globe with an orbiting communications satellite"
+        >
+          <span class="instrument-fallback">✥</span>
+        </div>
+      </section>
+      <section class="folio entries">
+        <div class="entries-heading">
+          <p class="eyebrow">THE ARCHIVE · 001—003</p>
+          <p>Each entry is a small instrument for thinking.</p>
+        </div>
+        <a class="entry-card featured" href="#entry-001"
+          ><div class="entry-number">001</div>
+          <div>
+            <p class="eyebrow">08.09.26 · SAMPLE ESSAY · 3 MIN READ</p>
+            <h2>A map is not<br /><em>the territory.</em></h2>
+            <p>
+              What old navigators can teach us about building systems in the age
+              of AI.
+            </p>
+          </div>
+          <span class="entry-arrow">↘</span></a
+        >
+        <div class="entry-card">
+          <div class="entry-number">002</div>
+          <div>
+            <p class="eyebrow">COMING SOON · FIELD NOTE</p>
+            <h2>How to build an<br /><em>instrument panel.</em></h2>
+            <p>
+              Observability, feedback loops, and the gentle art of seeing a
+              system clearly.
+            </p>
+          </div>
+          <span class="entry-arrow">—</span>
+        </div>
+        <div class="entry-card">
+          <div class="entry-number">003</div>
+          <div>
+            <p class="eyebrow">COMING SOON · DEEP SPACE / DEEP SYSTEMS</p>
+            <h2>Signals across<br /><em>the dark.</em></h2>
+            <p>
+              A note on latency, distributed systems, and sending a message into
+              the unknown.
+            </p>
+          </div>
+          <span class="entry-arrow">—</span>
+        </div>
+      </section>
+      <article id="entry-001" class="folio full-entry">
+        <div class="entry-meta">
+          <p class="eyebrow">ENTRY 001 · 08.09.26 · 3 MIN READ</p>
+          <a class="underlined" href="#main">Back to the index ↑</a>
+        </div>
+        <h2>A map is not<br /><em>the territory.</em></h2>
+        <p class="entry-deck">
+          What old navigators can teach us about building systems in the age of
+          AI.
+        </p>
+        <div class="essay">
+          <p>
+            A diagram gives us the reassuring shape of a system: boxes, arrows,
+            and a destination. Production introduces the weather. A dependency
+            slows down. A dataset arrives incomplete. A user asks a question
+            nobody put on the chart.
+          </p>
+          <p>
+            The useful response is to improve our instruments. Logs tell us
+            where we have been. Metrics give us bearings. Traces show the path
+            of a single request through unfamiliar waters. Together, they let us
+            compare the system we imagined with the one we actually built.
+          </p>
+          <h4>New waters, familiar discipline</h4>
+          <p>
+            AI adds another kind of uncertainty. A convincing answer can still
+            be wrong, and a successful demonstration can hide a fragile
+            workflow. Before building around a model, I want to understand what
+            good means, how we will measure it, and what should happen when it
+            fails.
+          </p>
+          <p>
+            A small, representative evaluation set is a useful first chart.
+            Human review, explicit boundaries, and a recoverable fallback give
+            the team room to explore without confusing movement with progress.
+          </p>
+          <h4>Leave room to redraw the coast</h4>
+          <p>
+            The best architecture preserves our ability to learn. Keep the parts
+            we understand simple. Make uncertain decisions reversible. Record
+            assumptions so that the next engineer can see where the coastline is
+            still a guess.
+          </p>
+          <p>
+            We build a map to help us sail. We keep looking out of the window to
+            know where we are.
+          </p>
+        </div>
+      </article>
+    </main>
+    <footer>
+      <a class="footer-signature" href="index.html#home">Daniel Fenoll-Castro</a
+      ><span>SOFTWARE, DATA &amp; UNCHARTED POSSIBILITIES</span
+      ><a href="#main">Back to the top ↑</a>
+    </footer>
+    <button id="motion-toggle" type="button" aria-pressed="false" hidden>
+      Pause instruments
+    </button>
+    <script type="module" src="script.js"></script>
+  </body>
+</html>

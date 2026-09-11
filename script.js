@@ -832,7 +832,8 @@ async function startAtlas() {
       frame = 0;
     } else requestDraw();
   });
-  document.querySelector("details").addEventListener("toggle", requestDraw);
+  const details = document.querySelector("details");
+  if (details) details.addEventListener("toggle", requestDraw);
   new ResizeObserver(requestDraw).observe(document.body);
   canvas.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
