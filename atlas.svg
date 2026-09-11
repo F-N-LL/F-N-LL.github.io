@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M100 0H0V100" stroke="#766646" stroke-opacity=".2" />
+    </pattern>
+    <pattern id="waves" width="22" height="14" patternUnits="userSpaceOnUse">
+      <path
+        d="M0 7q5-3 11 0t11 0"
+        stroke="#697c70"
+        stroke-width=".6"
+        opacity=".2"
+      />
+    </pattern>
+  </defs>
+  <path fill="url(#grid)" d="M0 0h1200v900H0z" />
+  <path fill="url(#waves)" d="M0 0h1200v900H0z" />
+  <g stroke="#826e48" stroke-opacity=".3" stroke-width=".7">
+    <path
+      d="M750 430L0 0m750 430L250 0m500 430L600 0m150 430L980 0m-230 430L1200 100M750 430l450 230M750 430l200 470M750 430l-250 470M750 430L0 750M750 430L0 350"
+    />
+    <circle cx="750" cy="430" r="230" />
+    <circle cx="750" cy="430" r="360" />
+  </g>
+  <g fill="#94a17e" fill-opacity=".27" stroke="#768162" stroke-width="2">
+    <path
+      d="M0 68l56 13 26 31 69 2 38 38 29-15 40 34-18 40 28 41-39 25 13 37-41 40 9 39-51 45-12 61-41 27 12 70-35 41-7 83-35-23-2-75-23-47-16-86-29-14z"
+    />
+    <path
+      d="M1200 19l-43 38-65-9-54 47 17 47-31 42-43-13-38 28 9 45-46 12 11 32-45 24-13 55 49 25 40-25 21 25 47-8 26 41 46 6 41 63 37-18 35 15z"
+    />
+    <path
+      d="M1020 496l39 20 20 57-22 38 7 57-36 57-8 63-36 28-19-61-30-26-8-73-35-49 8-43 58-5z"
+    />
+  </g>
+  <g stroke="#a4744f" stroke-opacity=".45">
+    <path
+      d="M13 83l38 12 25 31 71 2 38 40 31-17 25 19-16 39 29 43-42 24 16 40-41 40 11 39-50 43-13 64-40 27 10 66-30 42-5 58"
+    />
+    <path
+      d="M1189 39l-28 33-62-9-43 36 14 47-41 55-45-13-24 16 10 48-46 13 9 32-47 25-7 41 32 14"
+    />
+  </g>
+  <g
+    font-family="Georgia,serif"
+    fill="#655c43"
+    opacity=".65"
+    text-anchor="middle"
+  >
+    <text
+      x="600"
+      y="185"
+      font-size="20"
+      letter-spacing="8"
+      transform="rotate(-8 600 185)"
+    >
+      OCEANUS DATARUM
+    </text>
+    <text x="555" y="747" font-size="14" letter-spacing="6">
+      TERRA INCOGNITA
+    </text>
+    <text
+      x="1090"
+      y="252"
+      font-size="12"
+      letter-spacing="3"
+      transform="rotate(16 1090 252)"
+    >
+      INTELLIGENTIA
+    </text>
+    <text
+      x="104"
+      y="343"
+      font-size="12"
+      letter-spacing="3"
+      transform="rotate(-72 104 343)"
+    >
+      SYSTEMATA
+    </text>
+  </g>
+  <g transform="translate(750 430)" stroke="#886f45" opacity=".4">
+    <circle r="53" />
+    <circle r="58" />
+    <path d="M0-100L12-12 100 0 12 12 0 100-12 12-100 0-12-12Z" />
+    <path d="M0-100V100M-100 0H100M-52-52L52 52m-104 0L52-52" />
+    <path
+      d="M0-100L12-12 0 0Z M100 0L12 12 0 0Z M0 100L-12 12 0 0Z M-100 0L-12-12 0 0Z"
+      fill="#886f45"
+    />
+  </g>
+  <path
+    d="M210 670Q400 440 560 510T1030 280"
+    stroke="#975e43"
+    stroke-width="2"
+    stroke-dasharray="3 10"
+    opacity=".5"
+  />
+</svg>

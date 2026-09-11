@@ -1,24 +1,355 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Daniel Fenoll-Castro — Senior Software Engineer</title>
-  <meta name="description" content="Daniel Fenoll-Castro — senior software engineer building data-intensive systems." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <canvas id="scene"></canvas>
-  <div class="grain"></div>
-  <header><a class="mark" href="#home">DF<span>•</span>C</a><nav><a href="#about">About</a><a href="#cv">CV / Experience</a><a href="#blog">Blog</a><a href="#contact">Contact</a></nav><span class="status"><i></i> available for good problems</span></header>
-  <main>
-    <section id="home" class="hero page"><p class="eyebrow">01 / ENGINEERING THE SIGNAL</p><h1>Systems with<br><em>weight &amp; wonder.</em></h1><p class="lede">Daniel Fenoll-Castro is a senior software engineer building resilient, data-intensive applications for an increasingly intelligent world.</p><div class="actions"><a class="button" href="#about">Enter the archive <span>↘</span></a><a class="text-link" href="#contact">Start a conversation</a></div><div class="orbit-label">N 38° 20' 00"<br><span>ALICANTE · SPAIN</span></div></section>
-    <section id="about" class="page split"><div><p class="eyebrow">02 / ABOUT</p><h2>Make the complex<br><em>legible.</em></h2></div><div class="copy"><p>I work at the intersection of software architecture, data, and product craft. My favorite systems are the ones that feel inevitable: quiet on the surface, deeply considered underneath.</p><p>Over the past four years I’ve helped shape APIs, pipelines, and tools that turn large volumes of information into useful decisions. Currently exploring the edges of AI-assisted engineering and dependable infrastructure.</p><div class="tags"><span>DATA SYSTEMS</span><span>BACKEND</span><span>AI / ML</span><span>PRODUCT THINKING</span></div></div></section>
-    <section id="cv" class="page"><p class="eyebrow">03 / FIELD NOTES</p><div class="section-head"><h2>Selected<br><em>experience.</em></h2><a class="text-link" href="#contact">Request full CV ↗</a></div><div class="timeline"><article><span>2022 — NOW</span><div><h3>Senior Software Engineer <small>· Independent / placeholder</small></h3><p>Designing and shipping data-intensive services, event-driven workflows, and developer tooling. Leading technical direction from first diagram to production.</p></div></article><article><span>2020 — 2022</span><div><h3>Software Engineer <small>· Previous studio / placeholder</small></h3><p>Built reliable web platforms, translated ambiguous product questions into simple interfaces, and made performance a feature.</p></div></article><article><span>ALWAYS</span><div><h3>Curious generalist <small>· Ongoing</small></h3><p>Reading systems papers, collecting beautiful interfaces, and learning where the old world’s craft meets the new world’s machines.</p></div></article></div></section>
-    <section id="blog" class="page"><p class="eyebrow">04 / DISPATCHES</p><h2>Notes from<br><em>the workshop.</em></h2><article class="post"><div class="post-meta">FIELD NOTE 001 <span>· 08.09.26</span></div><h3>The quiet architecture of a<br>good data product</h3><p>A first-principles look at why the best data systems disappear into the experience—and how to design for that kind of invisibility.</p><a class="text-link" href="#blog">Read dispatch ↗</a></article></section>
-    <section id="contact" class="page contact"><div><p class="eyebrow">05 / CORRESPONDENCE</p><h2>Have a problem<br><em>worth solving?</em></h2><p class="lede">Tell me what you’re building, what’s stuck, or what you’re curious about. I’ll get back to you at the speed of a thoughtful reply.</p><div class="contact-links"><a href="mailto:dfenollapps@gmail.com">dfenollapps@gmail.com ↗</a><a href="https://github.com/F-N-LL">github.com/F-N-LL ↗</a><a href="https://x.com/daniel0xFC">x.com/daniel0xFC ↗</a></div></div><form action="https://formsubmit.co/dfenollapps@gmail.com" method="POST"><input type="hidden" name="_subject" value="New message from daniel0xFC.github.io"><input type="hidden" name="_captcha" value="false"><label>Name<input name="name" required placeholder="Your name"></label><label>Email<input type="email" name="email" required placeholder="you@example.com"></label><label>Message<textarea name="message" required rows="4" placeholder="A few words..."></textarea></label><button class="button" type="submit">Send transmission <span>↗</span></button></form></section>
-  </main><footer><span>© 2026 DANIEL FENOLL-CASTRO</span><span>BUILT WITH CURIOSITY + THREE.JS</span></footer>
-  <script type="module" src="script.js"></script>
-</body></html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#e5d4ae" />
+    <meta
+      name="description"
+      content="Daniel Fenoll-Castro, senior software engineer. Charting data-intensive systems and exploring the frontiers of AI."
+    />
+    <title>Daniel Fenoll-Castro · An Atlas of Engineering</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IM+Fell+English:ital@0;1&family=DM+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="compass.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a
+    ><canvas id="scene" aria-hidden="true"></canvas>
+    <div class="paper-grain" aria-hidden="true"></div>
+    <header class="masthead">
+      <a class="wordmark" href="#home"
+        ><span class="rose">✥</span
+        ><span
+          >D. Fenoll-Castro<small>SOFTWARE ENGINEER &amp; EXPLORER</small></span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#about">The engineer</a><a href="#cv">Voyages</a
+        ><a href="#blog">Logbook</a><a href="#contact">Correspondence ↗</a>
+      </nav>
+    </header>
+    <main id="main">
+      <section id="home" class="hero folio">
+        <div class="hero-map" aria-hidden="true"></div>
+        <div class="hero-copy">
+          <p class="eyebrow">VOL. I · A PERSONAL ATLAS OF ENGINEERING</p>
+          <h1>
+            Charting the<br />uncharted.<br /><em
+              >One system<br />at a time.</em
+            >
+          </h1>
+          <div class="small-rule" aria-hidden="true">✧</div>
+          <p class="intro">
+            I’m Daniel Fenoll-Castro.<br />A senior software engineer navigating
+            the seas of data and the new frontiers of artificial intelligence.
+          </p>
+          <a class="button" href="#about">Explore the atlas <span>↘</span></a>
+        </div>
+        <figure class="hero-figure">
+          <p class="chart-coordinate">CHART I / THE INSTRUMENTS OF DISCOVERY</p>
+          <div
+            class="instrument"
+            data-instrument="armillary"
+            role="img"
+            aria-label="Animated brass armillary sphere with engraved rings and connected data nodes"
+          >
+            <span class="instrument-fallback">✥</span>
+          </div>
+          <figcaption>
+            <span>Fig. I</span> The engine of possibilities<small
+              >AN ARMILLARY FOR THE AGE OF INTELLIGENCE</small
+            >
+          </figcaption>
+        </figure>
+        <div class="hero-bottom">
+          <span>DATA SYSTEMS / SOFTWARE CRAFT / AI EXPLORATION</span
+          ><a href="#about">Follow the meridian ↓</a>
+        </div>
+      </section>
+      <div class="chapter-divider" aria-hidden="true">
+        <span>✦</span><i></i><span>ARS · SCIENTIA · EXPLORATIO</span><i></i
+        ><span>✦</span>
+      </div>
+      <section id="about" class="folio about">
+        <div class="about-visual">
+          <p class="eyebrow">PLATE II · FINDING TRUE NORTH</p>
+          <div
+            class="instrument"
+            data-instrument="compass"
+            role="img"
+            aria-label="Antique brass compass with a red needle and ivory engraved dial"
+          >
+            <span class="instrument-fallback">✥</span>
+          </div>
+          <p class="plate-caption">
+            A sound architecture is a compass.<br /><em
+              >It makes the next decision clearer.</em
+            >
+          </p>
+        </div>
+        <div class="about-copy">
+          <p class="eyebrow">I. THE ENGINEER</p>
+          <h2>Curiosity is<br />my <em>true north.</em></h2>
+          <p class="dropcap">
+            Every worthwhile system begins with unfamiliar territory. An unruly
+            dataset. An unanswered question. A new capability looking for its
+            purpose.
+          </p>
+          <p>
+            I’m Daniel, a senior software engineer focused on data-intensive
+            applications. With four years of experience, I care about making
+            complex systems understandable, useful, and dependable.
+          </p>
+          <p>
+            To me, AI is a new ocean to explore. Good engineering supplies the
+            instruments: clear interfaces, reliable data, and the discipline to
+            test our bearings.
+          </p>
+          <a class="underlined" href="https://github.com/F-N-LL"
+            >Visit my workshop on GitHub ↗</a
+          >
+        </div>
+        <div class="principles">
+          <article>
+            <span>01 / CARTOGRAPHY</span>
+            <h3>Understand the terrain.</h3>
+            <p>Model the data. Name the boundaries. Make complexity legible.</p>
+          </article>
+          <article>
+            <span>02 / NAVIGATION</span>
+            <h3>Build with a bearing.</h3>
+            <p>Choose tools with purpose and keep the product in sight.</p>
+          </article>
+          <article>
+            <span>03 / EXPLORATION</span>
+            <h3>Question the horizon.</h3>
+            <p>
+              Explore AI with curiosity, measured experiments, and judgment.
+            </p>
+          </article>
+        </div>
+      </section>
+      <section id="cv" class="folio voyages">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">II. VOYAGES &amp; EXPERIENCE</p>
+            <h2>Learning by<br /><em>leaving port.</em></h2>
+          </div>
+          <p class="section-aside">
+            Four years at the workbench.<br />Many more horizons to explore.
+          </p>
+        </div>
+        <div class="voyage-body">
+          <div class="timeline">
+            <article>
+              <span class="route-dot"></span>
+              <p class="eyebrow">CURRENT BEARING</p>
+              <h3>Senior Software Engineer</h3>
+              <p>
+                Data-intensive applications, thoughtful architecture, and the
+                growing possibilities of AI.
+              </p>
+              <small>Company, dates, and project details to be added.</small>
+            </article>
+            <article>
+              <span class="route-dot"></span>
+              <p class="eyebrow">THE JOURNEY SO FAR</p>
+              <h3>Four years of engineering</h3>
+              <p>
+                Building a practice around clear thinking, reliable software,
+                and continuous learning.
+              </p>
+              <small
+                >Previous roles and selected achievements to be added.</small
+              >
+            </article>
+            <a
+              class="underlined"
+              href="mailto:dfenollapps@gmail.com?subject=CV%20request"
+              >Request my full CV ↗</a
+            >
+          </div>
+          <figure>
+            <div
+              class="instrument"
+              data-instrument="sextant"
+              role="img"
+              aria-label="Brass sextant with a graduated arc, telescope, and mechanical frame"
+            >
+              <span class="instrument-fallback">✥</span>
+            </div>
+            <figcaption>
+              <span>Fig. III</span> Measure before you steer<small
+                >OBSERVATION → JUDGMENT → DIRECTION</small
+              >
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+      <section id="blog" class="folio logbook">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">III. THE CAPTAIN’S LOGBOOK</p>
+            <h2>Dispatches from<br /><em>the frontier.</em></h2>
+          </div>
+          <span class="edition-stamp"
+            >NOTES<br /><b>&amp;</b><br />OBSERVATIONS</span
+          >
+        </div>
+        <div class="journal-grid">
+          <figure class="globe-plate">
+            <div
+              class="instrument"
+              data-instrument="globe"
+              role="img"
+              aria-label="Antique globe with cartographic continents, navigation routes, and a brass stand"
+            >
+              <span class="instrument-fallback">✥</span>
+            </div>
+            <figcaption>
+              Terra incognita · There is always more to learn.
+            </figcaption>
+          </figure>
+          <article class="journal-entry">
+            <p class="eyebrow">ENTRY 001 · SAMPLE ESSAY · 3 MIN READ</p>
+            <h3>A map is not<br />the territory.</h3>
+            <p>
+              What old navigators can teach us about building systems in the age
+              of AI.
+            </p>
+            <details>
+              <summary>Open the logbook <span>↗</span></summary>
+              <div class="essay">
+                <p>
+                  A diagram gives us the reassuring shape of a system: boxes,
+                  arrows, and a destination. Production introduces the weather.
+                  A dependency slows down. A dataset arrives incomplete. A user
+                  asks a question nobody put on the chart.
+                </p>
+                <p>
+                  The useful response is to improve our instruments. Logs tell
+                  us where we have been. Metrics give us bearings. Traces show
+                  the path of a single request through unfamiliar waters.
+                  Together, they let us compare the system we imagined with the
+                  one we actually built.
+                </p>
+                <h4>New waters, familiar discipline</h4>
+                <p>
+                  AI adds another kind of uncertainty. A convincing answer can
+                  still be wrong, and a successful demonstration can hide a
+                  fragile workflow. Before building around a model, I want to
+                  understand what good means, how we will measure it, and what
+                  should happen when it fails.
+                </p>
+                <p>
+                  A small, representative evaluation set is a useful first
+                  chart. Human review, explicit boundaries, and a recoverable
+                  fallback give the team room to explore without confusing
+                  movement with progress.
+                </p>
+                <h4>Leave room to redraw the coast</h4>
+                <p>
+                  The best architecture preserves our ability to learn. Keep the
+                  parts we understand simple. Make uncertain decisions
+                  reversible. Record assumptions so that the next engineer can
+                  see where the coastline is still a guess.
+                </p>
+                <p>
+                  We build a map to help us sail. We keep looking out of the
+                  window to know where we are.
+                </p>
+              </div>
+            </details>
+          </article>
+        </div>
+      </section>
+      <section id="contact" class="folio correspondence">
+        <div class="contact-copy">
+          <p class="eyebrow">IV. CORRESPONDENCE</p>
+          <h2>Every voyage<br />begins with<br /><em>a conversation.</em></h2>
+          <p>
+            Have an interesting system to build, a difficult question, or a new
+            horizon in mind? Send a note.
+          </p>
+          <a class="email-link" href="mailto:dfenollapps@gmail.com"
+            >dfenollapps@gmail.com</a
+          >
+          <div class="socials">
+            <a href="https://github.com/F-N-LL">GitHub ↗</a
+            ><a href="https://x.com/daniel0xFC">X / @daniel0xFC ↗</a>
+          </div>
+          <div
+            class="instrument seal"
+            data-instrument="seal"
+            role="img"
+            aria-label="Brass compass seal engraved with an eight-point star"
+          >
+            <span class="instrument-fallback">✥</span>
+          </div>
+        </div>
+        <form
+          action="https://formsubmit.co/dfenollapps@gmail.com"
+          method="POST"
+        >
+          <p class="letter-heading">A letter to Daniel</p>
+          <p class="eyebrow">PRIVATE CORRESPONDENCE</p>
+          <input
+            type="hidden"
+            name="_subject"
+            value="Personal atlas — new correspondence"
+          /><input
+            class="honeypot"
+            type="text"
+            name="_honey"
+            tabindex="-1"
+            autocomplete="off"
+            aria-hidden="true"
+          /><label for="name">Your name</label
+          ><input
+            id="name"
+            name="name"
+            autocomplete="name"
+            required
+            placeholder="The name behind the note"
+          /><label for="email">Return address</label
+          ><input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="you@example.com"
+          /><label for="message">Your message</label
+          ><textarea
+            id="message"
+            name="message"
+            rows="4"
+            required
+            placeholder="Dear Daniel, …"
+          ></textarea
+          ><button class="button" type="submit">
+            Send correspondence <span>↗</span>
+          </button>
+          <p class="form-note">
+            Sent through FormSubmit. Your details are used to reply.
+          </p>
+        </form>
+      </section>
+    </main>
+    <footer>
+      <a class="footer-signature" href="#home">Daniel Fenoll-Castro</a
+      ><span>SOFTWARE, DATA &amp; UNCHARTED POSSIBILITIES</span
+      ><a href="#home">Back to the beginning ↑</a>
+    </footer>
+    <button id="motion-toggle" type="button" aria-pressed="false" hidden>
+      Pause instruments
+    </button>
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
