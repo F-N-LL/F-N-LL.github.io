@@ -384,6 +384,32 @@ async function startAtlas() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
   });
+  const terminalMap = texture(640, 360, (ctx, w, h) => {
+    ctx.fillStyle = "#182a28";
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = "#ad9b60";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(18, 18, w - 36, h - 36);
+    ctx.font = "22px monospace";
+    ctx.fillStyle = "#d5bd78";
+    ctx.fillText("ORBITAL RELAY / 07", 38, 62);
+    ctx.fillStyle = "#b16a4c";
+    ctx.fillText("SIGNAL: STABLE", 38, 102);
+    ctx.fillStyle = "#c8d0a0";
+    ctx.fillText("▰ ▰ ▰ ▱ ▱ ▱ ▰", 38, 160);
+    ctx.fillText("DATA      98.4%", 38, 210);
+    ctx.fillText("LAT       38.336°", 38, 250);
+    ctx.fillText("VECTOR    07.21 / ∞", 38, 290);
+    ctx.strokeStyle = "#a76445";
+    ctx.beginPath();
+    ctx.moveTo(350, 285);
+    ctx.lineTo(575, 120);
+    ctx.stroke();
+    ctx.fillStyle = "#c9b36d";
+    ctx.beginPath();
+    ctx.arc(575, 120, 8, 0, TAU);
+    ctx.fill();
+  });
 
   function armillary(root) {
     base(root, -2.3);
@@ -437,6 +463,25 @@ async function startAtlas() {
       0,
       0,
     );
+    const terminal = new THREE.Group();
+    terminal.position.set(-1.58, -1.32, 0.45);
+    terminal.rotation.set(-0.18, 0.2, 0.12);
+    cage.add(terminal);
+    mesh(terminal, new THREE.BoxGeometry(0.9, 0.56, 0.12), darkBrass);
+    mesh(
+      terminal,
+      new THREE.PlaneGeometry(0.74, 0.41),
+      new THREE.MeshStandardMaterial({
+        map: terminalMap,
+        emissive: 0x132622,
+        emissiveIntensity: 0.5,
+      }),
+      0,
+      0,
+      0.075,
+    );
+    rod(terminal, V(-0.27, -0.35, 0), V(-0.27, -0.64, 0), 0.035, brass);
+    rod(terminal, V(0.27, -0.35, 0), V(0.27, -0.64, 0), 0.035, brass);
     return (t) => {
       earth.rotation.y = t * 0.09;
       orbit.rotation.y = 0.5 + Math.sin(t * 0.12) * 0.25;
@@ -602,8 +647,44 @@ async function startAtlas() {
     const horizon = ring(root, 1.6, 0.045);
     horizon.rotation.x = Math.PI / 2;
     horizon.position.y = -0.1;
+    const satellite = new THREE.Group();
+    satellite.position.set(1.65, 1.05, 0.1);
+    root.add(satellite);
+    mesh(satellite, new THREE.BoxGeometry(0.34, 0.2, 0.18), darkBrass);
+    mesh(
+      satellite,
+      new THREE.BoxGeometry(0.5, 0.11, 0.015),
+      new THREE.MeshStandardMaterial({
+        color: 0x526754,
+        metalness: 0.25,
+        roughness: 0.4,
+      }),
+      -0.42,
+      0,
+      0,
+    );
+    mesh(
+      satellite,
+      new THREE.BoxGeometry(0.5, 0.11, 0.015),
+      new THREE.MeshStandardMaterial({
+        color: 0x526754,
+        metalness: 0.25,
+        roughness: 0.4,
+      }),
+      0.42,
+      0,
+      0,
+    );
+    rod(satellite, V(0, 0.1, 0), V(0, 0.38, 0), 0.018, brass);
+    mesh(satellite, new THREE.SphereGeometry(0.045, 10, 8), red, 0, 0.43, 0);
     return (t) => {
       sphere.rotation.y = 0.55 + t * 0.055;
+      satellite.rotation.z = t * 0.16;
+      satellite.position.set(
+        Math.cos(t * 0.16) * 1.65,
+        1.05 + Math.sin(t * 0.16) * 0.28,
+        0.1,
+      );
     };
   }
   const builders = {

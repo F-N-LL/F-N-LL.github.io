@@ -636,6 +636,51 @@ footer > a:last-child {
   font: 9px var(--mono);
   cursor: pointer;
 }
+.signal {
+  display: inline-block;
+  color: var(--red);
+  border: 1px solid #8d453566;
+  padding: 1px 5px;
+  margin-left: 8px;
+  font-size: 8px;
+  letter-spacing: 1px;
+  animation: pulse-signal 2.8s infinite;
+}
+.signal:before {
+  content: "●";
+  margin-right: 5px;
+  font-size: 7px;
+}
+.chart-coordinate span {
+  color: var(--red);
+}
+.chart-coordinate {
+  position: relative;
+  z-index: 3;
+}
+.hero-map {
+  filter: sepia(0.12);
+}
+.instrument:after {
+  content: "";
+  position: absolute;
+  inset: 7%;
+  border: 1px solid #8c785018;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.globe-plate figcaption small {
+  color: var(--red);
+}
+@keyframes pulse-signal {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 @media (min-width: 1600px) {
   .hero {
     min-height: 850px;
