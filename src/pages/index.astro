@@ -1,0 +1,548 @@
+---
+import Base from '../layouts/Base.astro';
+import Section from '../components/Section.astro';
+import Meander from '../components/Meander.astro';
+import PixelArt from '../components/PixelArt.astro';
+import { profile, links, work, education, volunteering, projects, writing } from '../data/site';
+import { seal, sealPalette, tomato, tomatoPalette } from '../data/sprites';
+
+const year = new Date().getFullYear();
+---
+<Base
+  title="Daniel Fenoll — Software Engineer"
+  description="Software engineer, designer and gardener from Alicante. Cloud and backend on AWS at TUI."
+>
+  <div class="page">
+    <header class="top">
+      <a href="#top" class="seal-link" aria-label="Daniel Fenoll, back to top">
+        <PixelArt rows={seal} palette={sealPalette} scale={2} class="seal" />
+      </a>
+      <nav aria-label="Sections">
+        <ul class="menu pixel">
+          <li><a href="#work">Work</a></li>
+          <li><a href="#projects">Projects</a></li>
+          <li><a href="#writing">Writing</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="top">
+      <div class="hero">
+        <p class="roles pixel">{profile.roles.join(' · ')}</p>
+        <div class="name-row">
+          <h1>{profile.name.split(' ').map((w) => <span>{w}</span>)}</h1>
+          <span class="kana pixel" lang="ja" aria-hidden="true">{profile.kana}</span>
+        </div>
+        <p class="motto">“{profile.motto}”</p>
+        <button class="tomato" type="button" aria-label="A pixel tomato from the huerta">
+          <PixelArt rows={tomato} palette={tomatoPalette} scale={4} />
+        </button>
+      </div>
+
+      <Meander />
+
+      <p class="now pixel">
+        <span class="now-label">NOW ▸</span>
+        {profile.now.map((n, i) => (
+          <>
+            {i > 0 && <span class="sep" aria-hidden="true"> · </span>}
+            <span class="now-item">{n}</span>{' '}
+          </>
+        ))}
+      </p>
+
+      <div class="about">
+        {profile.about.map((p) => <p>{p}</p>)}
+      </div>
+
+      <Section id="work" numeral="I" kanji="仕事" title="Work">
+        <ol class="entries">
+          {work.map((w) => (
+            <li>
+              <span class="when pixel">{w.period}</span>
+              <div>
+                <p class="what"><strong>{w.title}</strong>, {w.org}</p>
+                {w.note && <p class="note">{w.note}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <h3 class="sub pixel">Study</h3>
+        <ol class="entries compact">
+          {education.map((e) => (
+            <li>
+              <span class="when pixel">{e.period}</span>
+              <p class="what">{e.title}, <span class="org">{e.org}</span></p>
+            </li>
+          ))}
+        </ol>
+
+        <h3 class="sub pixel">Volunteering</h3>
+        <ol class="entries compact">
+          {volunteering.map((v) => (
+            <li>
+              <span class="when pixel">{v.period}</span>
+              <p class="what">{v.title}, <span class="org">{v.org}</span></p>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      <Section id="projects" numeral="II" kanji="作品" title="Projects">
+        <ul class="entries menu-list">
+          {projects.map((p) => (
+            <li>
+              <span class="when pixel">{p.year}</span>
+              <div>
+                <p class="what">
+                  <a href={p.href} rel="noopener">{p.name}</a>
+                  <span class="tag pixel">{p.lang}</span>
+                </p>
+                <p class="note">{p.note}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section id="writing" numeral="III" kanji="文章" title="Writing">
+        <ul class="entries menu-list">
+          {writing.map((w) => (
+            <li>
+              <span class="when pixel">{w.date}</span>
+              <p class="what">
+                <a href={w.href} rel="noopener" lang={w.lang === 'ES' ? 'es' : undefined}>{w.title}</a>
+                {w.lang && <span class="tag pixel">{w.lang}</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section id="contact" numeral="IV" kanji="連絡" title="Contact">
+        <p class="lede">The fastest way to reach me is email. I’m also around on X most days.</p>
+        <ul class="links menu-list">
+          {links.map((l) => (
+            <li>
+              <span class="when pixel">{l.label}</span>
+              <a href={l.href} rel={l.href.startsWith('http') ? 'me noopener' : undefined}>{l.handle}</a>
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </main>
+
+    <footer>
+      <Meander />
+      <div class="foot">
+        <p>© {year} {profile.name} · {profile.location}</p>
+        <p class="pixel konami" aria-hidden="true">↑↑↓↓←→←→ B A</p>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast pixel" role="status" aria-live="polite"></div>
+
+  <script>
+    // Hidden "Famicom mode": the Konami code, or five taps on the tomato.
+    const root = document.documentElement;
+    const toast = document.querySelector<HTMLElement>('.toast')!;
+    const code = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    let pos = 0;
+    let taps = 0;
+    let tapTimer: number | undefined;
+
+    function toggle() {
+      const on = root.classList.toggle('famicom');
+      toast.textContent = on ? '▶ PLAYER 1 START' : '■ GAME OVER — CONTINUE?';
+      toast.classList.remove('show');
+      void toast.offsetWidth;
+      toast.classList.add('show');
+    }
+
+    addEventListener('keydown', (e) => {
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      pos = key === code[pos] ? pos + 1 : key === code[0] ? 1 : 0;
+      if (pos === code.length) {
+        pos = 0;
+        toggle();
+      }
+    });
+
+    document.querySelector('.tomato')?.addEventListener('click', (e) => {
+      const el = e.currentTarget as HTMLElement;
+      el.classList.remove('hop');
+      void el.offsetWidth;
+      el.classList.add('hop');
+      taps++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => (taps = 0), 1200);
+      if (taps === 5) {
+        taps = 0;
+        toggle();
+      }
+    });
+  </script>
+</Base>
+
+<style>
+  .page {
+    max-width: calc(var(--measure) + 6rem + 2 * var(--gutter));
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Header */
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 1.5rem;
+  }
+  .seal-link {
+    display: block;
+    line-height: 0;
+  }
+  .seal-link :global(.seal) {
+    transform: rotate(-3deg);
+    transition: transform 0.2s steps(3);
+  }
+  .seal-link:hover :global(.seal) {
+    transform: rotate(0deg);
+  }
+  .menu {
+    display: flex;
+    gap: 1.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .menu a {
+    text-decoration: none;
+    color: var(--ink-2);
+  }
+  .menu a:hover {
+    color: var(--accent);
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    padding-block: clamp(3rem, 12vw, 7rem) 2.5rem;
+  }
+  .roles {
+    color: var(--ink-2);
+    text-transform: uppercase;
+    margin: 0 0 1.25rem;
+  }
+  .name-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: clamp(3.75rem, 15vw, 7.5rem);
+    line-height: 0.88;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  h1 span {
+    display: block;
+  }
+  h1 span + span {
+    padding-left: 0.6em;
+  }
+  .kana {
+    writing-mode: vertical-rl;
+    color: var(--accent);
+    font-size: 0.95rem;
+    letter-spacing: 0.35em;
+    margin-top: 0.4rem;
+  }
+  .motto {
+    font-family: var(--f-display);
+    font-style: italic;
+    font-size: clamp(1.35rem, 3.5vw, 1.65rem);
+    line-height: 1.3;
+    color: var(--ink-2);
+    max-width: 26ch;
+    margin: 2.25rem 0 0;
+  }
+  .tomato {
+    position: absolute;
+    right: 0;
+    bottom: 2.5rem;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    line-height: 0;
+  }
+  .tomato:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+  .tomato.hop {
+    animation: hop 0.36s steps(4);
+  }
+  @keyframes hop {
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  /* Now bar */
+  .now {
+    margin: 1.5rem 0 0;
+    color: var(--ink-2);
+  }
+  .now-label {
+    color: var(--accent);
+    margin-right: 0.5rem;
+  }
+  .now-item {
+    white-space: nowrap;
+  }
+
+  .about {
+    padding-block: 2.5rem 3.5rem;
+    max-width: var(--measure);
+  }
+  .about p {
+    margin: 0 0 1em;
+  }
+  .about p:first-child {
+    font-size: 1.3rem;
+    line-height: 1.5;
+  }
+
+  /* Entries */
+  .entries {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: var(--measure);
+  }
+  .entries li {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: 1rem;
+    padding-block: 0.9rem;
+  }
+  .entries li + li {
+    border-top: 1px dashed var(--rule);
+  }
+  .entries.compact li {
+    padding-block: 0.45rem;
+  }
+  .entries.compact li + li {
+    border-top: 0;
+  }
+  .when {
+    color: var(--ink-2);
+    padding-top: 0.2rem;
+  }
+  .what,
+  .note {
+    margin: 0;
+  }
+  .what strong {
+    font-weight: 600;
+  }
+  .org {
+    color: var(--ink-2);
+  }
+  .note {
+    color: var(--ink-2);
+    font-size: 1rem;
+    margin-top: 0.2rem;
+  }
+  .tag {
+    font-size: 0.6875rem;
+    color: var(--blue);
+    border: 1px solid currentColor;
+    padding: 0 0.35rem;
+    margin-left: 0.5rem;
+    vertical-align: 0.15em;
+    white-space: nowrap;
+  }
+  .sub {
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: normal;
+    margin: 2.25rem 0 0.5rem;
+  }
+
+  /* JRPG menu cursor on hover */
+  .menu-list li {
+    position: relative;
+  }
+  .menu-list li::before {
+    content: '▶';
+    font-family: var(--f-pixel);
+    font-size: 0.7rem;
+    color: var(--accent);
+    position: absolute;
+    left: -1.35rem;
+    top: 50%;
+    translate: 0 -50%;
+    opacity: 0;
+  }
+  .menu-list li:has(a:hover)::before,
+  .menu-list li:has(a:focus-visible)::before {
+    opacity: 1;
+    animation: blink 0.8s steps(1) infinite;
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .lede {
+    max-width: var(--measure);
+    margin: 0 0 1rem;
+  }
+  .links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .links li {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: 1rem;
+    padding-block: 0.4rem;
+    align-items: baseline;
+  }
+  .links a {
+    word-break: break-word;
+  }
+
+  /* Footer */
+  footer {
+    padding-block: 3rem 2.5rem;
+  }
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    margin-top: 1.25rem;
+    font-size: 0.95rem;
+    color: var(--ink-2);
+  }
+  .foot p {
+    margin: 0;
+  }
+  .konami {
+    opacity: 0.55;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    translate: -50% 0;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 0.6rem 1rem;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .toast.show {
+    animation: toast 2.4s steps(1) forwards;
+  }
+  @keyframes toast {
+    0%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @media (min-width: 760px) {
+    .hero,
+    .now,
+    .about {
+      padding-left: 6rem;
+    }
+    .hero .tomato {
+      right: 1rem;
+    }
+  }
+  @media (max-width: 520px) {
+    .menu {
+      gap: 0.9rem;
+      font-size: 0.75rem;
+    }
+    .now .sep {
+      display: none;
+    }
+    .now-item {
+      display: block;
+    }
+    .now-label {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .entries li,
+    .links li {
+      grid-template-columns: 3.25rem 1fr;
+      gap: 0.75rem;
+    }
+    .menu-list li::before {
+      display: none;
+    }
+  }
+
+  /* ─── Famicom mode ─── */
+  :global(html.famicom) {
+    --bg: #101010;
+    --bg-2: #1c1c1c;
+    --ink: #fcfcfc;
+    --ink-2: #bcbcbc;
+    --rule: #3c3c3c;
+    --accent: #f83800;
+    --accent-deep: #a81000;
+    --olive: #00a800;
+    --blue: #3cbcfc;
+    --grain-opacity: 0;
+    --f-display: 'DotGothic16', monospace;
+    --f-body: 'DotGothic16', monospace;
+  }
+  :global(html.famicom body) {
+    font-size: 1rem;
+  }
+  :global(html.famicom body::after) {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / 0.28) 2px 3px);
+    z-index: 10;
+  }
+  :global(html.famicom) h1 {
+    font-size: clamp(2.75rem, 11vw, 5.5rem);
+    line-height: 1.05;
+  }
+  :global(html.famicom) .motto {
+    font-style: normal;
+  }
+  :global(html.famicom) .tomato {
+    animation: bob 0.8s steps(2) infinite;
+  }
+  @keyframes bob {
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+</style>

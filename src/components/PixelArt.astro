@@ -1,0 +1,39 @@
+---
+// Renders a bitmap (array of strings) as crisp SVG pixels.
+// Each character maps to a CSS colour via `palette`; '.' is transparent.
+interface Props {
+  rows: string[];
+  palette: Record<string, string>;
+  scale?: number;
+  label?: string;
+  class?: string;
+}
+const { rows, palette, scale = 4, label, class: className } = Astro.props;
+const w = Math.max(...rows.map((r) => r.length));
+const h = rows.length;
+
+// Merge horizontal runs of the same colour into one rect to keep the SVG small.
+const rects: { x: number; y: number; w: number; fill: string }[] = [];
+rows.forEach((row, y) => {
+  let x = 0;
+  while (x < row.length) {
+    const c = row[x];
+    let run = 1;
+    while (row[x + run] === c) run++;
+    if (c !== '.' && palette[c]) rects.push({ x, y, w: run, fill: palette[c] });
+    x += run;
+  }
+});
+---
+<svg
+  class={className}
+  viewBox={`0 0 ${w} ${h}`}
+  width={w * scale}
+  height={h * scale}
+  shape-rendering="crispEdges"
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+>
+  {rects.map((r) => <rect x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} />)}
+</svg>

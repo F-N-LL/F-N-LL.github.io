@@ -1,0 +1,70 @@
+---
+interface Props {
+  id: string;
+  numeral: string;
+  kanji: string;
+  title: string;
+}
+const { id, numeral, kanji, title } = Astro.props;
+---
+<section id={id} aria-labelledby={`${id}-title`}>
+  <div class="marker" aria-hidden="true">
+    <span class="numeral">{numeral}</span>
+    <span class="kanji pixel">{kanji}</span>
+  </div>
+  <div class="body">
+    <h2 id={`${id}-title`}>{title}</h2>
+    <slot />
+  </div>
+</section>
+
+<style>
+  section {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    padding-block: 3.5rem;
+    border-top: 1px solid var(--rule);
+    scroll-margin-top: 1rem;
+  }
+  .marker {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+  .numeral {
+    font-family: var(--f-display);
+    font-size: 1.5rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .kanji {
+    color: var(--ink-2);
+    font-size: 0.75rem;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 2.25rem;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    margin: 0 0 1.75rem;
+  }
+
+  @media (min-width: 760px) {
+    section {
+      grid-template-columns: 6rem 1fr;
+      gap: 0;
+    }
+    .marker {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding-top: 0.35rem;
+    }
+    .kanji {
+      writing-mode: vertical-rl;
+      letter-spacing: 0.3em;
+    }
+  }
+</style>
