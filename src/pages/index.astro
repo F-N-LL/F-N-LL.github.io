@@ -1,463 +1,1786 @@
 ---
+import sharp from 'sharp';
 import Base from '../layouts/Base.astro';
-import Section from '../components/Section.astro';
-import Meander from '../components/Meander.astro';
-import PixelArt from '../components/PixelArt.astro';
-import { profile, links, work, education, volunteering, projects, writing } from '../data/site';
-import { seal, sealPalette, tomato, tomatoPalette } from '../data/sprites';
+import Flow from '../components/Flow.astro';
+import { profile } from '../data/site';
+import { specimens, flow, elsewhere } from '../data/cabinet';
 
+// Desktop: a Roman floor you can move around. A framed emblema holds an intro
+// line and the specimens in four labelled bands (the same order as the phone),
+// set in a field of tesserae sampled from the Pyrenees panorama.
+const COLS = 29;
+const ROWS = 17;
+const PANEL = { col: 11, row: 6, w: 7, h: 5 }; // intro row + four section rows
+const LABEL_COL = PANEL.col;
+const FIRST_CARD_COL = PANEL.col + 1;
+
+const bySlug = new Map(specimens.map((s) => [s.slug, s]));
+const items = flow.flatMap(({ section, slugs }) =>
+  slugs.map((slug, i) => ({ ...bySlug.get(slug)!, section, pos: i + 1, count: slugs.length })),
+);
+const sectionRows = flow.map(({ section, slugs }, k) => ({
+  section,
+  row: PANEL.row + 1 + k,
+  first: items.findIndex((it) => it.section === section),
+  count: slugs.length,
+}));
+
+const PIGMENTS: [number, number, number][] = [
+  [43, 41, 38], [98, 96, 68], [158, 63, 50], [197, 138, 61], [226, 214, 192], [107, 141, 160],
+];
+const cropW = Math.round(120 * (COLS / ROWS));
+const { data } = await sharp('public/img/panorama.png')
+  .extract({ left: Math.round((360 - cropW) / 2), top: 0, width: cropW, height: 120 })
+  .resize(COLS, ROWS, { fit: 'fill', kernel: 'cubic' })
+  .removeAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true });
+
+// Deterministic jitter so the floor looks hand-laid but never changes.
+let seed = 7;
+const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+type Cell =
+  | { kind: 'tessera'; color: string; rot: number; size: number; blur: number }
+  | { kind: 'blank' }
+  | { kind: 'intro' }
+  | { kind: 'label'; section: string; count: number }
+  | { kind: 'card'; index: number };
+const cells: Cell[] = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const inPanel = c >= PANEL.col && c < PANEL.col + PANEL.w && r >= PANEL.row && r < PANEL.row + PANEL.h;
+    if (inPanel) {
+      if (r === PANEL.row) {
+        if (c === FIRST_CARD_COL) cells.push({ kind: 'intro' });
+        else if (c < FIRST_CARD_COL) cells.push({ kind: 'blank' });
+        // the intro spans the rest of the row
+        continue;
+      }
+      const band = sectionRows.find((b) => b.row === r)!;
+      if (c === LABEL_COL) cells.push({ kind: 'label', section: band.section, count: band.count });
+      else if (c - FIRST_CARD_COL < band.count) cells.push({ kind: 'card', index: band.first + (c - FIRST_CARD_COL) });
+      else cells.push({ kind: 'blank' });
+      continue;
+    }
+    const i = (r * COLS + c) * 3;
+    let best = PIGMENTS[0];
+    let bestD = Infinity;
+    for (const p of PIGMENTS) {
+      const d = (data[i] - p[0]) ** 2 + (data[i + 1] - p[1]) ** 2 + (data[i + 2] - p[2]) ** 2;
+      if (d < bestD) (bestD = d), (best = p);
+    }
+    // Distance (in cells) from the panel sets how far out of focus a tessera sits.
+    const dx = Math.max(PANEL.col - c, 0, c - (PANEL.col + PANEL.w - 1));
+    const dy = Math.max(PANEL.row - r, 0, r - (PANEL.row + PANEL.h - 1));
+    const blur = Math.min(4, Math.max(0, Math.hypot(dx * 0.8, dy) - 2.5) * 0.7);
+    cells.push({ kind: 'tessera', color: `rgb(${best.join(',')})`, rot: Math.round((rand() - 0.5) * 14), size: 0.28 + rand() * 0.12, blur: +blur.toFixed(1) });
+  }
+}
+
+const pad = (n: number) => String(n).padStart(2, '0');
 const year = new Date().getFullYear();
+const email = elsewhere.find((l) => l.href.startsWith('mailto:'))!;
+const social = elsewhere.filter((l) => l !== email);
+const shortcuts: [string[], string][] = [
+  [['←', '↑', '→', '↓'], 'Move between cards'],
+  [['Enter'], 'Open'],
+  [['Esc'], 'Close, or fit when nothing is open'],
+  [['+', '−'], 'Zoom'],
+  [['1', '2', '3', '4'], 'Show a section'],
+  [['I'], 'Index'],
+];
+const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, first: b.first, count: b.count, section: b.section })) };
 ---
 <Base
-  title="Daniel Fenoll — Software Engineer"
-  description="Software engineer, designer and gardener from Alicante. Cloud and backend on AWS at TUI."
+  title="Daniel Fenoll"
+  description="A cabinet of works and curiosities by Daniel Fenoll, software engineer and designer in Alicante, Spain."
 >
-  <div class="page">
-    <header class="top">
-      <a href="#top" class="seal-link" aria-label="Daniel Fenoll, back to top">
-        <PixelArt rows={seal} palette={sealPalette} scale={2} class="seal" />
-      </a>
-      <nav aria-label="Sections">
-        <ul class="menu pixel">
-          <li><a href="#work">Work</a></li>
-          <li><a href="#projects">Projects</a></li>
-          <li><a href="#writing">Writing</a></li>
-          <li><a href="#contact">Contact</a></li>
-        </ul>
-      </nav>
-    </header>
+  <a class="skip caps" href="#index-view" data-skip>Skip to the index</a>
 
-    <main id="top">
-      <div class="hero">
-        <p class="roles pixel">{profile.roles.join(' · ')}</p>
-        <div class="name-row">
-          <h1>{profile.name.split(' ').map((w) => <span>{w}</span>)}</h1>
-          <span class="kana pixel" lang="ja" aria-hidden="true">{profile.kana}</span>
-        </div>
-        <p class="motto">“{profile.motto}”</p>
-        <button class="tomato" type="button" aria-label="A pixel tomato from the huerta">
-          <PixelArt rows={tomato} palette={tomatoPalette} scale={4} />
-        </button>
+  <header class="bar caps">
+    <a href="#" class="b-name" data-home>Daniel Fenoll</a>
+    <nav class="b-filters" aria-label="Show">
+      <button type="button" data-filter="all" aria-pressed="true" data-key="0">All</button>
+      {flow.map(({ section }, k) => (
+        <button type="button" data-filter={section} aria-pressed="false" data-key={String(k + 1)}>{section}</button>
+      ))}
+    </nav>
+    <nav class="b-right" aria-label="Site">
+      <button type="button" data-toggle-index aria-pressed="false" data-key="I">Index</button>
+      <button type="button" data-open-info>Information</button>
+      <a href={email.href} class="b-contact">Contact</a>
+      <span class="b-clock"><span class="muted">Alicante</span> <time data-clock></time></span>
+    </nav>
+  </header>
+
+  <main>
+    <h1 class="sr-only">Daniel Fenoll — software engineer and designer, Alicante</h1>
+
+    <!-- Cabinet -->
+    <div class="stage" data-stage aria-label="Cabinet. Drag or scroll to move, pinch or Control-scroll to zoom.">
+      <div class="field" data-field style={`--cols:${COLS};--rows:${ROWS}`}>
+        <span class="frame" aria-hidden="true" style={`--c:${PANEL.col};--r:${PANEL.row};--w:${PANEL.w};--h:${PANEL.h}`}></span>
+        {cells.map((cell) => {
+          if (cell.kind === 'tessera')
+            return (
+              <span class="cell" aria-hidden="true">
+                <i class="tessera" style={`background:${cell.color};--r:${cell.rot}deg;--s:${cell.size}${cell.blur ? `;filter:blur(${cell.blur}px)` : ''}`} />
+              </span>
+            );
+          if (cell.kind === 'blank') return <span class="cell" aria-hidden="true" />;
+          if (cell.kind === 'intro')
+            return (
+              <div class="intro" style={`grid-column: span ${PANEL.w - 1}`}>
+                <p class="i-name">{profile.name} <span class="pixel" lang="ja">{profile.kana}</span></p>
+                <p class="i-line">{profile.statement}</p>
+              </div>
+            );
+          if (cell.kind === 'label')
+            return (
+              <span class="cell label caps" data-label={cell.section}>
+                <span>{cell.section}</span>
+                <span class="muted">{pad(cell.count)}</span>
+              </span>
+            );
+          const it = items[cell.index];
+          return (
+            <span class="cell">
+              <button
+                type="button"
+                class="spec"
+                style={`--k:${cell.index}`}
+                data-i={cell.index}
+                data-section={it.section}
+                aria-label={`${it.section} ${it.pos} of ${it.count}: ${it.title}, ${it.kind}, ${it.year}`}
+              >
+                <img src={`/img/s-${it.slug}.png`} width="160" height="200" alt="" draggable="false" />
+              </button>
+            </span>
+          );
+        })}
       </div>
+    </div>
 
-      <Meander />
+    <!-- Hover caption, set beside the card -->
+    <div class="tip" data-tip aria-hidden="true">
+      <p class="caps muted" data-tip-kick></p>
+      <p class="t-title" data-tip-title></p>
+      <p class="muted" data-tip-meta></p>
+    </div>
 
-      <p class="now pixel">
-        <span class="now-label">NOW ▸</span>
-        {profile.now.map((n, i) => (
-          <>
-            {i > 0 && <span class="sep" aria-hidden="true"> · </span>}
-            <span class="now-item">{n}</span>{' '}
-          </>
+    <!-- Index -->
+    <section class="index" id="index-view" data-index hidden aria-label="Index" tabindex="-1">
+      <div class="i-head caps" role="row">
+        <button type="button" data-sort="no" aria-sort="ascending">No.</button>
+        <button type="button" data-sort="title">Title</button>
+        <button type="button" data-sort="section">Section</button>
+        <button type="button" data-sort="kind">Kind</button>
+        <span class="r-medium">Medium</span>
+        <button type="button" data-sort="year" class="r-year">Year</button>
+      </div>
+      <ol data-rows>
+        {items.map((s, i) => (
+          <li data-row={i} data-section={s.section}>
+            <button type="button" class="row" data-i={i}>
+              <span class="muted">{pad(i + 1)}</span>
+              <span class="r-title" lang={s.lang}>{s.title}</span>
+              <span class="muted">{s.section}</span>
+              <span class="muted">{s.kind}</span>
+              <span class="muted r-medium">{s.medium}</span>
+              <span class="muted r-year">{s.year}</span>
+            </button>
+          </li>
         ))}
-      </p>
+      </ol>
+      <img class="peek" data-peek alt="" width="160" height="200" />
+    </section>
 
-      <div class="about">
-        {profile.about.map((p) => <p>{p}</p>)}
-      </div>
-
-      <Section id="work" numeral="I" kanji="仕事" title="Work">
-        <ol class="entries">
-          {work.map((w) => (
-            <li>
-              <span class="when pixel">{w.period}</span>
-              <div>
-                <p class="what"><strong>{w.title}</strong>, {w.org}</p>
-                {w.note && <p class="note">{w.note}</p>}
-              </div>
-            </li>
-          ))}
-        </ol>
-
-        <h3 class="sub pixel">Study</h3>
-        <ol class="entries compact">
-          {education.map((e) => (
-            <li>
-              <span class="when pixel">{e.period}</span>
-              <p class="what">{e.title}, <span class="org">{e.org}</span></p>
-            </li>
-          ))}
-        </ol>
-
-        <h3 class="sub pixel">Volunteering</h3>
-        <ol class="entries compact">
-          {volunteering.map((v) => (
-            <li>
-              <span class="when pixel">{v.period}</span>
-              <p class="what">{v.title}, <span class="org">{v.org}</span></p>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      <Section id="projects" numeral="II" kanji="作品" title="Projects">
-        <ul class="entries menu-list">
-          {projects.map((p) => (
-            <li>
-              <span class="when pixel">{p.year}</span>
-              <div>
-                <p class="what">
-                  <a href={p.href} rel="noopener">{p.name}</a>
-                  <span class="tag pixel">{p.lang}</span>
-                </p>
-                <p class="note">{p.note}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section id="writing" numeral="III" kanji="文章" title="Writing">
-        <ul class="entries menu-list">
-          {writing.map((w) => (
-            <li>
-              <span class="when pixel">{w.date}</span>
-              <p class="what">
-                <a href={w.href} rel="noopener" lang={w.lang === 'ES' ? 'es' : undefined}>{w.title}</a>
-                {w.lang && <span class="tag pixel">{w.lang}</span>}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section id="contact" numeral="IV" kanji="連絡" title="Contact">
-        <p class="lede">The fastest way to reach me is email. I’m also around on X most days.</p>
-        <ul class="links menu-list">
-          {links.map((l) => (
-            <li>
-              <span class="when pixel">{l.label}</span>
-              <a href={l.href} rel={l.href.startsWith('http') ? 'me noopener' : undefined}>{l.handle}</a>
-            </li>
-          ))}
-        </ul>
-      </Section>
-    </main>
-
-    <footer>
-      <Meander />
-      <div class="foot">
-        <p>© {year} {profile.name} · {profile.location}</p>
-        <p class="pixel konami" aria-hidden="true">↑↑↓↓←→←→ B A</p>
+    <!-- Footer chrome -->
+    <footer class="foot">
+      <ul class="f-social caps">
+        {social.map((l) => (
+          <li><a href={l.href} rel="me noopener">{l.label}</a></li>
+        ))}
+      </ul>
+      <p class="f-hint caps muted">Drag or scroll to move · Pinch or Ctrl + scroll to zoom · <kbd>?</kbd> Shortcuts</p>
+      <div class="zoom" data-zoom>
+        <button type="button" class="z-btn key-up" data-zoom-out aria-label="Zoom out" data-key="−">−</button>
+        <div class="ruler" data-ruler role="slider" tabindex="0" aria-label="Zoom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="ticks" aria-hidden="true">
+            {Array.from({ length: 31 }, (_, i) => <i class={i % 10 === 0 ? 'major' : i % 5 === 0 ? 'mid' : ''} />)}
+          </div>
+          <span class="knob" data-knob></span>
+          <span class="pct caps" data-pct></span>
+        </div>
+        <button type="button" class="z-btn key-up" data-zoom-in aria-label="Zoom in" data-key="+">+</button>
+        <button type="button" class="z-fit caps key-up" data-fit data-key="Esc">Fit</button>
       </div>
     </footer>
+  </main>
+
+  <!-- Detail -->
+  <div class="detail" data-detail hidden role="dialog" aria-modal="true" aria-labelledby="d-title">
+    <button type="button" class="d-arrow d-prev" data-prev aria-label="Previous" data-key="←">←</button>
+    <div class="d-plate"><img data-d-img alt="" width="160" height="200" /></div>
+    <div class="d-text">
+      <p class="caps muted" data-d-kick></p>
+      <h2 id="d-title" data-d-title></h2>
+      <dl>
+        <dt class="caps muted">Kind</dt><dd data-d-kind></dd>
+        <dt class="caps muted">Date</dt><dd data-d-year></dd>
+        <dt class="caps muted">Medium</dt><dd data-d-medium></dd>
+      </dl>
+      <p class="d-body" data-d-text></p>
+      <a class="d-link" data-d-link rel="noopener"><span class="ul" data-d-link-label></span> ↗</a>
+    </div>
+    <button type="button" class="d-arrow d-next" data-next aria-label="Next" data-key="→">→</button>
+    <div class="d-top caps">
+      <span class="muted" data-d-count></span>
+      <button type="button" data-close>Close <kbd>Esc</kbd></button>
+    </div>
   </div>
 
-  <div class="toast pixel" role="status" aria-live="polite"></div>
+  <div class="scrim" data-scrim hidden></div>
+
+  <!-- Information -->
+  <aside class="info" data-info hidden role="dialog" aria-modal="true" aria-labelledby="i-title">
+    <button type="button" class="i-close caps" data-close-info>Close</button>
+    <h2 id="i-title" class="caps muted">Information</h2>
+    <p class="i-lead">{profile.statement}</p>
+    {profile.about.map((p) => <p>{p}</p>)}
+    <p class="muted">“{profile.motto}”</p>
+    <h3 class="caps muted">Contact</h3>
+    <ul class="i-links">
+      {elsewhere.map((l) => (
+        <li><a href={l.href} rel={l.href.startsWith('http') ? 'me noopener' : undefined}><span class="muted">{l.label}</span> <span class="ul">{l.handle}</span></a></li>
+      ))}
+    </ul>
+    <h3 class="caps muted">Keyboard</h3>
+    <dl class="i-keys">
+      {shortcuts.map(([ks, what]) => (
+        <>
+          <dt>{ks.map((k) => <kbd>{k}</kbd>)}</dt>
+          <dd class="muted">{what}</dd>
+        </>
+      ))}
+    </dl>
+    <h3 class="caps muted">Colophon</h3>
+    <p class="muted">
+      Every plate is ordered-dithered (Bayer 8×8) into six pigments from Pompeii. The floor is laid like a Roman mosaic:
+      a framed emblema of specimens in a field of tesserae, each coloured from the Pyrenees. Set in Geist. Built with
+      Astro. © {year} {profile.name}.
+    </p>
+  </aside>
+
+  <!-- Shortcuts -->
+  <div class="keys" data-keys hidden role="dialog" aria-modal="true" aria-labelledby="k-title">
+    <h2 id="k-title" class="caps muted">Shortcuts</h2>
+    <dl>
+      {shortcuts.map(([ks, what]) => (
+        <>
+          <dt>{ks.map((k) => <kbd>{k}</kbd>)}</dt>
+          <dd>{what}</dd>
+        </>
+      ))}
+    </dl>
+  </div>
+
+  <div class="toast caps" role="status" aria-live="polite"></div>
+
+  <p class="kchip caps" data-kchip aria-hidden="true">
+    <span><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> Move</span>
+    <span><kbd>Enter</kbd> Open</span>
+    <span><kbd>Esc</kbd> Fit</span>
+  </p>
+
+  <Flow />
+
+  <script type="application/json" id="items" set:html={JSON.stringify(items)} />
+  <script type="application/json" id="layout" set:html={JSON.stringify(layout)} />
 
   <script>
-    // Hidden "Famicom mode": the Konami code, or five taps on the tomato.
+    type Item = {
+      slug: string; title: string; kind: string; year: string; medium: string; text: string;
+      href?: string; link?: string; lang?: string; section: string; pos: number; count: number;
+    };
+    type Layout = { COLS: number; ROWS: number; PANEL: { col: number; row: number; w: number; h: number }; rows: { row: number; first: number; count: number; section: string }[] };
+    const S: Item[] = JSON.parse(document.getElementById('items')!.textContent!);
+    const L: Layout = JSON.parse(document.getElementById('layout')!.textContent!);
+    const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector(sel) as T;
+    const $$ = <T extends Element = HTMLElement>(sel: string) => [...document.querySelectorAll<T>(sel)] as T[];
+    const pad = (n: number) => String(n).padStart(2, '0');
     const root = document.documentElement;
-    const toast = document.querySelector<HTMLElement>('.toast')!;
-    const code = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-    let pos = 0;
-    let taps = 0;
-    let tapTimer: number | undefined;
+    const reducedQ = matchMedia('(prefers-reduced-motion: reduce)');
+    const desktop = matchMedia('(min-width: 761px)');
 
-    function toggle() {
-      const on = root.classList.toggle('famicom');
-      toast.textContent = on ? '▶ PLAYER 1 START' : '■ GAME OVER — CONTINUE?';
-      toast.classList.remove('show');
-      void toast.offsetWidth;
-      toast.classList.add('show');
+    // ── Clock ──
+    const clock = $('[data-clock]');
+    const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' });
+    const tick = () => (clock.textContent = fmt.format(new Date()));
+    tick();
+    setInterval(tick, 15000);
+
+    // ═══ Camera ═══
+    // The floor is a canvas: position (x, y) and tile size t. Input writes to
+    // `goal`; the frame loop eases `cam` toward it, so every move starts from
+    // where the floor is now and can be interrupted at any point.
+    const stage = $('[data-stage]');
+    const field = $('[data-field]');
+    const PX = 1.9; // cell pitch, in tiles
+    const PY = 1.95;
+    const T_MAX = 170;
+    const SCROLL = 0.45; // wheel/trackpad pan speed: floor px per scrolled px
+    const BAR = 64; // chrome reserved at the top and bottom when fitting
+    const FOOT = 76;
+    const cam = { x: 0, y: 0, t: 80 };
+    const goal = { x: 0, y: 0, t: 80 };
+    let vel = { x: 0, y: 0 };
+    let dragging = false;
+    let hovered: HTMLElement | null = null;
+
+    const vw = () => stage.clientWidth;
+    const vh = () => stage.clientHeight;
+    const tMin = () => Math.max(vw() / (L.COLS * PX), vh() / (L.ROWS * PY));
+    const clampT = (t: number) => Math.min(T_MAX, Math.max(tMin(), t));
+    const bounds = (t: number) => ({
+      minX: vw() - L.COLS * PX * t,
+      minY: vh() - L.ROWS * PY * t,
+    });
+    const clampX = (x: number, t: number) => Math.min(0, Math.max(bounds(t).minX, x));
+    const clampY = (y: number, t: number) => Math.min(0, Math.max(bounds(t).minY, y));
+
+    // Soft edges: past a bound the floor follows less and less.
+    const rubber = (over: number, dim: number) => (over * dim * 0.55) / (dim + 0.55 * Math.abs(over));
+    const soft = (v: number, lo: number, hi: number, dim: number) =>
+      v > hi ? hi + rubber(v - hi, dim) : v < lo ? lo - rubber(lo - v, dim) : v;
+
+    // Frame a rectangle given in cells.
+    function frameCells(c0: number, r0: number, c1: number, r1: number, maxT = T_MAX) {
+      const w = (c1 - c0) * PX;
+      const h = (r1 - r0) * PY;
+      const t = clampT(Math.min((vw() - 160) / w, (vh() - BAR - FOOT - 40) / h, maxT));
+      const cx = ((c0 + c1) / 2) * PX * t;
+      const cy = ((r0 + r1) / 2) * PY * t;
+      goal.t = t;
+      goal.x = clampX(vw() / 2 - cx, t);
+      goal.y = clampY(BAR + (vh() - BAR - FOOT) / 2 - cy, t);
+      vel = { x: 0, y: 0 };
+    }
+    const fit = () => frameCells(L.PANEL.col - 0.1, L.PANEL.row, L.PANEL.col + L.PANEL.w + 0.1, L.PANEL.row + L.PANEL.h, 110);
+
+    function zoomAt(cx: number, cy: number, t: number) {
+      t = clampT(t);
+      const ux = (cx - goal.x) / goal.t;
+      const uy = (cy - goal.y) / goal.t;
+      goal.t = t;
+      goal.x = clampX(cx - ux * t, t);
+      goal.y = clampY(cy - uy * t, t);
     }
 
+    let shown = { x: NaN, y: NaN, t: NaN };
+    function frame() {
+      requestAnimationFrame(frame);
+      if (!desktop.matches) return;
+      const reduced = reducedQ.matches;
+      if (!dragging) {
+        // momentum, then settle inside the bounds
+        if (Math.abs(vel.x) + Math.abs(vel.y) > 0.02) {
+          goal.x += vel.x * 16;
+          goal.y += vel.y * 16;
+          vel.x *= 0.92;
+          vel.y *= 0.92;
+        }
+        const cx = clampX(goal.x, goal.t);
+        const cy = clampY(goal.y, goal.t);
+        goal.x += (cx - goal.x) * 0.25;
+        goal.y += (cy - goal.y) * 0.25;
+      }
+      const k = dragging || reduced ? 1 : 0.2;
+      cam.x += (goal.x - cam.x) * k;
+      cam.y += (goal.y - cam.y) * k;
+      cam.t += (goal.t - cam.t) * (reduced ? 1 : 0.2);
+      // Land exactly, so a settled floor stops redrawing.
+      if (Math.abs(goal.t - cam.t) < 0.01) cam.t = goal.t;
+      if (Math.abs(goal.x - cam.x) < 0.05) cam.x = goal.x;
+      if (Math.abs(goal.y - cam.y) < 0.05) cam.y = goal.y;
+      if (cam.x !== shown.x || cam.y !== shown.y || cam.t !== shown.t) {
+        if (cam.t !== shown.t) field.style.setProperty('--t', `${cam.t.toFixed(2)}px`);
+        const b = bounds(cam.t);
+        const x = dragging ? soft(cam.x, b.minX, 0, vw()) : cam.x;
+        const y = dragging ? soft(cam.y, b.minY, 0, vh()) : cam.y;
+        field.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+        shown = { ...cam };
+        syncRuler();
+        if (hovered) placeTip(hovered);
+      }
+    }
+
+    // Drag to pan, with momentum on release.
+    let down: { x: number; y: number; gx: number; gy: number } | null = null;
+    let moved = false;
+    let trail: { x: number; y: number; t: number }[] = [];
+    stage.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      down = { x: e.clientX, y: e.clientY, gx: goal.x, gy: goal.y };
+      moved = false;
+      vel = { x: 0, y: 0 };
+      trail = [{ x: e.clientX, y: e.clientY, t: e.timeStamp }];
+    });
+    addEventListener('pointermove', (e) => {
+      if (!down) return;
+      const dx = e.clientX - down.x;
+      const dy = e.clientY - down.y;
+      if (!moved && Math.hypot(dx, dy) < 5) return; // a click, not a drag
+      if (!moved) {
+        moved = true;
+        dragging = true;
+        stage.setPointerCapture(e.pointerId);
+        stage.classList.add('grabbing');
+        hideTip();
+      }
+      goal.x = cam.x = down.gx + dx;
+      goal.y = cam.y = down.gy + dy;
+      trail.push({ x: e.clientX, y: e.clientY, t: e.timeStamp });
+      if (trail.length > 5) trail.shift();
+    });
+    const release = () => {
+      if (!down) return;
+      if (moved) {
+        const a = trail[0];
+        const b = trail[trail.length - 1];
+        const dt = Math.max(1, b.t - a.t);
+        vel = { x: (b.x - a.x) / dt, y: (b.y - a.y) / dt };
+        // the finger's position may be past the edge; carry on from what is on screen
+        const bb = bounds(cam.t);
+        goal.x = cam.x = soft(cam.x, bb.minX, 0, vw());
+        goal.y = cam.y = soft(cam.y, bb.minY, 0, vh());
+      }
+      dragging = false;
+      down = null;
+      stage.classList.remove('grabbing');
+      // The click that follows this pointerup (if any) is dispatched first;
+      // after it, nothing should be swallowed any more.
+      setTimeout(() => (moved = false));
+    };
+    addEventListener('pointerup', release);
+    addEventListener('pointercancel', release);
+    // A drag must not also count as a click on the card it started on.
+    stage.addEventListener(
+      'click',
+      (e) => {
+        if (moved) {
+          e.stopPropagation();
+          e.preventDefault();
+          moved = false;
+        }
+      },
+      true,
+    );
+    stage.addEventListener('dblclick', (e) => {
+      if (!(e.target as HTMLElement).closest('.spec')) fit();
+    });
+
+    // Scroll pans; pinch (ctrlKey) zooms toward the cursor.
+    stage.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? vh() : 1;
+        if (e.ctrlKey || e.metaKey) {
+          // trackpad pinch sends small deltas, a mouse notch ~100: cap each event
+          const d = Math.max(-60, Math.min(60, e.deltaY * unit));
+          zoomAt(e.clientX, e.clientY, goal.t * Math.exp(-d * 0.006));
+        } else {
+          const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+          const dy = e.shiftKey && !e.deltaX ? 0 : e.deltaY;
+          // Calmer than 1:1, and one mouse notch never jumps more than ~50px.
+          const pan = (d: number) => Math.max(-110, Math.min(110, d * unit)) * SCROLL;
+          vel = { x: 0, y: 0 };
+          goal.x = clampX(goal.x - pan(dx), goal.t);
+          goal.y = clampY(goal.y - pan(dy), goal.t);
+        }
+        hideTip();
+      },
+      { passive: false },
+    );
+
+    // ── Zoom controls ──
+    const ruler = $('[data-ruler]');
+    const knob = $('[data-knob]');
+    const pct = $('[data-pct]');
+    const toS = (t: number) => (Math.log(t) - Math.log(tMin())) / (Math.log(T_MAX) - Math.log(tMin()));
+    const fromS = (s: number) => Math.exp(Math.log(tMin()) + Math.max(0, Math.min(1, s)) * (Math.log(T_MAX) - Math.log(tMin())));
+    function syncRuler() {
+      const s = Math.max(0, Math.min(1, toS(cam.t)));
+      knob.style.left = pct.style.left = `${s * 100}%`;
+      const p = Math.round(s * 100);
+      pct.textContent = `${p}%`;
+      ruler.setAttribute('aria-valuenow', String(p));
+    }
+    const centre = () => [vw() / 2, BAR + (vh() - BAR - FOOT) / 2] as const;
+    const zoomBy = (f: number) => zoomAt(...centre(), goal.t * f);
+    ruler.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      ruler.setPointerCapture(e.pointerId);
+      const set = (ev: PointerEvent) => {
+        const r = ruler.getBoundingClientRect();
+        zoomAt(...centre(), fromS((ev.clientX - r.left) / r.width));
+      };
+      set(e);
+      ruler.addEventListener('pointermove', set);
+      ruler.addEventListener('pointerup', () => ruler.removeEventListener('pointermove', set), { once: true });
+    });
+    ruler.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') (e.preventDefault(), zoomBy(1.15));
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') (e.preventDefault(), zoomBy(1 / 1.15));
+    });
+    $('[data-zoom-in]').addEventListener('click', () => zoomBy(1.3));
+    $('[data-zoom-out]').addEventListener('click', () => zoomBy(1 / 1.3));
+    $('[data-fit]').addEventListener('click', () => applyFilter('all'));
+
+    // ═══ Cards ═══
+    const cards = $$<HTMLButtonElement>('.spec');
+    const tip = $('[data-tip]');
+    function placeTip(el: HTMLElement) {
+      const r = el.getBoundingClientRect();
+      const w = tip.offsetWidth;
+      const right = r.right + 14 + w < vw() - 16;
+      tip.style.translate = `${right ? r.right + 14 : r.left - 14 - w}px ${Math.max(BAR, r.top)}px`;
+    }
+    function showTip(el: HTMLElement) {
+      const it = S[Number(el.dataset.i)];
+      $('[data-tip-kick]').textContent = `${it.section} ${pad(it.pos)}/${pad(it.count)}`;
+      $('[data-tip-title]').textContent = it.title;
+      $('[data-tip-meta]').textContent = `${it.kind} · ${it.year}`;
+      hovered = el;
+      placeTip(el);
+      tip.classList.add('on');
+    }
+    function hideTip() {
+      hovered = null;
+      tip.classList.remove('on');
+    }
+    cards.forEach((el) => {
+      // Cards sliding under a still cursor (while the floor animates) must not
+      // count as hovering; only a real mouse move re-enables hover.
+      el.addEventListener('pointerenter', () => !dragging && !stage.classList.contains('nohover') && showTip(el));
+      el.addEventListener('pointerleave', () => {
+        if (hovered === el && document.activeElement !== el) hideTip();
+      });
+      el.addEventListener('focus', () => {
+        // Walking out of a filtered section takes the filter with you.
+        const f = document.body.dataset.filter;
+        if (f && f !== 'all' && el.dataset.section !== f) applyFilter(el.dataset.section!);
+        else reveal(el);
+        showTip(el);
+      });
+      el.addEventListener('blur', hideTip);
+      el.addEventListener('click', () => open(Number(el.dataset.i), el.querySelector('img')));
+    });
+
+    // Keep a keyboard-focused card on screen.
+    function reveal(el: HTMLElement) {
+      const r = el.getBoundingClientRect();
+      const m = 80;
+      let dx = 0;
+      let dy = 0;
+      if (r.left < m) dx = m - r.left;
+      else if (r.right > vw() - m) dx = vw() - m - r.right;
+      if (r.top < BAR + 20) dy = BAR + 20 - r.top;
+      else if (r.bottom > vh() - FOOT - 20) dy = vh() - FOOT - 20 - r.bottom;
+      goal.x = clampX(goal.x + dx, goal.t);
+      goal.y = clampY(goal.y + dy, goal.t);
+    }
+
+    // Arrow keys walk the panel like a grid.
+    const grid = L.rows.map((b) => Array.from({ length: b.count }, (_, j) => b.first + j));
+    function neighbour(i: number, key: string) {
+      const r = grid.findIndex((row) => row.includes(i));
+      const c = grid[r].indexOf(i);
+      if (key === 'ArrowLeft') return grid[r][c - 1] ?? grid[r - 1]?.at(-1);
+      if (key === 'ArrowRight') return grid[r][c + 1] ?? grid[r + 1]?.[0];
+      const next = grid[r + (key === 'ArrowDown' ? 1 : -1)];
+      return next ? next[Math.min(c, next.length - 1)] : undefined;
+    }
+
+    // ═══ Filters ═══
+    const filterBtns = $$<HTMLButtonElement>('[data-filter]');
+    function applyFilter(name: string) {
+      filterBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === name)));
+      document.body.dataset.filter = name;
+      cards.forEach((c) => c.classList.toggle('dim', name !== 'all' && c.dataset.section !== name));
+
+      // The floor is about to move under a still cursor, and the browser won't
+      // re-test :hover until the mouse moves. Drop the stale hover and caption.
+      hideTip();
+      stage.classList.add('nohover');
+      // Keyboard focus follows the section; a mouse-given focus is released.
+      const a = document.activeElement as HTMLElement | null;
+      if (a?.classList.contains('spec') && name !== 'all' && a.dataset.section !== name) {
+        if (a.matches(':focus-visible')) cards.find((c) => c.dataset.section === name)?.focus({ preventScroll: true });
+        else a.blur();
+      }
+
+      $$('[data-row]').forEach((r) => (r.hidden = name !== 'all' && r.dataset.section !== name));
+      if (name === 'all') fit();
+      else {
+        const b = L.rows.find((x) => x.section === name)!;
+        frameCells(L.PANEL.col - 0.1, b.row - 0.35, L.PANEL.col + 1 + b.count + 0.1, b.row + 1.35, 150);
+      }
+    }
+    filterBtns.forEach((b) => b.addEventListener('click', () => applyFilter(b.dataset.filter!)));
+    $('[data-home]').addEventListener('click', (e) => {
+      e.preventDefault();
+      view('cabinet');
+      applyFilter('all');
+    });
+
+    // The first real mouse move after a jump restores hover where the pointer is.
+    addEventListener('pointermove', (e) => {
+      if (!stage.classList.contains('nohover') || dragging) return;
+      stage.classList.remove('nohover');
+      const under = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('.spec');
+      if (under && document.activeElement?.classList.contains('spec') !== true) showTip(under);
+    });
+
+    // ═══ Views ═══
+    const indexEl = $('[data-index]');
+    const indexBtn = $('[data-toggle-index]');
+    function view(name: 'cabinet' | 'index') {
+      document.body.classList.toggle('v-cabinet', name === 'cabinet');
+      document.body.classList.toggle('v-index', name === 'index');
+      indexEl.hidden = name !== 'index';
+      indexBtn.setAttribute('aria-pressed', String(name === 'index'));
+      hideTip();
+    }
+    indexBtn.addEventListener('click', () => view(indexEl.hidden ? 'index' : 'cabinet'));
+    $('[data-skip]').addEventListener('click', (e) => {
+      e.preventDefault();
+      view('index');
+      indexEl.focus();
+    });
+
+    // Index: sortable columns and a plate that follows the cursor.
+    const rowsEl = $('[data-rows]');
+    let sortKey = 'no';
+    let sortDir = 1;
+    $$<HTMLButtonElement>('[data-sort]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const k = b.dataset.sort!;
+        sortDir = k === sortKey ? -sortDir : 1;
+        sortKey = k;
+        const val = (i: number) =>
+          k === 'no' ? i : k === 'year' ? (parseInt(S[i].year) || (S[i].year === 'Current' || S[i].year === 'Open' ? 9999 : 0)) : String(S[i][k as 'title' | 'section' | 'kind']).toLowerCase();
+        const lis = $$<HTMLLIElement>('[data-row]');
+        lis.sort((a, b2) => {
+          const x = val(+a.dataset.row!);
+          const y = val(+b2.dataset.row!);
+          return (x < y ? -1 : x > y ? 1 : 0) * sortDir;
+        });
+        lis.forEach((li) => rowsEl.append(li));
+        $$('[data-sort]').forEach((o) => o.removeAttribute('aria-sort'));
+        b.setAttribute('aria-sort', sortDir > 0 ? 'ascending' : 'descending');
+      }),
+    );
+    const peek = $<HTMLImageElement>('[data-peek]');
+    const peekPos = { x: 0, y: 0 };
+    let peekGoal = { x: 0, y: 0 };
+    indexEl.addEventListener('pointermove', (e) => (peekGoal = { x: e.clientX, y: e.clientY }));
+    $$('.row').forEach((row) => {
+      row.addEventListener('pointerenter', () => {
+        peek.src = `/img/s-${S[Number(row.dataset.i)].slug}.png`;
+        peek.classList.add('on');
+      });
+      row.addEventListener('click', () => open(Number(row.dataset.i)));
+    });
+    indexEl.addEventListener('pointerleave', () => peek.classList.remove('on'));
+    (function peekFrame() {
+      peekPos.x += (peekGoal.x - peekPos.x) * 0.18;
+      peekPos.y += (peekGoal.y - peekPos.y) * 0.18;
+      peek.style.transform = `translate3d(${peekPos.x + 28}px, ${peekPos.y - 110}px, 0)`;
+      requestAnimationFrame(peekFrame);
+    })();
+
+    // ═══ Detail ═══
+    const detail = $('[data-detail]');
+    const dImg = $<HTMLImageElement>('[data-d-img]');
+    const dLink = $<HTMLAnchorElement>('[data-d-link]');
+    let current = -1;
+    let lastFocus: HTMLElement | null = null;
+    let pushed = false;
+
+    function fill(i: number) {
+      const it = S[i];
+      current = i;
+      dImg.src = `/img/s-${it.slug}.png`;
+      dImg.alt = `${it.title}, dithered plate`;
+      $('[data-d-kick]').textContent = `${it.section} ${pad(it.pos)}/${pad(it.count)}`;
+      $('[data-d-count]').textContent = `${pad(i + 1)} / ${pad(S.length)}`;
+      const t = $('[data-d-title]');
+      t.textContent = it.title;
+      if (it.lang) t.setAttribute('lang', it.lang);
+      else t.removeAttribute('lang');
+      $('[data-d-kind]').textContent = it.kind;
+      $('[data-d-year]').textContent = it.year;
+      $('[data-d-medium]').textContent = it.medium;
+      $('[data-d-text]').textContent = it.text;
+      dLink.hidden = !it.href;
+      if (it.href) {
+        dLink.href = it.href;
+        $('[data-d-link-label]').textContent = it.link ?? 'Open';
+      }
+    }
+
+    function open(i: number, from?: HTMLImageElement | null, fromHistory = false) {
+      if (detail.hidden) lastFocus = document.activeElement as HTMLElement;
+      hideTip();
+      fill(i);
+      if (!fromHistory) {
+        if (detail.hidden) {
+          history.pushState({ slug: S[i].slug }, '', `#${S[i].slug}`);
+          pushed = true;
+        } else history.replaceState({ slug: S[i].slug }, '', `#${S[i].slug}`);
+      }
+      const wasHidden = detail.hidden;
+      detail.hidden = false;
+      document.body.classList.add('modal');
+      if (wasHidden) {
+        detail.classList.remove('in');
+        requestAnimationFrame(() => {
+          detail.classList.add('in');
+          // FLIP: grow the plate out of the tile it came from.
+          if (from && !reducedQ.matches) {
+            const a = from.getBoundingClientRect();
+            const b = dImg.getBoundingClientRect();
+            dImg.animate(
+              [
+                { transform: `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width}, ${a.height / b.height})` },
+                { transform: 'none' },
+              ],
+              { duration: 700, easing: 'cubic-bezier(0.2, 0.7, 0.1, 1)' },
+            );
+          }
+        });
+        $<HTMLButtonElement>('[data-close]').focus({ preventScroll: true });
+      }
+    }
+    function hide() {
+      detail.hidden = true;
+      detail.classList.remove('in');
+      document.body.classList.remove('modal');
+      const card = cards.find((c) => Number(c.dataset.i) === current);
+      (document.body.classList.contains('v-index') ? lastFocus : card ?? lastFocus)?.focus({ preventScroll: true });
+    }
+    // Closing walks back through history, so the browser's Back button closes too.
+    function close() {
+      if (pushed) {
+        pushed = false;
+        history.back();
+      } else {
+        history.replaceState(null, '', location.pathname);
+        hide();
+      }
+    }
+    addEventListener('popstate', () => {
+      const i = S.findIndex((s) => `#${s.slug}` === location.hash);
+      if (i >= 0) open(i, null, true);
+      else if (!detail.hidden) {
+        pushed = false;
+        hide();
+      }
+    });
+    const step = (d: number) => {
+      fill((current + d + S.length) % S.length);
+      history.replaceState({ slug: S[current].slug }, '', `#${S[current].slug}`);
+    };
+    $('[data-prev]').addEventListener('click', () => step(-1));
+    $('[data-next]').addEventListener('click', () => step(1));
+    $('[data-close]').addEventListener('click', close);
+    detail.addEventListener('click', (e) => {
+      if (e.target === detail || (e.target as HTMLElement).classList.contains('d-plate')) close();
+    });
+
+    // ═══ Information & shortcuts ═══
+    const info = $('[data-info]');
+    const scrim = $('[data-scrim]');
+    const keys = $('[data-keys]');
+    const openInfo = () => {
+      info.hidden = false;
+      scrim.hidden = false;
+      document.body.classList.add('modal');
+      requestAnimationFrame(() => requestAnimationFrame(() => info.classList.add('in')));
+      $<HTMLButtonElement>('[data-close-info]').focus({ preventScroll: true });
+    };
+    const closeInfo = () => {
+      info.classList.remove('in');
+      info.hidden = true;
+      scrim.hidden = true;
+      document.body.classList.remove('modal');
+    };
+    $('[data-open-info]').addEventListener('click', openInfo);
+    $('[data-close-info]').addEventListener('click', closeInfo);
+    scrim.addEventListener('click', () => (keys.hidden ? closeInfo() : toggleKeys(false)));
+    function toggleKeys(on = keys.hidden) {
+      keys.hidden = !on;
+      scrim.hidden = !on && info.hidden;
+    }
+
+    // ═══ Keyboard ═══
     addEventListener('keydown', (e) => {
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      pos = key === code[pos] ? pos + 1 : key === code[0] ? 1 : 0;
-      if (pos === code.length) {
-        pos = 0;
-        toggle();
+      if (!desktop.matches || e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (!detail.hidden) {
+        if (e.key === 'Escape') close();
+        if (e.key === 'ArrowRight') step(1);
+        if (e.key === 'ArrowLeft') step(-1);
+        return;
+      }
+      // Esc steps back out of whatever is open; with nothing open, it fits.
+      if (e.key === 'Escape') {
+        if (!keys.hidden) toggleKeys(false);
+        else if (!info.hidden) closeInfo();
+        else if (!indexEl.hidden) view('cabinet');
+        else applyFilter('all');
+        return;
+      }
+      if (!info.hidden || !keys.hidden) return;
+      if (e.key === '?') return toggleKeys(true);
+      if (e.key === 'i' || e.key === 'I') return view(indexEl.hidden ? 'index' : 'cabinet');
+      if (!indexEl.hidden) return;
+      if (e.key === '+' || e.key === '=') return zoomBy(1.3);
+      if (e.key === '-' || e.key === '_') return zoomBy(1 / 1.3);
+      if (e.key === '0') return applyFilter('all');
+      if (/^[1-4]$/.test(e.key)) return applyFilter(L.rows[Number(e.key) - 1].section);
+      if (e.key.startsWith('Arrow')) {
+        e.preventDefault();
+        const focused = document.activeElement as HTMLElement;
+        const i = focused?.classList.contains('spec') ? Number(focused.dataset.i) : -1;
+        const next = i < 0 ? 0 : neighbour(i, e.key);
+        if (next !== undefined) cards.find((c) => Number(c.dataset.i) === next)?.focus({ preventScroll: true });
       }
     });
 
-    document.querySelector('.tomato')?.addEventListener('click', (e) => {
-      const el = e.currentTarget as HTMLElement;
-      el.classList.remove('hop');
-      void el.offsetWidth;
-      el.classList.add('hop');
-      taps++;
-      clearTimeout(tapTimer);
-      tapTimer = setTimeout(() => (taps = 0), 1200);
-      if (taps === 5) {
-        taps = 0;
-        toggle();
+    // ═══ Learning by doing ═══
+    // If a visitor sits still, one card lifts and shows its caption (once per
+    // visit); the first key press shows the keys (once, ever). ?nudge replays
+    // the nudge on demand.
+    const store = (kind: 'local' | 'session') => {
+      try {
+        return kind === 'local' ? localStorage : sessionStorage;
+      } catch {
+        return null;
       }
+    };
+    const seen = {
+      has: (k: string) => store(k === 'df-keys' ? 'local' : 'session')?.getItem(k) === '1',
+      mark: (k: string) => {
+        try {
+          store(k === 'df-keys' ? 'local' : 'session')?.setItem(k, '1');
+        } catch {}
+      },
+    };
+    const forceNudge = new URLSearchParams(location.search).has('nudge');
+    let engaged = false;
+    const engage = () => {
+      engaged = true;
+      clearTimeout(nudgeTimer);
+    };
+    stage.addEventListener('wheel', engage, { passive: true });
+    stage.addEventListener('pointerdown', engage);
+    cards.forEach((c) =>
+      c.addEventListener('pointerenter', () => {
+        if (forceNudge) return;
+        engage();
+        seen.mark('df-nudged');
+      }),
+    );
+    const nudgeTimer = window.setTimeout(() => {
+      if ((!forceNudge && (engaged || seen.has('df-nudged'))) || !desktop.matches || document.body.classList.contains('modal') || !indexEl.hidden) return;
+      const el = cards.find((c) => Number(c.dataset.i) === L.rows[1].first)!; // the first project
+      el.classList.add('nudge');
+      seen.mark('df-nudged');
+      setTimeout(() => showTip(el), 450); // caption follows the lift
+      setTimeout(() => {
+        el.classList.remove('nudge');
+        if (hovered === el) hideTip();
+      }, 3400);
+    }, forceNudge ? 2500 : 5000);
+
+    const kchip = $('[data-kchip]');
+    addEventListener('keydown', (e) => {
+      engage();
+      if (!desktop.matches || seen.has('df-keys') || document.body.classList.contains('modal') || !indexEl.hidden) return;
+      if (e.key !== 'Tab' && !e.key.startsWith('Arrow')) return;
+      seen.mark('df-keys');
+      kchip.classList.add('on');
+      setTimeout(() => kchip.classList.remove('on'), 5000);
+    });
+
+    // ═══ Start ═══
+    view('cabinet');
+    applyFilter('all');
+    cam.x = goal.x;
+    cam.y = goal.y;
+    cam.t = goal.t;
+    requestAnimationFrame(frame);
+    let lastW = vw();
+    new ResizeObserver(() => {
+      if (Math.abs(vw() - lastW) < 2 && !desktop.matches) return;
+      lastW = vw();
+      applyFilter(document.body.dataset.filter ?? 'all');
+    }).observe(stage);
+
+    // Deep links: /#moth opens that specimen.
+    const fromHash = S.findIndex((s) => `#${s.slug}` === location.hash);
+    if (fromHash >= 0 && desktop.matches) open(fromHash, null, true);
+
+    // ── ↑↑↓↓←→←→BA ──
+    const toast = $('.toast');
+    const code = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    let k = 0;
+    addEventListener('keydown', (e) => {
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      k = key === code[k] ? k + 1 : key === code[0] ? 1 : 0;
+      if (k < code.length) return;
+      k = 0;
+      const on = root.classList.toggle('famicom');
+      toast.textContent = on ? '▶ Player 1 start' : 'Continue?';
+      toast.classList.remove('show');
+      void toast.offsetWidth;
+      toast.classList.add('show');
     });
   </script>
 </Base>
 
 <style>
-  .page {
-    max-width: calc(var(--measure) + 6rem + 2 * var(--gutter));
-    margin-inline: auto;
-    padding-inline: var(--gutter);
+  :global(body) {
+    height: 100svh;
+    overflow: hidden;
   }
-
-  /* Header */
-  .top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding-block: 1.5rem;
+  :global(body.v-index) {
+    overflow: auto;
   }
-  .seal-link {
-    display: block;
-    line-height: 0;
-  }
-  .seal-link :global(.seal) {
-    transform: rotate(-3deg);
-    transition: transform 0.2s steps(3);
-  }
-  .seal-link:hover :global(.seal) {
-    transform: rotate(0deg);
-  }
-  .menu {
-    display: flex;
-    gap: 1.25rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .menu a {
-    text-decoration: none;
-    color: var(--ink-2);
-  }
-  .menu a:hover {
-    color: var(--accent);
-  }
-
-  /* Hero */
-  .hero {
-    position: relative;
-    padding-block: clamp(3rem, 12vw, 7rem) 2.5rem;
-  }
-  .roles {
-    color: var(--ink-2);
+  .caps {
+    font-size: 0.75rem;
     text-transform: uppercase;
-    margin: 0 0 1.25rem;
+    letter-spacing: 0.1em;
+    line-height: 1.4;
   }
-  .name-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  h1 {
-    font-family: var(--f-display);
-    font-weight: 500;
-    font-size: clamp(3.75rem, 15vw, 7.5rem);
-    line-height: 0.88;
-    letter-spacing: -0.01em;
-    margin: 0;
-  }
-  h1 span {
-    display: block;
-  }
-  h1 span + span {
-    padding-left: 0.6em;
-  }
-  .kana {
-    writing-mode: vertical-rl;
-    color: var(--accent);
-    font-size: 0.95rem;
-    letter-spacing: 0.35em;
-    margin-top: 0.4rem;
-  }
-  .motto {
-    font-family: var(--f-display);
-    font-style: italic;
-    font-size: clamp(1.35rem, 3.5vw, 1.65rem);
-    line-height: 1.3;
-    color: var(--ink-2);
-    max-width: 26ch;
-    margin: 2.25rem 0 0;
-  }
-  .tomato {
+  .sr-only {
     position: absolute;
-    right: 0;
-    bottom: 2.5rem;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  button {
+    font: inherit;
+    color: inherit;
     background: none;
     border: 0;
     padding: 0;
     cursor: pointer;
-    line-height: 0;
+    text-align: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
   }
-  .tomato:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 4px;
-  }
-  .tomato.hop {
-    animation: hop 0.36s steps(4);
-  }
-  @keyframes hop {
-    50% {
-      transform: translateY(-12px);
-    }
-  }
-
-  /* Now bar */
-  .now {
-    margin: 1.5rem 0 0;
-    color: var(--ink-2);
-  }
-  .now-label {
-    color: var(--accent);
-    margin-right: 0.5rem;
-  }
-  .now-item {
-    white-space: nowrap;
-  }
-
-  .about {
-    padding-block: 2.5rem 3.5rem;
-    max-width: var(--measure);
-  }
-  .about p {
-    margin: 0 0 1em;
-  }
-  .about p:first-child {
-    font-size: 1.3rem;
-    line-height: 1.5;
-  }
-
-  /* Entries */
-  .entries {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-width: var(--measure);
-  }
-  .entries li {
-    display: grid;
-    grid-template-columns: 4.5rem 1fr;
-    gap: 1rem;
-    padding-block: 0.9rem;
-  }
-  .entries li + li {
-    border-top: 1px dashed var(--rule);
-  }
-  .entries.compact li {
-    padding-block: 0.45rem;
-  }
-  .entries.compact li + li {
-    border-top: 0;
-  }
-  .when {
-    color: var(--ink-2);
-    padding-top: 0.2rem;
-  }
-  .what,
-  .note {
-    margin: 0;
-  }
-  .what strong {
-    font-weight: 600;
-  }
-  .org {
-    color: var(--ink-2);
-  }
-  .note {
-    color: var(--ink-2);
-    font-size: 1rem;
-    margin-top: 0.2rem;
-  }
-  .tag {
+  kbd {
+    font: inherit;
     font-size: 0.6875rem;
-    color: var(--blue);
-    border: 1px solid currentColor;
-    padding: 0 0.35rem;
-    margin-left: 0.5rem;
-    vertical-align: 0.15em;
-    white-space: nowrap;
+    display: inline-block;
+    min-width: 1.5em;
+    padding: 0.05em 0.35em;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    text-align: center;
+    color: var(--ink);
   }
-  .sub {
-    color: var(--accent);
-    text-transform: uppercase;
-    font-weight: normal;
-    margin: 2.25rem 0 0.5rem;
-  }
-
-  /* JRPG menu cursor on hover */
-  .menu-list li {
-    position: relative;
-  }
-  .menu-list li::before {
-    content: '▶';
-    font-family: var(--f-pixel);
-    font-size: 0.7rem;
-    color: var(--accent);
-    position: absolute;
-    left: -1.35rem;
-    top: 50%;
-    translate: 0 -50%;
-    opacity: 0;
-  }
-  .menu-list li:has(a:hover)::before,
-  .menu-list li:has(a:focus-visible)::before {
-    opacity: 1;
-    animation: blink 0.8s steps(1) infinite;
-  }
-  @keyframes blink {
-    50% {
-      opacity: 0;
-    }
-  }
-
-  .lede {
-    max-width: var(--measure);
-    margin: 0 0 1rem;
-  }
-  .links {
-    list-style: none;
+  p,
+  h2,
+  h3,
+  ol,
+  ul,
+  dl,
+  dd {
     margin: 0;
+  }
+  h2,
+  h3 {
+    font-weight: 400;
+  }
+  ol,
+  ul {
+    list-style: none;
     padding: 0;
   }
-  .links li {
+  button:focus-visible,
+  a:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 1px solid var(--ink);
+    outline-offset: 3px;
+  }
+
+  .skip {
+    position: fixed;
+    top: 0.75rem;
+    left: 50%;
+    translate: -50% -200%;
+    z-index: 60;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 0.5rem 0.8rem;
+  }
+  .skip:focus-visible {
+    translate: -50% 0;
+  }
+
+  /* ── Bar ── */
+  .bar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 20;
     display: grid;
-    grid-template-columns: 4.5rem 1fr;
-    gap: 1rem;
-    padding-block: 0.4rem;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: baseline;
+    gap: 2rem;
+    padding: 1.25rem var(--margin) 1.5rem;
+    background: linear-gradient(var(--bg) 40%, color-mix(in srgb, var(--bg) 0%, transparent));
+    pointer-events: none;
+  }
+  .bar > * {
+    pointer-events: auto;
+    justify-self: start;
+  }
+  .b-filters,
+  .b-right {
+    display: flex;
+    gap: 1.5rem;
     align-items: baseline;
   }
-  .links a {
-    word-break: break-word;
+  .b-right {
+    justify-self: end;
+  }
+  .b-filters button,
+  .b-right button {
+    position: relative;
+    color: var(--ink-2);
+    transition: color 0.2s;
+  }
+  .b-filters button[aria-pressed='true'],
+  .b-right button[aria-pressed='true'] {
+    color: var(--ink);
+  }
+  .b-filters button::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -0.55rem;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--dot);
+    translate: -50% 0;
+    scale: 0;
+    transition: scale 0.35s var(--ease);
+  }
+  .b-filters button[aria-pressed='true']::after {
+    scale: 1;
+  }
+  .b-contact {
+    border-bottom: 1px solid var(--ink);
+  }
+  .b-clock {
+    white-space: nowrap;
+  }
+  .b-clock time {
+    font-variant-numeric: tabular-nums;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .b-filters button:hover,
+    .b-right button:hover {
+      color: var(--ink);
+    }
+    .b-contact:hover {
+      color: var(--dot);
+      border-color: var(--dot);
+    }
   }
 
-  /* Footer */
-  footer {
-    padding-block: 3rem 2.5rem;
+  /* ── Stage & field ── */
+  .stage {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
+    /* a canvas you drag: nothing on it should highlight as text */
+    user-select: none;
+    -webkit-user-select: none;
   }
-  .foot {
+  .stage.grabbing {
+    cursor: grabbing;
+  }
+  :global(body.v-index) .stage,
+  :global(body.v-index) .zoom,
+  :global(body.v-index) .f-hint {
+    visibility: hidden;
+  }
+  .field {
+    --t: 80px;
+    --px: calc(var(--t) * 1.9);
+    --py: calc(var(--t) * 1.95);
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--px));
+    grid-auto-rows: var(--py);
+    will-change: transform;
+  }
+  .cell {
+    display: grid;
+    place-items: center;
+  }
+  .tessera {
+    width: calc(var(--t) * var(--s));
+    aspect-ratio: 1;
+    rotate: var(--r);
+    display: block;
+  }
+
+  /* The emblema: a thin frame around the panel, like the border of a mosaic. */
+  .frame {
+    position: absolute;
+    left: calc(var(--px) * var(--c));
+    top: calc(var(--py) * var(--r));
+    width: calc(var(--px) * var(--w));
+    height: calc(var(--py) * var(--h));
+    border: 1px solid var(--rule);
+    pointer-events: none;
+  }
+
+  .intro {
+    align-self: center;
+    padding-left: calc((var(--px) - var(--t)) / 2);
+    max-width: calc(var(--px) * 5.6);
+    cursor: auto;
+  }
+  .i-name {
+    font-size: calc(var(--t) * 0.3);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .i-name .pixel {
+    font-size: 0.45em;
+    color: var(--ink-2);
+    letter-spacing: 0.05em;
+    vertical-align: 0.4em;
+    margin-left: 0.4em;
+  }
+  .i-line {
+    margin-top: 0.4em;
+    font-size: calc(var(--t) * 0.17);
+    line-height: 1.3;
+    color: var(--ink-2);
+    max-width: 44ch;
+  }
+
+  .label {
+    place-items: center end;
+    align-content: center;
+    gap: 0.2rem;
+    padding-right: calc(var(--t) * 0.2);
+    font-size: clamp(0.5625rem, calc(var(--t) * 0.13), 0.8125rem);
+    letter-spacing: 0.06em;
+    text-align: right;
+    cursor: auto;
+  }
+
+  .spec {
+    position: relative;
+    width: var(--t);
+    aspect-ratio: 4 / 5;
+    transition:
+      scale 0.45s var(--ease),
+      opacity 0.35s var(--ease);
+    z-index: 1;
+    cursor: pointer;
+  }
+  .spec img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    -webkit-user-drag: none;
+  }
+  .spec.dim {
+    opacity: 0.18;
+  }
+  .spec:active {
+    scale: 0.97;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .stage:not(.nohover) .spec:hover {
+      scale: 1.08;
+      z-index: 2;
+    }
+  }
+  .spec:focus-visible {
+    scale: 1.08;
+    z-index: 2;
+  }
+
+  /* Cards develop into view in reading order, once, at load. */
+  @media (prefers-reduced-motion: no-preference) {
+    .spec img {
+      animation: develop 0.8s steps(8) both;
+      animation-delay: calc(0.25s + var(--k) * 45ms);
+    }
+    .intro,
+    .label {
+      animation: arrive 0.7s var(--ease) both 0.1s;
+    }
+  }
+  @keyframes develop {
+    from {
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      clip-path: inset(0);
+    }
+  }
+  @keyframes arrive {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+  /* The nudge: the card is picked up, held long enough to read, put down. */
+  .spec.nudge {
+    z-index: 2;
+    /* on the card, not its image: the image keeps its own reveal animation */
+    animation:
+      lift 3.4s var(--ease) both,
+      lift-shadow 3.4s var(--ease) both;
+  }
+  @keyframes lift {
+    0% {
+      scale: 1;
+      translate: 0 0;
+    }
+    14%,
+    82% {
+      scale: 1.16;
+      translate: 0 -8px;
+    }
+    100% {
+      scale: 1;
+      translate: 0 0;
+    }
+  }
+  @keyframes lift-shadow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 rgb(20 19 18 / 0);
+    }
+    14%,
+    82% {
+      box-shadow: 0 22px 34px -14px rgb(20 19 18 / 0.45);
+    }
+  }
+
+  /* A control's key shows on hover (after a beat, like a native tooltip)
+     and on keyboard focus: the shortcut is learnt at the moment it's useful. */
+  [data-key] {
+    position: relative;
+  }
+  [data-key]::before {
+    content: attr(data-key);
+    position: absolute;
+    top: calc(100% + 0.95rem);
+    left: 50%;
+    translate: -50% -3px;
+    min-width: 1.5em;
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--ink-2);
+    font-size: 0.625rem;
+    letter-spacing: 0.02em;
+    text-align: center;
+    text-transform: none;
+    line-height: 1.4;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.15s ease-out,
+      translate 0.2s var(--ease);
+  }
+  [data-key].key-up::before,
+  .d-arrow[data-key]::before {
+    top: auto;
+    bottom: calc(100% + 0.55rem);
+    translate: -50% 3px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    [data-key]:hover::before {
+      opacity: 1;
+      translate: -50% 0;
+      transition-delay: 0.45s;
+    }
+  }
+  [data-key]:focus-visible::before {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  .kchip {
+    position: fixed;
+    left: 50%;
+    bottom: 4.25rem;
+    z-index: 21;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.5rem 1.5rem;
-    margin-top: 1.25rem;
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0.5rem 0.9rem;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--rule);
+    color: var(--ink-2);
+    translate: -50% 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.3s ease-out,
+      translate 0.4s var(--ease);
+  }
+  .kchip.on {
+    opacity: 1;
+    translate: -50% 0;
+  }
+  .kchip span {
+    display: flex;
+    gap: 0.25rem;
+    align-items: baseline;
+  }
+  .i-keys {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 1.25rem;
+    align-items: baseline;
+  }
+  .i-keys dt {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  /* ── Hover caption ── */
+  .tip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 15;
+    width: 15rem;
+    padding: 0.7rem 0.85rem 0.8rem;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--rule);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+  }
+  .tip.on {
+    opacity: 1;
+    transition-duration: 0.25s;
+  }
+  .t-title {
+    margin: 0.2rem 0 0.1rem;
+    line-height: 1.25;
+  }
+
+  /* ── Footer chrome ── */
+  .foot {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    gap: 2rem;
+    padding: 1.5rem var(--margin) 1.25rem;
+    background: linear-gradient(transparent, var(--bg) 60%);
+    pointer-events: none;
+  }
+  .foot > * {
+    pointer-events: auto;
+  }
+  .f-social {
+    display: flex;
+    gap: 1.5rem;
+  }
+  .f-social a {
+    color: var(--ink);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .f-social a:hover {
+      color: var(--dot);
+    }
+  }
+  .f-hint {
+    text-align: center;
+  }
+  .zoom {
+    grid-column: -2;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .z-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--rule);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
     font-size: 0.95rem;
+    line-height: 1;
+    transition: border-color 0.2s;
+  }
+  .z-btn:active {
+    scale: 0.94;
+  }
+  .z-fit {
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    transition: border-color 0.2s;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .z-btn:hover,
+    .z-fit:hover {
+      border-color: var(--ink);
+    }
+  }
+  .ruler {
+    position: relative;
+    width: min(16rem, 22vw);
+    height: 1.75rem;
+    cursor: ew-resize;
+    touch-action: none;
+  }
+  .ticks {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .ticks i {
+    width: 1px;
+    height: 35%;
+    background: var(--ink);
+    opacity: 0.45;
+  }
+  .ticks i.mid {
+    height: 60%;
+  }
+  .ticks i.major {
+    height: 100%;
+    opacity: 1;
+  }
+  .knob {
+    position: absolute;
+    top: 0.55rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: var(--ink);
+    translate: -50% -50%;
+  }
+  .pct {
+    position: absolute;
+    top: 1.15rem;
+    translate: -50% 0;
+    font-size: 0.625rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .ruler:hover .pct,
+  .ruler:focus-visible .pct,
+  .ruler:active .pct {
+    opacity: 1;
+  }
+
+  /* ── Index ── */
+  .index {
+    position: relative;
+    padding: 4.75rem var(--margin) 6rem;
+    min-height: 100svh;
+    outline: none;
+  }
+  .index[hidden] {
+    display: none;
+  }
+  .i-head,
+  .row {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 2.2fr) minmax(0, 0.9fr) minmax(0, 0.8fr) minmax(0, 1.8fr) 5rem;
+    gap: var(--col-gap);
+    align-items: baseline;
+  }
+  .i-head {
+    position: sticky;
+    top: 3.4rem;
+    z-index: 5;
+    padding-block: 0.75rem 0.6rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--ink);
     color: var(--ink-2);
   }
-  .foot p {
-    margin: 0;
+  .i-head button {
+    text-align: left;
   }
-  .konami {
-    opacity: 0.55;
+  .i-head [aria-sort] {
+    color: var(--ink);
+  }
+  .i-head [aria-sort='ascending']::after {
+    content: ' ↑';
+  }
+  .i-head [aria-sort='descending']::after {
+    content: ' ↓';
+  }
+  .row {
+    width: 100%;
+    padding-block: 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    transition: opacity 0.3s var(--ease);
+  }
+  .index li[hidden] {
+    display: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .index ol:has(.row:hover) .row:not(:hover) {
+      opacity: 0.35;
+    }
+  }
+  .r-year {
+    text-align: right;
+  }
+  .peek {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 11rem;
+    height: auto;
+    image-rendering: pixelated;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s;
+    z-index: 15;
+  }
+  .peek.on {
+    opacity: 1;
   }
 
-  /* Toast */
+  /* ── Detail ── */
+  .detail {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: var(--bg);
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1.25fr) minmax(0, 1fr) 4rem;
+    align-items: center;
+    gap: var(--col-gap);
+    padding: 4.5rem var(--margin) 3.5rem;
+  }
+  .detail[hidden] {
+    display: none;
+  }
+  .d-plate {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    min-height: 0;
+    cursor: zoom-out;
+  }
+  .d-plate img {
+    height: min(100%, 72svh);
+    width: auto;
+    aspect-ratio: 4 / 5;
+    image-rendering: pixelated;
+    transform-origin: top left;
+    cursor: auto;
+  }
+  .d-arrow {
+    width: 3rem;
+    height: 3rem;
+    border: 1px solid var(--rule);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 1.1rem;
+    justify-self: center;
+    transition: border-color 0.2s;
+  }
+  .d-arrow:active {
+    scale: 0.94;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .d-arrow:hover {
+      border-color: var(--ink);
+    }
+  }
+  .d-text {
+    max-width: 28rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    opacity: 0;
+    translate: 0 8px;
+    transition:
+      opacity 0.5s var(--ease) 0.25s,
+      translate 0.5s var(--ease) 0.25s;
+  }
+  .detail.in .d-text {
+    opacity: 1;
+    translate: 0 0;
+  }
+  .d-text h2 {
+    font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+  }
+  .d-text dl {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    row-gap: 0.4rem;
+    padding-block: 0.9rem;
+    border-block: 1px solid var(--rule);
+  }
+  .d-text dt {
+    padding-top: 0.15rem;
+  }
+  .d-body {
+    max-width: 34em;
+  }
+  .d-link[hidden] {
+    display: none;
+  }
+  .d-top {
+    position: absolute;
+    inset: 1.25rem var(--margin) auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .d-top button {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+
+  /* ── Information & shortcuts ── */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+  }
+  .scrim[hidden] {
+    display: none;
+  }
+  .info {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(34rem, 100vw);
+    z-index: 30;
+    overflow: auto;
+    background: var(--bg);
+    border-left: 1px solid var(--rule);
+    padding: 4.5rem 2.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    translate: 100% 0;
+    transition: translate 0.6s var(--ease);
+  }
+  .info[hidden],
+  .keys[hidden] {
+    display: none;
+  }
+  .info.in {
+    translate: 0 0;
+  }
+  .i-close {
+    position: absolute;
+    top: 1.25rem;
+    right: 2.5rem;
+    color: var(--ink-2);
+  }
+  .info h3 {
+    margin-top: 1.5rem;
+  }
+  .i-lead {
+    font-size: 1.5rem;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+  .i-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .keys {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    z-index: 30;
+    width: min(24rem, 90vw);
+    padding: 1.5rem 1.75rem 1.75rem;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.3);
+  }
+  .keys dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.6rem 1.25rem;
+    margin-top: 1rem;
+    align-items: baseline;
+  }
+  .keys dt {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  /* ── Toast ── */
   .toast {
     position: fixed;
     left: 50%;
-    bottom: 1.5rem;
+    bottom: 5rem;
     translate: -50% 0;
     background: var(--ink);
     color: var(--bg);
-    padding: 0.6rem 1rem;
+    padding: 0.55rem 0.9rem;
     opacity: 0;
     pointer-events: none;
+    z-index: 40;
   }
   .toast.show {
-    animation: toast 2.4s steps(1) forwards;
+    animation: toast 2.2s steps(1) forwards;
   }
   @keyframes toast {
     0%,
@@ -469,80 +1792,67 @@ const year = new Date().getFullYear();
     }
   }
 
-  @media (min-width: 760px) {
-    .hero,
-    .now,
-    .about {
-      padding-left: 6rem;
-    }
-    .hero .tomato {
-      right: 1rem;
-    }
-  }
-  @media (max-width: 520px) {
-    .menu {
-      gap: 0.9rem;
-      font-size: 0.75rem;
-    }
-    .now .sep {
+  /* ── Narrow desktops ── */
+  @media (max-width: 1320px) {
+    .b-clock,
+    .f-hint {
       display: none;
     }
-    .now-item {
-      display: block;
+    .foot {
+      grid-template-columns: 1fr auto;
     }
-    .now-label {
-      display: block;
-      margin-bottom: 0.25rem;
+  }
+  @media (max-width: 960px) {
+    .bar {
+      grid-template-columns: 1fr auto;
+      row-gap: 0.6rem;
     }
-    .entries li,
-    .links li {
-      grid-template-columns: 3.25rem 1fr;
-      gap: 0.75rem;
+    .b-filters {
+      grid-row: 2;
+      grid-column: 1 / -1;
     }
-    .menu-list li::before {
+    .i-head,
+    .row {
+      grid-template-columns: 2.5rem minmax(0, 2fr) minmax(0, 1fr) 4.5rem;
+    }
+    .i-head > :nth-child(4),
+    .row > :nth-child(4),
+    .r-medium {
       display: none;
     }
   }
 
-  /* ─── Famicom mode ─── */
-  :global(html.famicom) {
-    --bg: #101010;
-    --bg-2: #1c1c1c;
-    --ink: #fcfcfc;
-    --ink-2: #bcbcbc;
-    --rule: #3c3c3c;
-    --accent: #f83800;
-    --accent-deep: #a81000;
-    --olive: #00a800;
-    --blue: #3cbcfc;
-    --grain-opacity: 0;
-    --f-display: 'DotGothic16', monospace;
-    --f-body: 'DotGothic16', monospace;
+  /* Phones get the Flow instead (components/Flow.astro). */
+  @media (max-width: 760px) {
+    .bar,
+    .stage,
+    .tip,
+    .foot,
+    .index,
+    .detail,
+    .info,
+    .keys,
+    .scrim,
+    .skip,
+    .kchip {
+      display: none !important;
+    }
   }
-  :global(html.famicom body) {
-    font-size: 1rem;
+
+  /* ── ↑↑↓↓←→←→BA ── */
+  :global(html.famicom) {
+    --bg: #000;
+    --ink: #fcfcfc;
+    --ink-2: #a4a4a4;
+    --rule: #333;
+    --f-sans: 'DotGothic16', monospace;
   }
   :global(html.famicom body::after) {
     content: '';
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / 0.28) 2px 3px);
-    z-index: 10;
-  }
-  :global(html.famicom) h1 {
-    font-size: clamp(2.75rem, 11vw, 5.5rem);
-    line-height: 1.05;
-  }
-  :global(html.famicom) .motto {
-    font-style: normal;
-  }
-  :global(html.famicom) .tomato {
-    animation: bob 0.8s steps(2) infinite;
-  }
-  @keyframes bob {
-    50% {
-      transform: translateY(-6px);
-    }
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / 0.3) 2px 3px);
+    z-index: 50;
   }
 </style>

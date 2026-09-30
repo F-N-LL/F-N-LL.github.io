@@ -1,0 +1,580 @@
+---
+// Phone view: the cabinet as a vertical Cover Flow. Native scroll + snap does
+// the physics; a sticky 3D stage inside the scroller draws the cards from the
+// scroll position. When scrolling settles, the centred card dims and its
+// catalogue entry rises over it.
+import { profile } from '../data/site';
+import { specimens, flow, elsewhere } from '../data/cabinet';
+
+const bySlug = new Map(specimens.map((s) => [s.slug, s]));
+const pad = (n: number) => String(n).padStart(2, '0');
+const cards = flow.flatMap(({ section, slugs }) =>
+  slugs.map((slug, i) => ({ ...bySlug.get(slug)!, section, pos: `${pad(i + 1)}/${pad(slugs.length)}` })),
+);
+const starts = flow.map(({ section, slugs }) => ({
+  section,
+  count: slugs.length,
+  index: cards.findIndex((c) => c.section === section),
+}));
+---
+<div class="flow" data-flow>
+  <header class="f-bar caps">
+    <span>Daniel Fenoll</span>
+    <span class="f-where" aria-live="polite">
+      <span class="f-sec"><span data-f-sec>{starts[0].section}</span></span>
+      <span class="f-num"><span data-f-local>01</span> / <span data-f-total>{pad(starts[0].count)}</span></span>
+    </span>
+  </header>
+
+  <div class="f-scroll" data-f-scroll tabindex="0" aria-label="Cabinet, one card per specimen">
+    <div class="f-stage">
+      {cards.map((c, i) => (
+        <article class="card" data-card={i} aria-labelledby={`f-t-${i}`}>
+          <img src={`/img/s-${c.slug}.png`} width="160" height="200" alt="" loading={i < 4 ? 'eager' : 'lazy'} />
+          <div class="depth" aria-hidden="true"></div>
+          <div class="veil" aria-hidden="true"></div>
+          <div class="info">
+            <p class="kick caps">{c.section} <span>{c.pos}</span></p>
+            {i === 0 ? (
+              <div class="body">
+                <p class="kana pixel" lang="ja">{profile.kana}</p>
+                <h2 id={`f-t-${i}`} class="title">{profile.name}</h2>
+                <p class="meta caps">Software engineer & designer · Alicante</p>
+                <p class="text">{profile.statement}</p>
+                <ul class="links">
+                  {elsewhere.map((l) => (
+                    <li><a href={l.href} rel={l.href.startsWith('http') ? 'me noopener' : undefined}>{l.label}</a></li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div class="body">
+                <h2 id={`f-t-${i}`} class="title" lang={c.lang}>{c.title}</h2>
+                <p class="meta caps">{c.kind} · {c.year}</p>
+                <p class="medium">{c.medium}</p>
+                <p class="text">{c.text}</p>
+                {c.href && <a class="cta" href={c.href} rel="noopener">{c.link ?? 'Open'} <span aria-hidden="true">↗</span></a>}
+              </div>
+            )}
+          </div>
+        </article>
+      ))}
+    </div>
+    <div class="f-track" aria-hidden="true">
+      {cards.map(() => <i class="snap" />)}
+    </div>
+  </div>
+
+  <nav class="f-tabs caps" aria-label="Sections">
+    <div class="f-rail" data-f-rail style={`grid-template-columns:${starts.map((s) => `${s.count}fr`).join(' ')}`}>
+      {starts.map((s) => (
+        <button type="button" data-f-jump={s.index} data-f-count={s.count} data-f-section={s.section}>
+          <span class="f-label">{s.section}</span>
+          <span class="f-seg" aria-hidden="true"><i class="f-fill"></i></span>
+        </button>
+      ))}
+      <span class="f-dot" data-f-dot aria-hidden="true"></span>
+    </div>
+  </nav>
+</div>
+
+<script>
+  const phone = matchMedia('(max-width: 760px)');
+  let started = false;
+
+  function start() {
+    if (started || !phone.matches) return;
+    started = true;
+
+    const root = document.querySelector<HTMLElement>('[data-flow]')!;
+    const scroller = root.querySelector<HTMLElement>('[data-f-scroll]')!;
+    const cards = [...root.querySelectorAll<HTMLElement>('[data-card]')];
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-f-jump]')];
+    const rail = root.querySelector<HTMLElement>('[data-f-rail]')!;
+    const dot = root.querySelector<HTMLElement>('[data-f-dot]')!;
+    const fills = tabs.map((t) => t.querySelector<HTMLElement>('.f-fill')!);
+    const segs = tabs.map((t) => t.querySelector<HTMLElement>('.f-seg')!);
+    const secEl = root.querySelector<HTMLElement>('[data-f-sec]')!;
+    const localEl = root.querySelector<HTMLElement>('[data-f-local]')!;
+    const totalEl = root.querySelector<HTMLElement>('[data-f-total]')!;
+    const sections = tabs.map((t) => ({ name: t.dataset.fSection!, start: +t.dataset.fJump!, count: +t.dataset.fCount! }));
+    let segBox: { x: number; w: number }[] = [];
+    let current = -1; // section index
+    let lastAt = 0;
+    let lastT = 0;
+    let relax = 0;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const n = cards.length;
+
+    let step = 1; // scroll distance between two cards, px
+    let ch = 1; // card height, px
+    let active = -1; // card whose info is showing
+    let nearest = -1;
+    let settleTimer = 0;
+
+    const measure = () => {
+      ch = cards[0].offsetHeight;
+      step = Math.round(ch * 0.5);
+      root.style.setProperty('--step', `${step}px`);
+      const r = rail.getBoundingClientRect();
+      segBox = segs.map((sg) => {
+        const b = sg.getBoundingClientRect();
+        return { x: b.left - r.left, w: b.width };
+      });
+      const s0 = segs[0].getBoundingClientRect();
+      dot.style.top = `${s0.top - r.top + s0.height / 2}px`;
+    };
+
+    // Progress rail: every section fills as you move through it, and the dot
+    // rides the leading edge across all four, stretching with scroll speed.
+    function progress(at: number) {
+      // Card k of a section of n reads as k/n: the last card fills it.
+      const c = Math.max(0, Math.min(n - 1, at));
+      const fill = (s: (typeof sections)[number]) => Math.max(0, Math.min(1, (c - s.start + 1) / s.count));
+      let k = 0;
+      sections.forEach((s, j) => {
+        fills[j].style.transform = `scaleX(${fill(s)})`;
+        if (c > s.start - 1) k = j;
+      });
+      const s = sections[k];
+      const p = fill(s);
+      const box = segBox[k];
+      if (box) dot.style.translate = `${box.x + p * box.w}px -50%`;
+
+      const now = performance.now();
+      const v = Math.abs(at - lastAt) / Math.max(1, now - lastT); // cards per ms
+      lastAt = at;
+      lastT = now;
+      dot.style.scale = `${1 + Math.min(v * 90, 2.2)} 1`;
+      clearTimeout(relax);
+      relax = window.setTimeout(() => (dot.style.scale = '1 1'), 90);
+
+      if (k !== current) {
+        const down = k > current;
+        current = k;
+        secEl.textContent = s.name;
+        totalEl.textContent = String(s.count).padStart(2, '0');
+        tabs.forEach((t, j) => t.setAttribute('aria-current', String(j === k)));
+        if (!reduced.matches && lastT > 0)
+          secEl.animate(
+            [
+              { transform: `translateY(${down ? 100 : -100}%)`, opacity: 0 },
+              { transform: 'none', opacity: 1 },
+            ],
+            { duration: 420, easing: 'cubic-bezier(0.2, 0.7, 0.1, 1)' },
+          );
+      }
+      return s;
+    }
+
+    // Cover Flow, turned on its side. d is a card's distance from centre, in cards.
+    function draw() {
+      const at = scroller.scrollTop / step;
+      for (let i = 0; i < n; i++) {
+        const d = i - at;
+        const el = cards[i];
+        const far = Math.abs(d);
+        if (far > 4.5) {
+          el.style.visibility = 'hidden';
+          continue;
+        }
+        el.style.visibility = '';
+        const a = Math.max(-1, Math.min(1, d)); // the turn happens within one card of centre
+        const rest = d - a; // beyond that, cards stack like a deck
+        let t: string;
+        if (reduced.matches) {
+          t = `translate3d(0, ${d * ch * 1.08}px, 0)`;
+        } else {
+          const y = a * ch * 0.6 + rest * ch * 0.12;
+          const z = -Math.abs(a) * ch * 1.05 - Math.abs(rest) * ch * 0.1;
+          t = `translate3d(0, ${y}px, ${z}px) rotateX(${a * 58}deg)`;
+        }
+        el.style.transform = t;
+        el.style.zIndex = String(100 - Math.round(far * 10));
+        el.style.setProperty('--dim', String(Math.min(far, 3) * 0.2));
+      }
+      const s = progress(at);
+      const i = Math.max(0, Math.min(n - 1, Math.round(at)));
+      if (i !== nearest) {
+        nearest = i;
+        localEl.textContent = String(Math.max(1, Math.min(s.count, i - s.start + 1))).padStart(2, '0');
+      }
+    }
+
+    function open(i: number) {
+      if (active === i) return;
+      close();
+      active = i;
+      cards[i].classList.add('open');
+    }
+    function close() {
+      if (active < 0) return;
+      cards[active].classList.remove('open');
+      active = -1;
+    }
+
+    // Settled = the scroller has stopped on a snap point.
+    function settle() {
+      const i = Math.round(scroller.scrollTop / step);
+      if (Math.abs(scroller.scrollTop - i * step) > 2) return; // snap still travelling
+      open(Math.max(0, Math.min(n - 1, i)));
+    }
+
+    let raf = 0;
+    scroller.addEventListener(
+      'scroll',
+      () => {
+        if (active >= 0 && Math.abs(scroller.scrollTop - active * step) > 6) close();
+        if (!raf) raf = requestAnimationFrame(() => ((raf = 0), draw()));
+        clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(settle, 160);
+      },
+      { passive: true },
+    );
+    scroller.addEventListener('scrollend', settle);
+
+    // Tap: a neighbour comes to centre; the centred card toggles its entry.
+    cards.forEach((el, i) =>
+      el.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('a')) return;
+        if (i !== nearest) scroller.scrollTo({ top: i * step, behavior: reduced.matches ? 'auto' : 'smooth' });
+        else if (active === i) close();
+        else open(i);
+      }),
+    );
+    tabs.forEach((t) =>
+      t.addEventListener('click', () =>
+        scroller.scrollTo({ top: Number(t.dataset.fJump) * step, behavior: reduced.matches ? 'auto' : 'smooth' }),
+      ),
+    );
+
+    const relayout = () => {
+      const i = nearest;
+      measure();
+      scroller.scrollTop = i * step;
+      draw();
+    };
+    new ResizeObserver(relayout).observe(scroller);
+    reduced.addEventListener('change', draw);
+
+    measure();
+    draw();
+    requestAnimationFrame(() => open(0));
+  }
+
+  start();
+  phone.addEventListener('change', start);
+</script>
+
+<style>
+  .flow {
+    display: none;
+  }
+
+  @media (max-width: 760px) {
+    .flow {
+      --cw: min(78vw, 44svh, 340px);
+      --ch: calc(var(--cw) * 1.25);
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: var(--bg);
+    }
+
+    .caps {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      line-height: 1.4;
+    }
+
+    /* Header and tab bar float over the flow, clear of notch and home bar. */
+    .f-bar,
+    .f-tabs {
+      position: absolute;
+      left: 0;
+      right: 0;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      padding-inline: calc(var(--margin) + env(safe-area-inset-left, 0px));
+      pointer-events: none;
+    }
+    .f-bar {
+      top: 0;
+      padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+      padding-bottom: 1.25rem;
+      background: linear-gradient(var(--bg) 55%, transparent);
+    }
+    .f-where {
+      display: flex;
+      gap: 0.9rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .f-sec {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: bottom;
+    }
+    .f-sec span {
+      display: inline-block;
+    }
+    .f-num {
+      color: var(--ink-2);
+    }
+    .f-num span:first-child {
+      color: var(--ink);
+    }
+    .f-tabs {
+      bottom: 0;
+      padding-top: 1.5rem;
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+      background: linear-gradient(transparent, var(--bg) 45%);
+    }
+    .f-tabs {
+      display: block;
+    }
+    .f-rail {
+      position: relative;
+      display: grid;
+      column-gap: 10px;
+    }
+    .f-tabs button {
+      font: inherit;
+      letter-spacing: 0.08em;
+      text-transform: inherit;
+      text-align: left;
+      background: none;
+      border: 0;
+      cursor: pointer;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      padding: 0.5rem 0 0.4rem;
+      color: var(--ink-2);
+      transition: color 0.25s var(--ease);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
+    }
+    .f-tabs button[aria-current='true'] {
+      color: var(--ink);
+    }
+    .f-tabs button:active .f-label {
+      opacity: 0.55;
+    }
+    .f-seg {
+      position: relative;
+      display: block;
+      height: 2px;
+      background: var(--rule);
+      overflow: hidden;
+    }
+    .f-fill {
+      position: absolute;
+      inset: 0;
+      background: var(--ink);
+      transform-origin: left center;
+      transform: scaleX(0);
+    }
+    .f-dot {
+      position: absolute;
+      left: -4px;
+      width: 8px;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--dot);
+      box-shadow: 0 0 0 3px var(--bg);
+      translate: 0 -50%;
+      transition: scale 0.28s var(--ease);
+      pointer-events: none;
+    }
+
+    /* The scroller owns the physics; its snap points are invisible. */
+    .f-scroll {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior: contain;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      outline: none;
+    }
+    .f-scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .f-track {
+      padding-block: calc((100dvh - var(--step, 200px)) / 2);
+    }
+    .snap {
+      display: block;
+      height: var(--step, 200px);
+      scroll-snap-align: center;
+    }
+
+    /* The stage rides along with the scroll and holds every card at centre. */
+    .f-stage {
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+      margin-bottom: -100dvh;
+      perspective: 900px;
+      perspective-origin: 50% 48%;
+      transform-style: preserve-3d;
+    }
+
+    .card {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: var(--cw);
+      height: var(--ch);
+      margin: calc(var(--ch) / -2) 0 0 calc(var(--cw) / -2);
+      backface-visibility: hidden;
+      will-change: transform;
+      box-shadow: 0 24px 40px -24px rgb(20 19 18 / 0.45);
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .card img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      pointer-events: none;
+    }
+
+    /* Distance from centre darkens a card; it reads as depth, not decoration. */
+    .depth {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      opacity: var(--dim, 0);
+      pointer-events: none;
+    }
+
+    /* Settled: the plate dims and the entry rises over it. */
+    .veil {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgb(26 25 23 / 0.55), rgb(26 25 23 / 0.9) 55%);
+      opacity: 0;
+      transition: opacity 0.14s ease-out;
+    }
+    .info {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1rem 1.1rem 1.15rem;
+      color: #efe8da;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .info > * {
+      opacity: 0;
+      translate: 0 10px;
+      transition:
+        opacity 0.12s ease-out,
+        translate 0.12s ease-out;
+    }
+    .card.open .veil {
+      opacity: 1;
+      transition-duration: 0.32s;
+    }
+    .card.open .info {
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .card.open .info > * {
+      opacity: 1;
+      translate: 0 0;
+      transition-duration: 0.45s;
+      transition-timing-function: var(--ease);
+    }
+    .card.open .info > :nth-child(2) {
+      transition-delay: 0.06s;
+    }
+
+    .kick {
+      display: flex;
+      justify-content: space-between;
+      color: rgb(239 232 218 / 0.7);
+    }
+    .body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .title {
+      font-size: clamp(1.3rem, 6.2vw, 1.6rem);
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.15rem;
+      text-wrap: balance;
+    }
+    .kana {
+      margin: 0;
+      font-size: 0.75rem;
+      color: rgb(239 232 218 / 0.7);
+    }
+    .meta,
+    .medium {
+      margin: 0;
+      color: rgb(239 232 218 / 0.7);
+    }
+    .medium {
+      font-size: 0.8125rem;
+      line-height: 1.35;
+    }
+    .text {
+      margin: 0.25rem 0 0;
+      font-size: 0.875rem;
+      line-height: 1.42;
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .cta,
+    .links a {
+      color: inherit;
+      font-size: 0.875rem;
+      text-decoration: underline;
+      text-decoration-color: rgb(239 232 218 / 0.45);
+      text-underline-offset: 0.2em;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .cta {
+      align-self: flex-start;
+      margin-top: 0.35rem;
+      padding: 0.35rem 0;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.2rem 1.1rem;
+      list-style: none;
+      margin: 0.35rem 0 0;
+      padding: 0;
+    }
+    .links a {
+      display: inline-block;
+      padding: 0.35rem 0;
+    }
+    .cta:active,
+    .links a:active {
+      opacity: 0.6;
+    }
+  }
+</style>

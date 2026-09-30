@@ -2,13 +2,15 @@
 
 export const profile = {
   name: 'Daniel Fenoll',
-  kana: 'ダニエル',
+  kana: 'ダニエル・フェノル',
   roles: ['Software engineer', 'Designer', 'AI enjoyer', 'Gardener'],
   location: 'Alicante, Spain',
   motto: 'The pursuit of excellence does not need justification.',
+  statement:
+    'Software engineer and designer in Alicante, Spain. Building cloud systems at TUI, small tools for the machines on the desk, and a vegetable garden on the terrace.',
   about: [
     'I’m a software engineer from Alicante. I build cloud and backend systems on AWS at TUI, and I design the interfaces I’d want to use myself.',
-    'I like clean systems, good type and slow craft: a C server written from scratch, a servo arm that follows you around the room, a trackpad that finally feels right. When the terminal lets me go, I’m in the huerta with the tomatoes.',
+    'I like clean systems, good type and slow craft: a C server written from scratch, a servo that turns to follow your hand, a trackpad that finally feels right. When the terminal lets me go, I’m in the huerta with the tomatoes.',
   ],
   now: ['Shipping on AWS at TUI', 'Tending the huerta', 'Pair-programming with Claude'],
 };
@@ -45,6 +47,7 @@ export const projects = [
     name: 'trackpad-curve',
     year: '2026',
     lang: 'C',
+    medium: 'C, libinput adapter, Niri',
     href: 'https://github.com/F-N-LL/trackpad-curve',
     note: 'Speed-dependent cursor and two-finger scroll curves for Niri touchpads.',
   },
@@ -52,13 +55,15 @@ export const projects = [
     name: 'haskarm',
     year: '2025',
     lang: 'Nix · CV',
+    medium: 'Haskell, OpenCV, ESP32-CAM, servo',
     href: 'https://github.com/F-N-LL/haskarm',
-    note: 'Computer vision tracks a target and a servo arm points at it.',
+    note: 'A camera finds your hand; a servo turns to follow it.',
   },
   {
     name: 'dino_ML',
     year: '2024',
     lang: 'Python',
+    medium: 'Python, machine learning',
     href: 'https://github.com/F-N-LL/dino_ML',
     note: 'The Chrome dino runner, rebuilt with ML layers to crack the high score.',
   },
@@ -66,6 +71,7 @@ export const projects = [
     name: 'HTTPServer_C',
     year: '2024',
     lang: 'C',
+    medium: 'C, sockets, HTTP/1.1',
     href: 'https://github.com/F-N-LL/HTTPServer_C',
     note: 'An HTTP server written from scratch in C: sockets, parsing, responses.',
   },

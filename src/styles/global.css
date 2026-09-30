@@ -1,55 +1,37 @@
-/* Palette: Pompeii. Pompeian red is the only accent. */
+/* Gallery wall. The UI stays monochrome; colour lives in the plates. */
 :root {
   color-scheme: light;
-  --bg: #ece3d3;          /* limestone */
-  --bg-2: #e2d6c0;        /* fresco cream */
-  --ink: #2b2926;         /* volcanic charcoal */
-  --ink-2: #5e574d;
-  --rule: #c9b391;        /* sand */
-  --accent: #9e3f32;      /* pompeian red */
-  --accent-deep: #7a2e24;
-  --ochre: #a8722c;       /* roman ochre, darkened for text */
-  --olive: #626044;       /* olive bronze */
-  --blue: #58787a;        /* faded egyptian blue */
-  --grain-opacity: 0.45;
+  --bg: #f4f3ef;
+  --ink: #141413;
+  --ink-2: #6f6c66; /* 4.7:1 on --bg */
+  --rule: #d9d5cc;
+  --dot: #9e3f32; /* pompeian red, used only for the "current" dot */
 
-  --f-display: 'Cormorant Garamond', 'Times New Roman', serif;
-  --f-body: 'Newsreader Variable', Georgia, serif;
+  --f-sans: 'Geist Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --f-pixel: 'DotGothic16', ui-monospace, monospace;
 
-  --measure: 40rem;
-  --gutter: 16px;
+  --margin: clamp(16px, 2.5vw, 40px);
+  --col-gap: clamp(12px, 1.6vw, 24px);
+  --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #1f1d1b;
-    --bg-2: #292623;
-    --ink: #e8dcc6;
-    --ink-2: #a79c8a;
-    --rule: #4a4339;
-    --accent: #cf6a58;
-    --accent-deep: #9e3f32;
-    --ochre: #d29a4e;
-    --olive: #8a8a5e;
-    --blue: #7fa0a2;
-    --grain-opacity: 0.25;
+    --bg: #121211;
+    --ink: #ecebe6;
+    --ink-2: #8b8881;
+    --rule: #2c2b29;
+    --dot: #d0614f;
   }
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #1f1d1b;
-  --bg-2: #292623;
-  --ink: #e8dcc6;
-  --ink-2: #a79c8a;
-  --rule: #4a4339;
-  --accent: #cf6a58;
-  --accent-deep: #9e3f32;
-  --ochre: #d29a4e;
-  --olive: #8a8a5e;
-  --blue: #7fa0a2;
-  --grain-opacity: 0.25;
+  --bg: #121211;
+  --ink: #ecebe6;
+  --ink-2: #8b8881;
+  --rule: #2c2b29;
+  --dot: #d0614f;
 }
 
 *,
@@ -60,69 +42,68 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--f-body);
-  font-size: 1.125rem;
-  line-height: 1.6;
-  font-optical-sizing: auto;
-}
-
-/* Plaster grain */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .3 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  font-family: var(--f-sans);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  font-feature-settings: 'ss01', 'tnum';
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: var(--accent);
+  background: var(--ink);
   color: var(--bg);
 }
 
 a {
   color: inherit;
-  text-decoration-line: underline;
-  text-decoration-color: var(--rule);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-  transition: color 0.15s, text-decoration-color 0.15s;
+  text-decoration: none;
 }
-a:hover {
-  color: var(--accent);
-  text-decoration-color: currentColor;
+
+/* Underline that draws in from the left */
+.ul {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 100% / 0 1px;
+  transition: background-size 0.45s var(--ease);
+  padding-bottom: 1px;
 }
+a:focus-visible .ul,
+a.ul:focus-visible {
+  background-size: 100% 1px;
+}
+@media (hover: hover) and (pointer: fine) {
+  a:hover .ul,
+  a.ul:hover {
+    background-size: 100% 1px;
+  }
+}
+
 a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  outline: 1px solid var(--ink);
+  outline-offset: 4px;
+}
+
+.muted {
+  color: var(--ink-2);
 }
 
 .pixel {
   font-family: var(--f-pixel);
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-  line-height: 1.5;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *,
   *::before,
   *::after {
