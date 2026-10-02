@@ -60,13 +60,10 @@ const starts = flow.map(({ section, slugs }) => ({
         </article>
       ))}
     </div>
-    <div class="f-track" aria-hidden="true">
-      {cards.map(() => <i class="snap" />)}
-    </div>
   </div>
 
   <nav class="f-tabs caps" aria-label="Sections">
-    <div class="f-rail" data-f-rail style={`grid-template-columns:${starts.map((s) => `${s.count}fr`).join(' ')}`}>
+    <div class="f-rail" data-f-rail>
       {starts.map((s) => (
         <button type="button" data-f-jump={s.index} data-f-count={s.count} data-f-section={s.section}>
           <span class="f-label">{s.section}</span>
@@ -110,7 +107,7 @@ const starts = flow.map(({ section, slugs }) => ({
     let ch = 1; // card height, px
     let active = -1; // card whose info is showing
     let nearest = -1;
-    let settleTimer = 0;
+    let pos = 0; // position along the flow, px (step px per card)
 
     const measure = () => {
       ch = cards[0].offsetHeight;
@@ -169,7 +166,7 @@ const starts = flow.map(({ section, slugs }) => ({
 
     // Cover Flow, turned on its side. d is a card's distance from centre, in cards.
     function draw() {
-      const at = scroller.scrollTop / step;
+      const at = pos / step;
       for (let i = 0; i < n; i++) {
         const d = i - at;
         const el = cards[i];
@@ -213,45 +210,182 @@ const starts = flow.map(({ section, slugs }) => ({
       active = -1;
     }
 
-    // Settled = the scroller has stopped on a snap point.
+    let drawRaf = 0;
+    const schedule = () => {
+      if (!drawRaf) drawRaf = requestAnimationFrame(() => ((drawRaf = 0), draw()));
+    };
+
+    // Settled = resting exactly on a card.
     function settle() {
-      const i = Math.round(scroller.scrollTop / step);
-      if (Math.abs(scroller.scrollTop - i * step) > 2) return; // snap still travelling
+      const i = Math.round(pos / step);
+      if (Math.abs(pos - i * step) > 2) return;
       open(Math.max(0, Math.min(n - 1, i)));
     }
 
-    let raf = 0;
+    // ── Motion: a spring that starts from wherever the flow is now, carrying
+    // the finger's velocity, so the hand-off from drag to animation has no seam
+    // and the flow can be caught again mid-flight.
+    const RESPONSE = 0.42; // s
+    const DAMPING = 0.9; // just under critical: a flick lands with the faintest give
+    let spring: { target: number; v: number } | null = null;
+    let springRaf = 0;
+    let springLast = 0;
+    function stopSpring() {
+      spring = null;
+      cancelAnimationFrame(springRaf);
+      springRaf = 0;
+    }
+    function tick(now: number) {
+      springRaf = 0;
+      if (!spring) return;
+      let dt = Math.min(0.064, (now - springLast) / 1000);
+      springLast = now;
+      const k = (2 * Math.PI / RESPONSE) ** 2;
+      const c = (4 * Math.PI * DAMPING) / RESPONSE;
+      while (dt > 0) {
+        const h = Math.min(dt, 1 / 240);
+        spring.v += (-k * (pos - spring.target) - c * spring.v) * h;
+        pos += spring.v * h;
+        dt -= h;
+      }
+      if (Math.abs(pos - spring.target) < 0.3 && Math.abs(spring.v) < 8) {
+        pos = spring.target;
+        spring = null;
+        draw();
+        settle();
+        return;
+      }
+      draw();
+      springRaf = requestAnimationFrame(tick);
+    }
+    function goTo(i: number, v = 0) {
+      i = Math.max(0, Math.min(n - 1, i));
+      if (i !== active) close();
+      if (reduced.matches) {
+        stopSpring();
+        pos = i * step;
+        draw();
+        settle();
+        return;
+      }
+      spring = { target: i * step, v };
+      if (!springRaf) {
+        springLast = performance.now();
+        springRaf = requestAnimationFrame(tick);
+      }
+    }
+
+    // ── Gesture: one card per swipe; only a hard flick travels further.
+    // The flow follows the finger 1:1. On release, Apple's momentum projection
+    // says where the swipe was heading; that is limited to the neighbouring
+    // card unless the flick was genuinely strong.
+    const rubber = (over: number, dim: number) => (over * dim * 0.55) / (dim + 0.55 * over);
+    let drag: { y0: number; p0: number; base: number; moved: boolean; trail: { y: number; t: number }[] } | null = null;
+    let swallowClick = false;
+    scroller.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      stopSpring();
+      drag = { y0: e.clientY, p0: pos, base: Math.round(pos / step), moved: false, trail: [{ y: e.clientY, t: e.timeStamp }] };
+    });
+    scroller.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dy = e.clientY - drag.y0;
+      if (!drag.moved) {
+        if (Math.abs(dy) < 8) return; // a tap, until it clearly isn't
+        drag.moved = true;
+        swallowClick = true;
+        scroller.setPointerCapture(e.pointerId);
+        close();
+      }
+      drag.trail.push({ y: e.clientY, t: e.timeStamp });
+      if (drag.trail.length > 6) drag.trail.shift();
+      const max = (n - 1) * step;
+      let p = drag.p0 - dy;
+      if (p < 0) p = -rubber(-p, ch);
+      else if (p > max) p = max + rubber(p - max, ch);
+      pos = p;
+      schedule();
+    });
+    const release = (e: PointerEvent) => {
+      const d = drag;
+      drag = null;
+      if (!d) return;
+      if (!d.moved) {
+        // a still touch that caught a moving flow: let it finish where it was going
+        if (Math.abs(pos - Math.round(pos / step) * step) > 1) goTo(Math.round(pos / step));
+        return;
+      }
+      setTimeout(() => (swallowClick = false));
+      const a = d.trail[0];
+      const b = d.trail[d.trail.length - 1];
+      let v = (-(b.y - a.y) / Math.max(1, b.t - a.t)) * 1000; // px/s along the flow
+      if (e.timeStamp - b.t > 90) v = 0; // the finger stopped before lifting
+      const projected = pos + ((v / 1000) * 0.99) / (1 - 0.99);
+      const strong = Math.abs(v) > 2200;
+      const reach = strong ? Math.min(4, Math.round(Math.abs(v) / 1400)) : 1;
+      let target = Math.max(d.base - reach, Math.min(d.base + reach, Math.round(projected / step)));
+      // A short, deliberate swipe still turns the card.
+      if (target === d.base) {
+        const moved = pos - d.base * step;
+        if (Math.abs(v) > 260) target = d.base + Math.sign(v);
+        else if (Math.abs(moved) > step * 0.2) target = d.base + Math.sign(moved);
+      }
+      goTo(target, v);
+    };
+    scroller.addEventListener('pointerup', release);
+    scroller.addEventListener('pointercancel', release);
     scroller.addEventListener(
-      'scroll',
-      () => {
-        if (active >= 0 && Math.abs(scroller.scrollTop - active * step) > 6) close();
-        if (!raf) raf = requestAnimationFrame(() => ((raf = 0), draw()));
-        clearTimeout(settleTimer);
-        settleTimer = window.setTimeout(settle, 160);
+      'click',
+      (e) => {
+        if (!swallowClick) return;
+        e.stopPropagation();
+        e.preventDefault();
+        swallowClick = false;
       },
-      { passive: true },
+      true,
     );
-    scroller.addEventListener('scrollend', settle);
+
+    // Wheel and keys (a mouse on a narrow window): one card per intent.
+    // Count from where the flow is heading, so quick repeats add up.
+    const heading = () => Math.round((spring ? spring.target : pos) / step);
+    let wheelAcc = 0;
+    let wheelLock = 0;
+    scroller.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        wheelAcc += e.deltaY;
+        if (Math.abs(wheelAcc) < 30 || e.timeStamp < wheelLock) return;
+        goTo(heading() + Math.sign(wheelAcc));
+        wheelAcc = 0;
+        wheelLock = e.timeStamp + 350;
+      },
+      { passive: false },
+    );
+    scroller.addEventListener('keydown', (e) => {
+      const here = heading();
+      const to = { ArrowDown: here + 1, PageDown: here + 1, ArrowUp: here - 1, PageUp: here - 1, Home: 0, End: n - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      goTo(to);
+    });
 
     // Tap: a neighbour comes to centre; the centred card toggles its entry.
     cards.forEach((el, i) =>
       el.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).closest('a')) return;
-        if (i !== nearest) scroller.scrollTo({ top: i * step, behavior: reduced.matches ? 'auto' : 'smooth' });
+        if (i !== nearest) goTo(i);
         else if (active === i) close();
         else open(i);
       }),
     );
-    tabs.forEach((t) =>
-      t.addEventListener('click', () =>
-        scroller.scrollTo({ top: Number(t.dataset.fJump) * step, behavior: reduced.matches ? 'auto' : 'smooth' }),
-      ),
-    );
+    tabs.forEach((t) => t.addEventListener('click', () => goTo(Number(t.dataset.fJump))));
 
     const relayout = () => {
-      const i = nearest;
+      const i = Math.max(0, nearest);
+      stopSpring();
       measure();
-      scroller.scrollTop = i * step;
+      pos = i * step;
       draw();
     };
     new ResizeObserver(relayout).observe(scroller);
@@ -338,33 +472,62 @@ const starts = flow.map(({ section, slugs }) => ({
     .f-rail {
       position: relative;
       display: grid;
-      column-gap: 10px;
+      /* auto tracks share the spare width, so the pills meet and the rail
+         under them reads as one line with hairline breaks */
+      grid-template-columns: repeat(4, auto);
+      column-gap: 6px;
     }
+    /* Sections are pills: the shape a phone reads as "tap me". The current
+       one is solid; every pill answers the finger the moment it lands. */
     .f-tabs button {
       font: inherit;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: inherit;
-      text-align: left;
       background: none;
       border: 0;
       cursor: pointer;
       pointer-events: auto;
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
-      padding: 0.5rem 0 0.4rem;
+      align-items: stretch;
+      gap: 0.55rem;
+      padding: 0.35rem 0 0.4rem; /* with the pill, a 44px-tall target */
       color: var(--ink-2);
-      transition: color 0.25s var(--ease);
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
       white-space: nowrap;
     }
-    .f-tabs button[aria-current='true'] {
-      color: var(--ink);
+    .f-label {
+      display: block;
+      padding: 0.42rem 0.7rem 0.38rem;
+      border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+      border-radius: 999px;
+      text-align: center;
+      transition:
+        background-color 0.25s var(--ease),
+        border-color 0.25s var(--ease),
+        color 0.25s var(--ease),
+        scale 0.12s ease-out;
+    }
+    .f-tabs button[aria-current='true'] .f-label {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--bg);
     }
     .f-tabs button:active .f-label {
-      opacity: 0.55;
+      scale: 0.95;
+      background: color-mix(in srgb, var(--ink) 10%, transparent);
+    }
+    .f-tabs button[aria-current='true']:active .f-label {
+      background: var(--ink);
+    }
+    .f-tabs button:focus-visible {
+      outline: none;
+    }
+    .f-tabs button:focus-visible .f-label {
+      outline: 1px solid var(--ink);
+      outline-offset: 3px;
     }
     .f-seg {
       position: relative;
@@ -394,34 +557,20 @@ const starts = flow.map(({ section, slugs }) => ({
     }
 
     /* The scroller owns the physics; its snap points are invisible. */
+    /* The flow owns the vertical gesture (see the script); nothing scrolls natively. */
     .f-scroll {
       position: absolute;
       inset: 0;
-      overflow-y: auto;
-      overflow-x: hidden;
-      overscroll-behavior: contain;
-      scroll-snap-type: y mandatory;
-      scrollbar-width: none;
+      overflow: hidden;
+      touch-action: none;
+      overscroll-behavior: none;
       outline: none;
-    }
-    .f-scroll::-webkit-scrollbar {
-      display: none;
-    }
-    .f-track {
-      padding-block: calc((100dvh - var(--step, 200px)) / 2);
-    }
-    .snap {
-      display: block;
-      height: var(--step, 200px);
-      scroll-snap-align: center;
     }
 
     /* The stage rides along with the scroll and holds every card at centre. */
     .f-stage {
-      position: sticky;
-      top: 0;
-      height: 100dvh;
-      margin-bottom: -100dvh;
+      position: absolute;
+      inset: 0;
       perspective: 900px;
       perspective-origin: 50% 48%;
       transform-style: preserve-3d;
