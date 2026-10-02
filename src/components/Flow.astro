@@ -33,10 +33,6 @@ const starts = flow.map(({ section, slugs }) => ({
           <img src={`/img/s-${c.slug}.png`} width="160" height="200" alt="" loading={i < 4 ? 'eager' : 'lazy'} />
           <div class="depth" aria-hidden="true"></div>
           <div class="veil" aria-hidden="true"></div>
-          <span class="tag" aria-hidden="true">
-            <span class="tag-t" lang={i === 0 ? undefined : c.lang}>{i === 0 ? profile.name : c.title}</span>
-            <span class="tag-plus">+</span>
-          </span>
           <div class="info">
             <p class="kick caps">{c.section} <span>{c.pos}</span></p>
             {i === 0 ? (
@@ -116,7 +112,7 @@ const starts = flow.map(({ section, slugs }) => ({
     let relax = 0;
     let scrubbing = false;
     const bubble = root.querySelector<HTMLElement>('[data-f-bubble]')!;
-    const titles = cards.map((c) => c.querySelector('.tag-t')?.textContent ?? '');
+    const titles = cards.map((c) => c.querySelector('.title')?.textContent ?? '');
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const n = cards.length;
 
@@ -237,8 +233,8 @@ const starts = flow.map(({ section, slugs }) => ({
       cards[active].classList.remove('open');
       active = -1;
     }
-    // Resting: the card the flow stopped on shows its plate clean, with a
-    // small label that says it opens. The entry itself waits for a tap.
+    // Resting: the card the flow stopped on shows its plate clean; its entry
+    // rises after a beat (see settle).
     let rested = -1;
     function rest(i: number) {
       if (rested === i) return;
@@ -801,58 +797,6 @@ const starts = flow.map(({ section, slugs }) => ({
       background: var(--bg);
       opacity: var(--dim, 0);
       pointer-events: none;
-    }
-
-    /* Resting: a label in the corner, the plate left clean. */
-    .tag {
-      position: absolute;
-      left: 0.7rem;
-      bottom: 0.7rem;
-      max-width: calc(100% - 1.4rem);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.36rem 0.4rem 0.36rem 0.75rem;
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--bg) 90%, transparent);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      color: var(--ink);
-      font-size: 0.8125rem;
-      line-height: 1.2;
-      box-shadow: 0 6px 16px -10px rgb(20 19 18 / 0.5);
-      opacity: 0;
-      translate: 0 6px;
-      transition:
-        opacity 0.12s ease-out,
-        translate 0.12s ease-out;
-      pointer-events: none;
-    }
-    .tag-t {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .tag-plus {
-      flex: none;
-      display: grid;
-      place-items: center;
-      width: 1.2rem;
-      height: 1.2rem;
-      border-radius: 50%;
-      background: var(--ink);
-      color: var(--bg);
-      font-size: 0.875rem;
-      line-height: 1;
-    }
-    .card.rest:not(.open) .tag {
-      opacity: 1;
-      translate: 0 0;
-      transition-duration: 0.35s;
-      transition-timing-function: var(--ease);
-    }
-    .card:active .tag-plus {
-      scale: 0.9;
     }
 
     /* Peek: while a finger holds an open card, the plate shows clean. */
