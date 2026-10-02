@@ -33,6 +33,10 @@ const starts = flow.map(({ section, slugs }) => ({
           <img src={`/img/s-${c.slug}.png`} width="160" height="200" alt="" loading={i < 4 ? 'eager' : 'lazy'} />
           <div class="depth" aria-hidden="true"></div>
           <div class="veil" aria-hidden="true"></div>
+          <span class="tag" aria-hidden="true">
+            <span class="tag-t" lang={i === 0 ? undefined : c.lang}>{i === 0 ? profile.name : c.title}</span>
+            <span class="tag-plus">+</span>
+          </span>
           <div class="info">
             <p class="kick caps">{c.section} <span>{c.pos}</span></p>
             {i === 0 ? (
@@ -209,6 +213,20 @@ const starts = flow.map(({ section, slugs }) => ({
       cards[active].classList.remove('open');
       active = -1;
     }
+    // Resting: the card the flow stopped on shows its plate clean, with a
+    // small label that says it opens. The entry itself waits for a tap.
+    let rested = -1;
+    function rest(i: number) {
+      if (rested === i) return;
+      unrest();
+      rested = i;
+      cards[i].classList.add('rest');
+    }
+    function unrest() {
+      if (rested < 0) return;
+      cards[rested].classList.remove('rest');
+      rested = -1;
+    }
 
     let drawRaf = 0;
     const schedule = () => {
@@ -219,7 +237,7 @@ const starts = flow.map(({ section, slugs }) => ({
     function settle() {
       const i = Math.round(pos / step);
       if (Math.abs(pos - i * step) > 2) return;
-      open(Math.max(0, Math.min(n - 1, i)));
+      rest(Math.max(0, Math.min(n - 1, i)));
     }
 
     // ── Motion: a spring that starts from wherever the flow is now, carrying
@@ -261,6 +279,7 @@ const starts = flow.map(({ section, slugs }) => ({
     function goTo(i: number, v = 0) {
       i = Math.max(0, Math.min(n - 1, i));
       if (i !== active) close();
+      if (i !== rested) unrest();
       if (reduced.matches) {
         stopSpring();
         pos = i * step;
@@ -296,6 +315,7 @@ const starts = flow.map(({ section, slugs }) => ({
         swallowClick = true;
         scroller.setPointerCapture(e.pointerId);
         close();
+        unrest();
       }
       drag.trail.push({ y: e.clientY, t: e.timeStamp });
       if (drag.trail.length > 6) drag.trail.shift();
@@ -393,7 +413,12 @@ const starts = flow.map(({ section, slugs }) => ({
 
     measure();
     draw();
-    requestAnimationFrame(() => open(0));
+    // On arrival the first card (who this is) opens by itself; after that,
+    // entries open on a tap.
+    requestAnimationFrame(() => {
+      rest(0);
+      open(0);
+    });
   }
 
   start();
@@ -608,7 +633,59 @@ const starts = flow.map(({ section, slugs }) => ({
       pointer-events: none;
     }
 
-    /* Settled: the plate dims and the entry rises over it. */
+    /* Resting: a label in the corner, the plate left clean. */
+    .tag {
+      position: absolute;
+      left: 0.7rem;
+      bottom: 0.7rem;
+      max-width: calc(100% - 1.4rem);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.36rem 0.4rem 0.36rem 0.75rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--bg) 90%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--ink);
+      font-size: 0.8125rem;
+      line-height: 1.2;
+      box-shadow: 0 6px 16px -10px rgb(20 19 18 / 0.5);
+      opacity: 0;
+      translate: 0 6px;
+      transition:
+        opacity 0.12s ease-out,
+        translate 0.12s ease-out;
+      pointer-events: none;
+    }
+    .tag-t {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tag-plus {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 1.2rem;
+      height: 1.2rem;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--bg);
+      font-size: 0.875rem;
+      line-height: 1;
+    }
+    .card.rest:not(.open) .tag {
+      opacity: 1;
+      translate: 0 0;
+      transition-duration: 0.35s;
+      transition-timing-function: var(--ease);
+    }
+    .card:active .tag-plus {
+      scale: 0.9;
+    }
+
+    /* Opened: the plate dims and the entry rises over it. */
     .veil {
       position: absolute;
       inset: 0;
