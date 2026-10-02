@@ -247,10 +247,15 @@ const starts = flow.map(({ section, slugs }) => ({
       cards[i].classList.add('rest');
     }
     function unrest() {
+      clearTimeout(openTimer);
       if (rested < 0) return;
       cards[rested].classList.remove('rest');
       rested = -1;
     }
+    // Half a second after the flow comes to rest on a card, its entry rises
+    // by itself. Moving on before then means it never does.
+    const OPEN_DELAY = 500;
+    let openTimer = 0;
 
     let drawRaf = 0;
     const schedule = () => {
@@ -261,7 +266,13 @@ const starts = flow.map(({ section, slugs }) => ({
     function settle() {
       const i = Math.round(pos / step);
       if (Math.abs(pos - i * step) > 2) return;
-      rest(Math.max(0, Math.min(n - 1, i)));
+      const k = Math.max(0, Math.min(n - 1, i));
+      if (rested === k) return; // already resting here (and maybe closed by a tap)
+      rest(k);
+      clearTimeout(openTimer);
+      openTimer = window.setTimeout(() => {
+        if (rested === k && !drag && !scrubbing) open(k);
+      }, OPEN_DELAY);
     }
 
     // ── Motion: a spring that starts from wherever the flow is now, carrying
@@ -331,16 +342,36 @@ const starts = flow.map(({ section, slugs }) => ({
     const rubber = (over: number, dim: number) => (over * dim * 0.55) / (dim + 0.55 * over);
     let drag: { y0: number; p0: number; base: number; moved: boolean; trail: { y: number; t: number }[] } | null = null;
     let swallowClick = false;
+    // Press and hold an open card (about half a second, finger still) to see
+    // its plate clean for as long as the finger stays down.
+    const HOLD = 450;
+    let holdTimer = 0;
+    let peeking = false;
+    const endPeek = () => {
+      clearTimeout(holdTimer);
+      if (!peeking) return;
+      peeking = false;
+      cards.forEach((c) => c.classList.remove('peek'));
+    };
     scroller.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       stopSpring();
       drag = { y0: e.clientY, p0: pos, base: Math.round(pos / step), moved: false, trail: [{ y: e.clientY, t: e.timeStamp }] };
+      clearTimeout(holdTimer);
+      holdTimer = window.setTimeout(() => {
+        if (!drag || drag.moved || active < 0 || Math.round(pos / step) !== active) return;
+        peeking = true;
+        swallowClick = true; // lifting the finger must not also count as a tap
+        cards[active].classList.add('peek');
+        navigator.vibrate?.(6);
+      }, HOLD);
     });
     scroller.addEventListener('pointermove', (e) => {
       if (!drag) return;
       const dy = e.clientY - drag.y0;
       if (!drag.moved) {
         if (Math.abs(dy) < 8) return; // a tap, until it clearly isn't
+        endPeek();
         drag.moved = true;
         swallowClick = true;
         scroller.setPointerCapture(e.pointerId);
@@ -360,6 +391,12 @@ const starts = flow.map(({ section, slugs }) => ({
       const d = drag;
       drag = null;
       if (!d) return;
+      if (peeking) {
+        endPeek();
+        setTimeout(() => (swallowClick = false));
+        return;
+      }
+      clearTimeout(holdTimer);
       if (!d.moved) {
         // a still touch that caught a moving flow: let it finish where it was going
         if (Math.abs(pos - Math.round(pos / step) * step) > 1) goTo(Math.round(pos / step));
@@ -504,12 +541,8 @@ const starts = flow.map(({ section, slugs }) => ({
 
     measure();
     draw();
-    // On arrival the first card (who this is) opens by itself; after that,
-    // entries open on a tap.
-    requestAnimationFrame(() => {
-      rest(0);
-      open(0);
-    });
+    // Arrival is just another rest: the first card (who this is) opens after the same beat.
+    requestAnimationFrame(settle);
   }
 
   start();
@@ -820,6 +853,14 @@ const starts = flow.map(({ section, slugs }) => ({
     }
     .card:active .tag-plus {
       scale: 0.9;
+    }
+
+    /* Peek: while a finger holds an open card, the plate shows clean. */
+    .card.open.peek .veil,
+    .card.open.peek .info > * {
+      opacity: 0;
+      transition-duration: 0.2s;
+      transition-delay: 0s;
     }
 
     /* Opened: the plate dims and the entry rises over it. */
