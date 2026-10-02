@@ -74,7 +74,17 @@ const starts = flow.map(({ section, slugs }) => ({
           <span class="f-seg" aria-hidden="true"><i class="f-fill"></i></span>
         </button>
       ))}
-      <span class="f-dot" data-f-dot aria-hidden="true"></span>
+      <span
+        class="f-dot"
+        data-f-dot
+        role="slider"
+        tabindex="0"
+        aria-label="Scrub through the cards"
+        aria-valuemin="1"
+        aria-valuemax={cards.length}
+        aria-valuenow="1"
+      ></span>
+      <span class="f-bubble caps" data-f-bubble aria-hidden="true"></span>
     </div>
   </nav>
 </div>
@@ -104,6 +114,9 @@ const starts = flow.map(({ section, slugs }) => ({
     let lastAt = 0;
     let lastT = 0;
     let relax = 0;
+    let scrubbing = false;
+    const bubble = root.querySelector<HTMLElement>('[data-f-bubble]')!;
+    const titles = cards.map((c) => c.querySelector('.tag-t')?.textContent ?? '');
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const n = cards.length;
 
@@ -140,15 +153,25 @@ const starts = flow.map(({ section, slugs }) => ({
       const s = sections[k];
       const p = fill(s);
       const box = segBox[k];
-      if (box) dot.style.translate = `${box.x + p * box.w}px -50%`;
+      const dx = box ? box.x + p * box.w : 0;
+      if (box) dot.style.translate = `${dx}px -50%`;
 
       const now = performance.now();
       const v = Math.abs(at - lastAt) / Math.max(1, now - lastT); // cards per ms
       lastAt = at;
       lastT = now;
-      dot.style.scale = `${1 + Math.min(v * 90, 2.2)} 1`;
       clearTimeout(relax);
-      relax = window.setTimeout(() => (dot.style.scale = '1 1'), 90);
+      if (scrubbing) {
+        // held: the dot is a grip, and a bubble names the card under it
+        dot.style.scale = '1.9 1.9';
+        const i = Math.max(0, Math.min(n - 1, Math.round(c)));
+        bubble.textContent = titles[i];
+        const half = bubble.offsetWidth / 2;
+        bubble.style.translate = `${Math.max(half, Math.min(rail.clientWidth - half, dx))}px 0`;
+      } else {
+        dot.style.scale = `${1 + Math.min(v * 90, 2.2)} 1`;
+        relax = window.setTimeout(() => (dot.style.scale = '1 1'), 90);
+      }
 
       if (k !== current) {
         const down = k > current;
@@ -198,6 +221,7 @@ const starts = flow.map(({ section, slugs }) => ({
       const i = Math.max(0, Math.min(n - 1, Math.round(at)));
       if (i !== nearest) {
         nearest = i;
+        dot.setAttribute('aria-valuenow', String(i + 1));
         localEl.textContent = String(Math.max(1, Math.min(s.count, i - s.start + 1))).padStart(2, '0');
       }
     }
@@ -244,7 +268,7 @@ const starts = flow.map(({ section, slugs }) => ({
     // the finger's velocity, so the hand-off from drag to animation has no seam
     // and the flow can be caught again mid-flight.
     const RESPONSE = 0.42; // s
-    const DAMPING = 0.9; // just under critical: a flick lands with the faintest give
+    const DAMPING = 1; // critically damped: arrives without bouncing back
     let spring: { target: number; v: number } | null = null;
     let springRaf = 0;
     let springLast = 0;
@@ -287,6 +311,12 @@ const starts = flow.map(({ section, slugs }) => ({
         settle();
         return;
       }
+      // Hand over the finger's speed, but never more than the remaining
+      // distance can absorb: a critically damped spring overshoots when
+      // v > ω·distance, and that overshoot is the fast-swipe rebound.
+      const dist = i * step - pos;
+      const omega = (2 * Math.PI) / RESPONSE;
+      v = v * dist <= 0 ? 0 : Math.sign(dist) * Math.min(Math.abs(v), omega * Math.abs(dist) * 0.9);
       spring = { target: i * step, v };
       if (!springRaf) {
         springLast = performance.now();
@@ -341,14 +371,18 @@ const starts = flow.map(({ section, slugs }) => ({
       let v = (-(b.y - a.y) / Math.max(1, b.t - a.t)) * 1000; // px/s along the flow
       if (e.timeStamp - b.t > 90) v = 0; // the finger stopped before lifting
       const projected = pos + ((v / 1000) * 0.99) / (1 - 0.99);
-      const strong = Math.abs(v) > 2200;
+      const strong = Math.abs(v) > 2600;
       const reach = strong ? Math.min(4, Math.round(Math.abs(v) / 1400)) : 1;
-      let target = Math.max(d.base - reach, Math.min(d.base + reach, Math.round(projected / step)));
+      // A short swipe counts from the card it started on; a drag that already
+      // travelled more than a card counts from where the finger let go, so
+      // it is never pulled back.
+      const base = Math.abs(pos - d.p0) < step * 1.5 ? d.base : Math.round(pos / step);
+      let target = Math.max(base - reach, Math.min(base + reach, Math.round(projected / step)));
       // A short, deliberate swipe still turns the card.
-      if (target === d.base) {
-        const moved = pos - d.base * step;
-        if (Math.abs(v) > 260) target = d.base + Math.sign(v);
-        else if (Math.abs(moved) > step * 0.2) target = d.base + Math.sign(moved);
+      if (target === base && base === d.base) {
+        const moved = pos - base * step;
+        if (Math.abs(v) > 260) target = base + Math.sign(v);
+        else if (Math.abs(moved) > step * 0.2) target = base + Math.sign(moved);
       }
       goTo(target, v);
     };
@@ -400,6 +434,63 @@ const starts = flow.map(({ section, slugs }) => ({
       }),
     );
     tabs.forEach((t) => t.addEventListener('click', () => goTo(Number(t.dataset.fJump))));
+
+    // ── Scrub: drag the red dot along the rail to fly through every card.
+    // The rail maps back to cards exactly as it was drawn (card k of a
+    // section of n sits at k/n of its segment), so the dot stays under the
+    // finger and the cards follow it live.
+    function cardAt(x: number) {
+      let k = 0;
+      segBox.forEach((b, j) => {
+        if (x >= b.x - 3) k = j; // halfway across the 6px gap
+      });
+      const s = sections[k];
+      const b = segBox[k];
+      const p = Math.max(0, Math.min(1, (x - b.x) / b.w));
+      return Math.max(Math.max(0, s.start - 0.49), Math.min(s.start + s.count - 1, s.start - 1 + p * s.count));
+    }
+    let tickAt = -1;
+    const scrubTo = (e: PointerEvent) => {
+      const c = cardAt(e.clientX - rail.getBoundingClientRect().left);
+      pos = c * step;
+      const i = Math.round(c);
+      if (i !== tickAt) {
+        tickAt = i;
+        dot.setAttribute('aria-valuenow', String(i + 1));
+        navigator.vibrate?.(4); // a detent per card where the device supports it
+      }
+      draw();
+    };
+    dot.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dot.setPointerCapture(e.pointerId);
+      stopSpring();
+      close();
+      unrest();
+      scrubbing = true;
+      tickAt = Math.round(pos / step);
+      root.classList.add('scrubbing');
+      scrubTo(e);
+    });
+    dot.addEventListener('pointermove', (e) => scrubbing && scrubTo(e));
+    const endScrub = () => {
+      if (!scrubbing) return;
+      scrubbing = false;
+      root.classList.remove('scrubbing');
+      goTo(Math.round(pos / step));
+    };
+    dot.addEventListener('pointerup', endScrub);
+    dot.addEventListener('pointercancel', endScrub);
+    dot.addEventListener('click', (e) => e.stopPropagation());
+    dot.addEventListener('keydown', (e) => {
+      const here = heading();
+      const to = { ArrowRight: here + 1, ArrowUp: here + 1, ArrowLeft: here - 1, ArrowDown: here - 1, Home: 0, End: n - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      goTo(to);
+      dot.setAttribute('aria-valuenow', String(Math.max(0, Math.min(n - 1, to)) + 1));
+    });
 
     const relayout = () => {
       const i = Math.max(0, nearest);
@@ -578,10 +669,56 @@ const starts = flow.map(({ section, slugs }) => ({
       box-shadow: 0 0 0 3px var(--bg);
       translate: 0 -50%;
       transition: scale 0.28s var(--ease);
+      pointer-events: auto;
+      touch-action: none;
+      cursor: grab;
+      z-index: 1;
+    }
+    /* the visible dot is 8px; the finger gets a 44px target */
+    .f-dot::before {
+      content: '';
+      position: absolute;
+      inset: -18px;
+      border-radius: 50%;
+    }
+    .f-dot:focus-visible {
+      outline: 1px solid var(--ink);
+      outline-offset: 4px;
+    }
+    .flow.scrubbing .f-dot {
+      cursor: grabbing;
+      box-shadow:
+        0 0 0 2px var(--bg),
+        0 2px 6px rgb(20 19 18 / 0.35);
+      transition-duration: 0.18s;
+    }
+    .f-bubble {
+      position: absolute;
+      left: 0;
+      bottom: calc(100% - 0.35rem);
+      max-width: 70vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0.42rem 0.75rem 0.38rem;
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--bg);
+      letter-spacing: 0.06em;
+      translate: 0 0;
+      margin-left: 0;
+      transform: translateX(-50%) translateY(6px);
+      opacity: 0;
       pointer-events: none;
+      transition:
+        opacity 0.15s ease-out,
+        transform 0.2s var(--ease);
+    }
+    .flow.scrubbing .f-bubble {
+      opacity: 1;
+      transform: translateX(-50%);
     }
 
-    /* The scroller owns the physics; its snap points are invisible. */
     /* The flow owns the vertical gesture (see the script); nothing scrolls natively. */
     .f-scroll {
       position: absolute;
