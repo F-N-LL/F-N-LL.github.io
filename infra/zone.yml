@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  zumodeia.com, step 1 of 2: the Route 53 DNS zone. After this stack exists,
+  copy the NameServers output into Spaceship (Domain > Nameservers > Custom).
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: zumodeia.com
+
+Resources:
+  Zone:
+    Type: AWS::Route53::HostedZone
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Authoritative DNS for the domain; Spaceship (registrar) delegates to its nameservers.
+        must: Keep. Replacing it issues new nameservers and takes the site offline until Spaceship is updated.
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneConfig:
+        Comment: Personal site of Daniel Fenoll
+
+Outputs:
+  HostedZoneId:
+    Value: !Ref Zone
+  NameServers:
+    Description: Paste these four into Spaceship as custom nameservers.
+    Value: !Join [', ', !GetAtt Zone.NameServers]
