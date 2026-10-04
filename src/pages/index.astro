@@ -364,18 +364,29 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     const goal = { x: 0, y: 0, t: 80 };
     let vel = { x: 0, y: 0 };
     let dragging = false;
+    // While scrolling: where the floor would be with no edges, so it can run
+    // past them with resistance and spring back once the scroll goes quiet.
+    let wheel: { x: number; y: number } | null = null;
+    let wheelEnd = 0;
     let hovered: HTMLElement | null = null;
 
     const vw = () => stage.clientWidth;
     const vh = () => stage.clientHeight;
     const tMin = () => Math.max(vw() / (L.COLS * PX), vh() / (L.ROWS * PY));
     const clampT = (t: number) => Math.min(T_MAX, Math.max(tMin(), t));
-    const bounds = (t: number) => ({
-      minX: vw() - L.COLS * PX * t,
-      minY: vh() - L.ROWS * PY * t,
-    });
-    const clampX = (x: number, t: number) => Math.min(0, Math.max(bounds(t).minX, x));
-    const clampY = (y: number, t: number) => Math.min(0, Math.max(bounds(t).minY, y));
+    // The camera is bound to the emblema (plus a cell of floor around it), not
+    // the whole floor: while the panel is bigger than the screen it pans freely
+    // across it; once it fits, it sits centred. Past a bound it rubber-bands back.
+    const span = (lo: number, hi: number, from: number, to: number) =>
+      hi - lo >= to - from ? { min: to - hi, max: from - lo } : { min: (from + to - lo - hi) / 2, max: (from + to - lo - hi) / 2 };
+    const bounds = (t: number) => {
+      const x = span((L.PANEL.col - 1) * PX * t, (L.PANEL.col + L.PANEL.w + 1) * PX * t, 0, vw());
+      const y = span((L.PANEL.row - 1) * PY * t, (L.PANEL.row + L.PANEL.h + 1) * PY * t, BAR, vh() - FOOT);
+      return { minX: x.min, maxX: x.max, minY: y.min, maxY: y.max };
+    };
+    const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+    const clampX = (x: number, t: number) => clamp(x, bounds(t).minX, bounds(t).maxX);
+    const clampY = (y: number, t: number) => clamp(y, bounds(t).minY, bounds(t).maxY);
 
     // Soft edges: past a bound the floor follows less and less.
     const rubber = (over: number, dim: number) => (over * dim * 0.55) / (dim + 0.55 * Math.abs(over));
@@ -410,7 +421,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       requestAnimationFrame(frame);
       if (!desktop.matches) return;
       const reduced = reducedQ.matches;
-      if (!dragging) {
+      if (!dragging && !wheel) {
         // momentum, then settle inside the bounds
         if (Math.abs(vel.x) + Math.abs(vel.y) > 0.02) {
           goal.x += vel.x * 16;
@@ -434,8 +445,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       if (cam.x !== shown.x || cam.y !== shown.y || cam.t !== shown.t) {
         if (cam.t !== shown.t) field.style.setProperty('--t', `${cam.t.toFixed(2)}px`);
         const b = bounds(cam.t);
-        const x = dragging ? soft(cam.x, b.minX, 0, vw()) : cam.x;
-        const y = dragging ? soft(cam.y, b.minY, 0, vh()) : cam.y;
+        const x = dragging ? soft(cam.x, b.minX, b.maxX, vw()) : cam.x;
+        const y = dragging ? soft(cam.y, b.minY, b.maxY, vh()) : cam.y;
         field.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
         shown = { ...cam };
         syncRuler();
@@ -449,6 +460,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     let trail: { x: number; y: number; t: number }[] = [];
     stage.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
+      wheel = null;
       down = { x: e.clientX, y: e.clientY, gx: goal.x, gy: goal.y };
       moved = false;
       vel = { x: 0, y: 0 };
@@ -480,8 +492,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         vel = { x: (b.x - a.x) / dt, y: (b.y - a.y) / dt };
         // the finger's position may be past the edge; carry on from what is on screen
         const bb = bounds(cam.t);
-        goal.x = cam.x = soft(cam.x, bb.minX, 0, vw());
-        goal.y = cam.y = soft(cam.y, bb.minY, 0, vh());
+        goal.x = cam.x = soft(cam.x, bb.minX, bb.maxX, vw());
+        goal.y = cam.y = soft(cam.y, bb.minY, bb.maxY, vh());
       }
       dragging = false;
       down = null;
@@ -517,6 +529,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         if (e.ctrlKey || e.metaKey) {
           // trackpad pinch sends small deltas, a mouse notch ~100: cap each event
           const d = Math.max(-60, Math.min(60, e.deltaY * unit));
+          wheel = null;
           zoomAt(e.clientX, e.clientY, goal.t * Math.exp(-d * 0.006));
         } else {
           const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
@@ -524,8 +537,16 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
           // Calmer than 1:1, and one mouse notch never jumps more than ~50px.
           const pan = (d: number) => Math.max(-110, Math.min(110, d * unit)) * SCROLL;
           vel = { x: 0, y: 0 };
-          goal.x = clampX(goal.x - pan(dx), goal.t);
-          goal.y = clampY(goal.y - pan(dy), goal.t);
+          wheel ??= { x: goal.x, y: goal.y };
+          wheel.x -= pan(dx);
+          wheel.y -= pan(dy);
+          const b = bounds(goal.t);
+          // stiffer than a drag: a scroll can overshoot a fifth of the screen at most
+          goal.x = soft(wheel.x, b.minX, b.maxX, vw() / 5);
+          goal.y = soft(wheel.y, b.minY, b.maxY, vh() / 5);
+          // trackpads keep sending inertia after the fingers lift: settle once it goes quiet
+          clearTimeout(wheelEnd);
+          wheelEnd = setTimeout(() => (wheel = null), 140);
         }
         hideTip();
       },
