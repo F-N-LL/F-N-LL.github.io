@@ -9,7 +9,10 @@ interface Props {
   description: string;
 }
 const { title, description } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site);
+// Canonical always names the release site, so the dev copy never competes with it.
+const RELEASE_SITE = 'https://zumodeia.com';
+const canonical = new URL(Astro.url.pathname, RELEASE_SITE);
+const isRelease = Astro.site?.origin === RELEASE_SITE;
 ---
 <!doctype html>
 <html lang="en">
@@ -20,6 +23,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {!isRelease && <meta name="robots" content="noindex" />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

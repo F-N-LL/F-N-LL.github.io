@@ -1,14 +1,12 @@
 name: Deploy
 
-# Builds the site once, then:
-#  - publishes it to AWS (S3 + CloudFront) as zumodeia.com, and
-#  - turns GitHub Pages (f-n-ll.github.io) into a redirect to it.
-# Until the repo variable AWS_ROLE_ARN is set, Pages keeps serving the full
-# site and the AWS job is skipped, so nothing breaks mid-migration.
+# Two environments, one per branch:
+#  - main → Release: AWS (S3 + CloudFront) at zumodeia.com
+#  - dev  → Dev:     GitHub Pages at f-n-ll.github.io (noindex, canonical → zumodeia.com)
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -17,11 +15,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: deploy
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
-
-env:
-  ON_AWS: ${{ vars.AWS_ROLE_ARN != '' }}
 
 jobs:
   build:
@@ -34,14 +29,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          SITE: ${{ github.ref_name == 'main' && 'https://zumodeia.com' || 'https://f-n-ll.github.io' }}
       - uses: actions/upload-artifact@v4
         with:
           name: site
           path: dist
 
-  aws:
+  release:
     needs: build
-    if: vars.AWS_ROLE_ARN != ''
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     # No `environment:` here: it would change the OIDC subject to
     # repo:…:environment:…, and the AWS role trusts repo:…:ref:refs/heads/main.
@@ -67,43 +64,20 @@ jobs:
       - name: Refresh CloudFront
         run: aws cloudfront create-invalidation --distribution-id "${{ vars.AWS_DISTRIBUTION_ID }}" --paths "/*" --query Invalidation.Id --output text
 
-  pages-build:
+  dev:
     needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: dist
-      - name: Redirect stub (once the site lives on AWS)
-        if: env.ON_AWS == 'true'
-        run: |
-          rm -rf dist && mkdir dist
-          cat > dist/index.html <<'HTML'
-          <!doctype html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8" />
-              <title>Daniel Fenoll — moved to zumodeia.com</title>
-              <link rel="canonical" href="https://zumodeia.com/" />
-              <meta name="robots" content="noindex" />
-              <meta http-equiv="refresh" content="0; url=https://zumodeia.com/" />
-              <script>location.replace('https://zumodeia.com' + location.pathname + location.search + location.hash);</script>
-            </head>
-            <body><p>Moved to <a href="https://zumodeia.com/">zumodeia.com</a>.</p></body>
-          </html>
-          HTML
-          cp dist/index.html dist/404.html
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  pages:
-    needs: pages-build
+    if: github.ref_name == 'dev'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
