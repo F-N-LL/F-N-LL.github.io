@@ -4,6 +4,7 @@ import Base from '../layouts/Base.astro';
 import Flow from '../components/Flow.astro';
 import { profile } from '../data/site';
 import { specimens, flow, elsewhere } from '../data/cabinet';
+import { PIGMENTS as TONES } from '../data/pigments';
 
 // Desktop: a Roman floor you can move around. A framed emblema holds an intro
 // line and the specimens in four labelled bands (the same order as the phone),
@@ -25,9 +26,8 @@ const sectionRows = flow.map(({ section, slugs }, k) => ({
   count: slugs.length,
 }));
 
-const PIGMENTS: [number, number, number][] = [
-  [43, 41, 38], [98, 96, 68], [158, 63, 50], [197, 138, 61], [226, 214, 192], [107, 141, 160],
-];
+const PIGMENTS = Object.values(TONES);
+const toneOf = new Map(Object.entries(TONES).map(([name, rgb]) => [rgb, name]));
 const cropW = Math.round(120 * (COLS / ROWS));
 const { data } = await sharp('public/img/panorama.png')
   .extract({ left: Math.round((360 - cropW) / 2), top: 0, width: cropW, height: 120 })
@@ -41,7 +41,7 @@ let seed = 7;
 const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
 type Cell =
-  | { kind: 'tessera'; color: string; rot: number; size: number; blur: number; r: number; c: number; juice?: boolean }
+  | { kind: 'tessera'; color: string; rot: number; size: number; blur: number; r: number; c: number; tone: string; juice?: boolean }
   | { kind: 'blank' }
   | { kind: 'intro' }
   | { kind: 'label'; section: string; count: number }
@@ -74,11 +74,11 @@ for (let r = 0; r < ROWS; r++) {
     const dx = Math.max(PANEL.col - c, 0, c - (PANEL.col + PANEL.w - 1));
     const dy = Math.max(PANEL.row - r, 0, r - (PANEL.row + PANEL.h - 1));
     const blur = Math.min(4, Math.max(0, Math.hypot(dx * 0.8, dy) - 2.5) * 0.7);
-    cells.push({ kind: 'tessera', color: `rgb(${best.join(',')})`, rot: Math.round((rand() - 0.5) * 14), size: 0.28 + rand() * 0.12, blur: +blur.toFixed(1), r, c });
+    cells.push({ kind: 'tessera', color: `rgb(${best.join(',')})`, rot: Math.round((rand() - 0.5) * 14), size: 0.28 + rand() * 0.12, blur: +blur.toFixed(1), r, c, tone: toneOf.get(best)! });
   }
 }
 
-// One tessera in five is the juice box (the favicon): seeded random picks,
+// One tessera in five is the juice box (the favicon, in that tessera's colour): seeded random picks,
 // but never two touching, diagonals included, so they stay scattered.
 {
   const order = cells.filter((x): x is Extract<Cell, { kind: 'tessera' }> => x.kind === 'tessera');
@@ -149,7 +149,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
             return (
               <span class="cell" aria-hidden="true">
                 {cell.juice ? (
-                  <img class="tessera juice" src="/favicon.svg" alt="" style={`--r:${cell.rot}deg;--s:${cell.size}${cell.blur ? `;filter:blur(${cell.blur}px)` : ''}`} />
+                  <img class="tessera juice" src={`/juice/${cell.tone}.svg`} alt="" style={`--r:${cell.rot}deg;--s:${cell.size}${cell.blur ? `;filter:blur(${cell.blur}px)` : ''}`} />
                 ) : (
                   <i class="tessera" style={`background:${cell.color};--r:${cell.rot}deg;--s:${cell.size}${cell.blur ? `;filter:blur(${cell.blur}px)` : ''}`} />
                 )}
