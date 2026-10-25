@@ -43,7 +43,7 @@ const starts = flow.map(({ section, slugs }) => ({
                 <p class="text">{profile.statement}</p>
                 <ul class="links">
                   {elsewhere.map((l) => (
-                    <li><a href={l.href} rel={l.href.startsWith('http') ? 'me noopener' : undefined}>{l.label}</a></li>
+                    <li><a href={l.href} {...(l.href.startsWith('http') ? { target: '_blank', rel: 'me noopener' } : {})}>{l.label}</a></li>
                   ))}
                 </ul>
               </div>
@@ -53,7 +53,7 @@ const starts = flow.map(({ section, slugs }) => ({
                 <p class="meta caps">{c.kind} · {c.year}</p>
                 <p class="medium">{c.medium}</p>
                 <p class="text">{c.text}</p>
-                {c.href && <a class="cta" href={c.href} rel="noopener">{c.link ?? 'Open'} <span aria-hidden="true">↗</span></a>}
+                {c.href && <a class="cta" href={c.href} {...(c.href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {})}>{c.link ?? 'Open'} <span aria-hidden="true">↗</span></a>}
               </div>
             )}
           </div>

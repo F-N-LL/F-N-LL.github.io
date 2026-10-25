@@ -44,7 +44,7 @@ type Cell =
   | { kind: 'tessera'; color: string; rot: number; size: number; blur: number; r: number; c: number; tone: string; juice?: boolean }
   | { kind: 'blank' }
   | { kind: 'intro' }
-  | { kind: 'label'; section: string; count: number }
+  | { kind: 'label'; section: string; key: number }
   | { kind: 'card'; index: number };
 const cells: Cell[] = [];
 for (let r = 0; r < ROWS; r++) {
@@ -58,7 +58,7 @@ for (let r = 0; r < ROWS; r++) {
         continue;
       }
       const band = sectionRows.find((b) => b.row === r)!;
-      if (c === LABEL_COL) cells.push({ kind: 'label', section: band.section, count: band.count });
+      if (c === LABEL_COL) cells.push({ kind: 'label', section: band.section, key: sectionRows.indexOf(band) + 1 });
       else if (c - FIRST_CARD_COL < band.count) cells.push({ kind: 'card', index: band.first + (c - FIRST_CARD_COL) });
       else cells.push({ kind: 'blank' });
       continue;
@@ -107,9 +107,12 @@ const email = elsewhere.find((l) => l.href.startsWith('mailto:'))!;
 const social = elsewhere.filter((l) => l !== email);
 const shortcuts: [string[], string][] = [
   [['←', '↑', '→', '↓'], 'Move between cards'],
+  [['H', 'J', 'K', 'L'], 'The same, vim-style; J K walk the index'],
   [['Enter'], 'Open'],
   [['Esc'], 'Close, or fit when nothing is open'],
   [['+', '−'], 'Zoom'],
+  [['←', '→', 'H', 'L'], 'Previous, next card (when open)'],
+  [['K', 'J'], 'Previous, next card (when open)'],
   [['1', '2', '3', '4'], 'Show a section'],
   [['I'], 'Index'],
 ];
@@ -166,8 +169,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
           if (cell.kind === 'label')
             return (
               <span class="cell label caps" data-label={cell.section}>
-                <span>{cell.section}</span>
-                <span class="muted">{pad(cell.count)}</span>
+                <span class="l-row"><kbd>{cell.key}</kbd><span>{cell.section}</span></span>
               </span>
             );
           const it = items[cell.index];
@@ -182,6 +184,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
                 aria-label={`${it.section} ${it.pos} of ${it.count}: ${it.title}, ${it.kind}, ${it.year}`}
               >
                 <img src={`/img/s-${it.slug}.png`} width="160" height="200" alt="" draggable="false" />
+                <span class="sheet" aria-hidden="true">
+                  <span class="s-kick caps"><span>{it.section}</span><span>{pad(it.pos)}/{pad(it.count)}</span></span>
+                  <span class="s-body">
+                    <span class="s-title" lang={it.lang}>{it.title}</span>
+                    <span class="s-meta caps">{it.kind} · {it.year}</span>
+                  </span>
+                </span>
               </button>
             </span>
           );
@@ -189,12 +198,6 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       </div>
     </div>
 
-    <!-- Hover caption, set beside the card -->
-    <div class="tip" data-tip aria-hidden="true">
-      <p class="caps muted" data-tip-kick></p>
-      <p class="t-title" data-tip-title></p>
-      <p class="muted" data-tip-meta></p>
-    </div>
 
     <!-- Index -->
     <section class="index" id="index-view" data-index hidden aria-label="Index" tabindex="-1">
@@ -227,7 +230,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     <footer class="foot">
       <ul class="f-social caps">
         {social.map((l) => (
-          <li><a href={l.href} rel="me noopener">{l.label}</a></li>
+          <li><a href={l.href} target="_blank" rel="me noopener">{l.label}</a></li>
         ))}
       </ul>
       <p class="f-hint caps muted">Drag or scroll to move · Pinch or Ctrl + scroll to zoom · <kbd>?</kbd> Shortcuts</p>
@@ -248,8 +251,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
   <!-- Detail -->
   <div class="detail" data-detail hidden role="dialog" aria-modal="true" aria-labelledby="d-title">
-    <button type="button" class="d-arrow d-prev" data-prev aria-label="Previous" data-key="←">←</button>
-    <div class="d-plate"><img data-d-img alt="" width="160" height="200" /></div>
+    <button type="button" class="d-arrow d-prev" data-prev aria-label="Previous" data-key="← / H">←</button>
+    <div class="d-plate"><img data-d-img alt="" width="160" height="200" decoding="sync" /></div>
     <div class="d-text">
       <p class="caps muted" data-d-kick></p>
       <h2 id="d-title" data-d-title></h2>
@@ -259,9 +262,15 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         <dt class="caps muted">Medium</dt><dd data-d-medium></dd>
       </dl>
       <p class="d-body" data-d-text></p>
-      <a class="d-link" data-d-link rel="noopener"><span class="ul" data-d-link-label></span> ↗</a>
+      <a class="d-link" data-d-link rel="noopener"><span class="ul" data-d-link-label></span> <span class="d-arr" aria-hidden="true">↗</span></a>
     </div>
-    <button type="button" class="d-arrow d-next" data-next aria-label="Next" data-key="→">→</button>
+    <div class="d-next-wrap">
+      <button type="button" class="d-arrow d-next" data-next aria-label="Next" data-key="→ / L">→</button>
+      <!-- First open only: how to browse from here -->
+      <p class="d-hint" aria-hidden="true">
+        Browse with <kbd>←</kbd> <kbd>→</kbd> or <kbd>H</kbd> <kbd>L</kbd> on your keyboard, or click the arrows
+      </p>
+    </div>
     <div class="d-top caps">
       <span class="muted" data-d-count></span>
       <button type="button" data-close>Close <kbd>Esc</kbd></button>
@@ -280,7 +289,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     <h3 class="caps muted">Contact</h3>
     <ul class="i-links">
       {elsewhere.map((l) => (
-        <li><a href={l.href} rel={l.href.startsWith('http') ? 'me noopener' : undefined}><span class="muted">{l.label}</span> <span class="ul">{l.handle}</span></a></li>
+        <li><a href={l.href} {...(l.href.startsWith('http') ? { target: '_blank', rel: 'me noopener' } : {})}><span class="muted">{l.label}</span> <span class="ul">{l.handle}</span></a></li>
       ))}
     </ul>
     <h3 class="caps muted">Keyboard</h3>
@@ -368,7 +377,6 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     // past them with resistance and spring back once the scroll goes quiet.
     let wheel: { x: number; y: number } | null = null;
     let wheelEnd = 0;
-    let hovered: HTMLElement | null = null;
 
     const vw = () => stage.clientWidth;
     const vh = () => stage.clientHeight;
@@ -397,7 +405,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     function frameCells(c0: number, r0: number, c1: number, r1: number, maxT = T_MAX) {
       const w = (c1 - c0) * PX;
       const h = (r1 - r0) * PY;
-      const t = clampT(Math.min((vw() - 160) / w, (vh() - BAR - FOOT - 40) / h, maxT));
+      const t = clampT(Math.min((vw() - 160) / w, (vh() - BAR - FOOT - 16) / h, maxT));
       const cx = ((c0 + c1) / 2) * PX * t;
       const cy = ((r0 + r1) / 2) * PY * t;
       goal.t = t;
@@ -443,14 +451,15 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       if (Math.abs(goal.x - cam.x) < 0.05) cam.x = goal.x;
       if (Math.abs(goal.y - cam.y) < 0.05) cam.y = goal.y;
       if (cam.x !== shown.x || cam.y !== shown.y || cam.t !== shown.t) {
-        if (cam.t !== shown.t) field.style.setProperty('--t', `${cam.t.toFixed(2)}px`);
+        if (cam.t !== shown.t) {
+          field.style.setProperty('--t', `${cam.t.toFixed(2)}px`);
+        }
         const b = bounds(cam.t);
         const x = dragging ? soft(cam.x, b.minX, b.maxX, vw()) : cam.x;
         const y = dragging ? soft(cam.y, b.minY, b.maxY, vh()) : cam.y;
         field.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
         shown = { ...cam };
         syncRuler();
-        if (hovered) placeTip(hovered);
       }
     }
 
@@ -461,6 +470,11 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     stage.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       wheel = null;
+      // Catch the floor where it is: a press mid-glide stops it under the
+      // cursor, so the card being clicked stays put.
+      goal.x = cam.x;
+      goal.y = cam.y;
+      goal.t = cam.t;
       down = { x: e.clientX, y: e.clientY, gx: goal.x, gy: goal.y };
       moved = false;
       vel = { x: 0, y: 0 };
@@ -476,20 +490,21 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         dragging = true;
         stage.setPointerCapture(e.pointerId);
         stage.classList.add('grabbing');
-        hideTip();
+        drop();
       }
       goal.x = cam.x = down.gx + dx;
       goal.y = cam.y = down.gy + dy;
       trail.push({ x: e.clientX, y: e.clientY, t: e.timeStamp });
       if (trail.length > 5) trail.shift();
     });
-    const release = () => {
+    const release = (e: PointerEvent) => {
       if (!down) return;
       if (moved) {
         const a = trail[0];
         const b = trail[trail.length - 1];
         const dt = Math.max(1, b.t - a.t);
-        vel = { x: (b.x - a.x) / dt, y: (b.y - a.y) / dt };
+        // the mouse stopped before letting go: no fling
+        vel = e.timeStamp - b.t > 80 ? { x: 0, y: 0 } : { x: (b.x - a.x) / dt, y: (b.y - a.y) / dt };
         // the finger's position may be past the edge; carry on from what is on screen
         const bb = bounds(cam.t);
         goal.x = cam.x = soft(cam.x, bb.minX, bb.maxX, vw());
@@ -548,7 +563,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
           clearTimeout(wheelEnd);
           wheelEnd = setTimeout(() => (wheel = null), 140);
         }
-        hideTip();
+        drop();
       },
       { passive: false },
     );
@@ -589,41 +604,48 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
     // ═══ Cards ═══
     const cards = $$<HTMLButtonElement>('.spec');
-    const tip = $('[data-tip]');
-    function placeTip(el: HTMLElement) {
-      const r = el.getBoundingClientRect();
-      const w = tip.offsetWidth;
-      const right = r.right + 14 + w < vw() - 16;
-      tip.style.translate = `${right ? r.right + 14 : r.left - 14 - w}px ${Math.max(BAR, r.top)}px`;
+    // The current card grows a touch and shows its entry inside it, as on
+    // the phone. The pointer and the keys choose it alike: hovering a card focuses
+    // it, so Enter opens it and the arrows walk on from it.
+    let cur: HTMLElement | null = null;
+    let curByPointer = false;
+    let hoverFocus = false;
+    function choose(el: HTMLElement, byPointer = false) {
+      if (cur && cur !== el) cur.classList.remove('cur', 'by-pointer');
+      cur = el;
+      curByPointer = byPointer;
+      el.classList.add('cur');
+      // the card under the pointer already says "this one": no focus ring
+      el.classList.toggle('by-pointer', byPointer);
     }
-    function showTip(el: HTMLElement) {
-      const it = S[Number(el.dataset.i)];
-      $('[data-tip-kick]').textContent = `${it.section} ${pad(it.pos)}/${pad(it.count)}`;
-      $('[data-tip-title]').textContent = it.title;
-      $('[data-tip-meta]').textContent = `${it.kind} · ${it.year}`;
-      hovered = el;
-      placeTip(el);
-      tip.classList.add('on');
+    function drop() {
+      cur?.classList.remove('cur', 'by-pointer');
+      cur = null;
     }
-    function hideTip() {
-      hovered = null;
-      tip.classList.remove('on');
+    function hover(el: HTMLElement) {
+      choose(el, true);
+      if (document.activeElement === el) return;
+      hoverFocus = true;
+      el.focus({ preventScroll: true });
+      hoverFocus = false;
     }
     cards.forEach((el) => {
       // Cards sliding under a still cursor (while the floor animates) must not
       // count as hovering; only a real mouse move re-enables hover.
-      el.addEventListener('pointerenter', () => !dragging && !stage.classList.contains('nohover') && showTip(el));
-      el.addEventListener('pointerleave', () => {
-        if (hovered === el && document.activeElement !== el) hideTip();
-      });
+      el.addEventListener('pointerenter', () => !dragging && !stage.classList.contains('nohover') && hover(el));
+      // Off the card it settles, but focus stays: the keys carry on from here.
+      el.addEventListener('pointerleave', () => cur === el && curByPointer && drop());
       el.addEventListener('focus', () => {
+        // A mouse press or a hover also focuses the card; only keyboard focus
+        // moves the floor or the filter, or the card would slide away from the pointer.
+        if (hoverFocus || !el.matches(':focus-visible')) return;
         // Walking out of a filtered section takes the filter with you.
         const f = document.body.dataset.filter;
         if (f && f !== 'all' && el.dataset.section !== f) applyFilter(el.dataset.section!);
         else reveal(el);
-        showTip(el);
+        choose(el);
       });
-      el.addEventListener('blur', hideTip);
+      el.addEventListener('blur', () => cur === el && drop());
       el.addEventListener('click', () => open(Number(el.dataset.i), el.querySelector('img')));
     });
 
@@ -661,7 +683,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
       // The floor is about to move under a still cursor, and the browser won't
       // re-test :hover until the mouse moves. Drop the stale hover and caption.
-      hideTip();
+      drop();
       stage.classList.add('nohover');
       // Keyboard focus follows the section; a mouse-given focus is released.
       const a = document.activeElement as HTMLElement | null;
@@ -678,6 +700,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       }
     }
     filterBtns.forEach((b) => b.addEventListener('click', () => applyFilter(b.dataset.filter!)));
+    $$('[data-label]').forEach((l) => l.addEventListener('click', () => applyFilter(l.dataset.label!)));
     $('[data-home]').addEventListener('click', (e) => {
       e.preventDefault();
       view('cabinet');
@@ -689,7 +712,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       if (!stage.classList.contains('nohover') || dragging) return;
       stage.classList.remove('nohover');
       const under = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('.spec');
-      if (under && document.activeElement?.classList.contains('spec') !== true) showTip(under);
+      // a real mouse move is the pointer choosing: it takes over from the keys
+      if (under) hover(under);
     });
 
     // ═══ Views ═══
@@ -700,7 +724,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       document.body.classList.toggle('v-index', name === 'index');
       indexEl.hidden = name !== 'index';
       indexBtn.setAttribute('aria-pressed', String(name === 'index'));
-      hideTip();
+      drop();
     }
     indexBtn.addEventListener('click', () => view(indexEl.hidden ? 'index' : 'cabinet'));
     $('[data-skip]').addEventListener('click', (e) => {
@@ -731,24 +755,47 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         b.setAttribute('aria-sort', sortDir > 0 ? 'ascending' : 'descending');
       }),
     );
+    // The plate sits beside the cursor, flips to its left near the right edge,
+    // and never leaves the screen. It appears where the cursor is (rather than
+    // gliding in from wherever it was last) and only eases while following.
     const peek = $<HTMLImageElement>('[data-peek]');
     const peekPos = { x: 0, y: 0 };
     let peekGoal = { x: 0, y: 0 };
-    indexEl.addEventListener('pointermove', (e) => (peekGoal = { x: e.clientX, y: e.clientY }));
+    let peekRaf = 0;
+    const peekAt = (x: number, y: number) => {
+      const w = peek.offsetWidth;
+      const h = peek.offsetHeight;
+      return {
+        x: x + 28 + w > innerWidth - 8 ? x - 28 - w : x + 28,
+        y: Math.max(BAR, Math.min(innerHeight - h - 8, y - 110)),
+      };
+    };
+    const drawPeek = () => (peek.style.transform = `translate3d(${peekPos.x}px, ${peekPos.y}px, 0)`);
+    function peekFrame() {
+      peekRaf = 0;
+      peekPos.x += (peekGoal.x - peekPos.x) * (reducedQ.matches ? 1 : 0.18);
+      peekPos.y += (peekGoal.y - peekPos.y) * (reducedQ.matches ? 1 : 0.18);
+      drawPeek();
+      if (Math.abs(peekGoal.x - peekPos.x) + Math.abs(peekGoal.y - peekPos.y) > 0.5) peekRaf = requestAnimationFrame(peekFrame);
+    }
+    indexEl.addEventListener('pointermove', (e) => {
+      peekGoal = peekAt(e.clientX, e.clientY);
+      if (!peek.classList.contains('on')) return;
+      peekRaf ||= requestAnimationFrame(peekFrame);
+    });
     $$('.row').forEach((row) => {
-      row.addEventListener('pointerenter', () => {
+      row.addEventListener('pointerenter', (e) => {
         peek.src = `/img/s-${S[Number(row.dataset.i)].slug}.png`;
+        if (!peek.classList.contains('on')) {
+          Object.assign(peekPos, (peekGoal = peekAt(e.clientX, e.clientY)));
+          drawPeek();
+        }
         peek.classList.add('on');
       });
-      row.addEventListener('click', () => open(Number(row.dataset.i)));
+      // From the mouse, the detail plate grows out of the peek.
+      row.addEventListener('click', (e) => open(Number(row.dataset.i), e.detail && peek.classList.contains('on') ? peek : null));
     });
-    indexEl.addEventListener('pointerleave', () => peek.classList.remove('on'));
-    (function peekFrame() {
-      peekPos.x += (peekGoal.x - peekPos.x) * 0.18;
-      peekPos.y += (peekGoal.y - peekPos.y) * 0.18;
-      peek.style.transform = `translate3d(${peekPos.x + 28}px, ${peekPos.y - 110}px, 0)`;
-      requestAnimationFrame(peekFrame);
-    })();
+    $('[data-rows]').addEventListener('pointerleave', () => peek.classList.remove('on'));
 
     // ═══ Detail ═══
     const detail = $('[data-detail]');
@@ -757,11 +804,34 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     let current = -1;
     let lastFocus: HTMLElement | null = null;
     let pushed = false;
+    let openedAt = 0;
+    let teachTimer = 0;
+    // Three seconds on a card and its link (Read, View source…) catches the
+    // eye: the underline draws in and the ↗ beckons. It waits for the first-open
+    // arrow hint to finish, and stands down if the link is already in hand.
+    let linkTimer = 0;
+    function armLink() {
+      clearTimeout(linkTimer);
+      dLink.classList.remove('beckon');
+      if (dLink.hidden) return;
+      linkTimer = window.setTimeout(() => {
+        if (detail.classList.contains('teach')) return armLink();
+        if (detail.hidden || dLink.matches(':hover, :focus-visible')) return;
+        dLink.classList.add('beckon');
+      }, 3000);
+    }
+    function teach(on: boolean) {
+      clearTimeout(teachTimer);
+      detail.classList.toggle('teach', on);
+      if (on) teachTimer = window.setTimeout(() => teach(false), 7000);
+    }
 
     function fill(i: number) {
       const it = S[i];
       current = i;
       dImg.src = `/img/s-${it.slug}.png`;
+      // the neighbours are next on the track: have them ready
+      for (const j of [i - 1, i + 1]) new Image().src = `/img/s-${S[(j + S.length) % S.length].slug}.png`;
       dImg.alt = `${it.title}, dithered plate`;
       $('[data-d-kick]').textContent = `${it.section} ${pad(it.pos)}/${pad(it.count)}`;
       $('[data-d-count]').textContent = `${pad(i + 1)} / ${pad(S.length)}`;
@@ -774,15 +844,19 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       $('[data-d-medium]').textContent = it.medium;
       $('[data-d-text]').textContent = it.text;
       dLink.hidden = !it.href;
+      armLink();
       if (it.href) {
         dLink.href = it.href;
+        // the web opens in a new tab; email stays a plain mailto
+        if (it.href.startsWith('http')) dLink.target = '_blank';
+        else dLink.removeAttribute('target');
         $('[data-d-link-label]').textContent = it.link ?? 'Open';
       }
     }
 
     function open(i: number, from?: HTMLImageElement | null, fromHistory = false) {
       if (detail.hidden) lastFocus = document.activeElement as HTMLElement;
-      hideTip();
+      drop();
       fill(i);
       if (!fromHistory) {
         if (detail.hidden) {
@@ -794,6 +868,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       detail.hidden = false;
       document.body.classList.add('modal');
       if (wasHidden) {
+        openedAt = performance.now();
+        // The first card ever opened points out the arrows, once the plate has landed.
+        if (forceNudge || !seen.has('df-arrows')) {
+          seen.mark('df-arrows');
+          clearTimeout(teachTimer);
+          teachTimer = window.setTimeout(() => teach(true), reducedQ.matches ? 0 : 750);
+        }
         detail.classList.remove('in');
         requestAnimationFrame(() => {
           detail.classList.add('in');
@@ -814,6 +895,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       }
     }
     function hide() {
+      teach(false);
+      clearTimeout(linkTimer);
       detail.hidden = true;
       detail.classList.remove('in');
       document.body.classList.remove('modal');
@@ -838,14 +921,77 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         hide();
       }
     });
+    // Passing is a carousel: the plate on show and the next one sit side by
+    // side on one track and slide a full width together (forward → leftward),
+    // no fades. The entry slides with them. A press mid-slide carries on from
+    // where the track is on screen, so a held key keeps the track running.
+    const plate = $('.d-plate');
+    const dText = $('.d-text');
+    const SLIDE = { duration: 460, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' };
+    let passing = 0;
+    function pass(d: number) {
+      // where the plate is drawn now, relative to where it rests
+      const drawn = dImg.getBoundingClientRect();
+      dImg.getAnimations().forEach((a) => a.cancel());
+      const rest = dImg.getBoundingClientRect();
+      const p = plate.getBoundingClientRect();
+      const ox = drawn.left - rest.left;
+      const w = p.width;
+      const ghost = dImg.cloneNode() as HTMLImageElement;
+      ghost.removeAttribute('data-d-img');
+      ghost.className = 'd-ghost';
+      ghost.alt = '';
+      Object.assign(ghost.style, { left: `${rest.left - p.left}px`, top: `${rest.top - p.top}px`, width: `${rest.width}px`, height: `${rest.height}px` });
+      // a long run of presses leaves at most the two newest plates in flight
+      [...plate.querySelectorAll('.d-ghost')].slice(0, -1).forEach((g) => g.remove());
+      plate.append(ghost);
+      plate.classList.add('passing');
+      passing++;
+      ghost.animate([{ transform: `translateX(${ox}px)` }, { transform: `translateX(${ox - d * w}px)` }], { ...SLIDE, fill: 'forwards' }).finished.then(() => ghost.remove(), () => {});
+
+      // the entry: the old text leaves the way the plate does as the new one arrives
+      const t = dText.getBoundingClientRect();
+      const box = detail.getBoundingClientRect();
+      const tg = dText.cloneNode(true) as HTMLElement;
+      tg.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+      tg.classList.add('d-text-ghost');
+      tg.setAttribute('aria-hidden', 'true');
+      Object.assign(tg.style, { left: `${t.left - box.left}px`, top: `${t.top - box.top}px`, width: `${t.width}px` });
+      detail.querySelectorAll('.d-text-ghost').forEach((g) => g.remove());
+      detail.append(tg);
+      tg.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-d * 40}px)`, opacity: 0 }], { duration: 200, easing: 'ease-in', fill: 'forwards' }).finished.then(() => tg.remove(), () => {});
+
+      return () => {
+        const run = passing;
+        dImg
+          .animate([{ transform: `translateX(${ox + d * w}px)` }, { transform: 'none' }], SLIDE)
+          .finished.then(() => run === passing && plate.classList.remove('passing'), () => {});
+        dText.getAnimations().forEach((a) => a.cancel());
+        dText.animate([{ transform: `translateX(${d * 40}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], SLIDE);
+      };
+    }
     const step = (d: number) => {
+      teach(false); // learnt
+      const enter = reducedQ.matches ? null : pass(d);
       fill((current + d + S.length) % S.length);
+      enter?.();
       history.replaceState({ slug: S[current].slug }, '', `#${S[current].slug}`);
+    };
+    // From the keyboard, the matching arrow on screen answers the key.
+    const press = (d: number) => {
+      const b = $(d > 0 ? '[data-next]' : '[data-prev]');
+      b.classList.remove('press');
+      void b.offsetWidth;
+      b.classList.add('press');
+      step(d);
     };
     $('[data-prev]').addEventListener('click', () => step(-1));
     $('[data-next]').addEventListener('click', () => step(1));
     $('[data-close]').addEventListener('click', close);
     detail.addEventListener('click', (e) => {
+      // A double-click on a card opens it with the first click; the second
+      // lands on the backdrop and must not close it again.
+      if (performance.now() - openedAt < 500) return;
       if (e.target === detail || (e.target as HTMLElement).classList.contains('d-plate')) close();
     });
 
@@ -879,10 +1025,15 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       if (!desktop.matches || e.metaKey || e.ctrlKey || e.altKey) return;
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      // vim: h j k l stand in for ← ↓ ↑ →
+      const vim = ({ h: 'ArrowLeft', j: 'ArrowDown', k: 'ArrowUp', l: 'ArrowRight' } as Record<string, string>)[e.key.toLowerCase()];
       if (!detail.hidden) {
         if (e.key === 'Escape') close();
-        if (e.key === 'ArrowRight') step(1);
-        if (e.key === 'ArrowLeft') step(-1);
+        if (e.key === 'ArrowRight' || vim === 'ArrowRight') press(1);
+        if (e.key === 'ArrowLeft' || vim === 'ArrowLeft') press(-1);
+        // j / k: next / previous, as in a feed
+        if (vim === 'ArrowDown') press(1);
+        if (vim === 'ArrowUp') press(-1);
         return;
       }
       // Esc steps back out of whatever is open; with nothing open, it fits.
@@ -896,24 +1047,35 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       if (!info.hidden || !keys.hidden) return;
       if (e.key === '?') return toggleKeys(true);
       if (e.key === 'i' || e.key === 'I') return view(indexEl.hidden ? 'index' : 'cabinet');
-      if (!indexEl.hidden) return;
+      if (!indexEl.hidden) {
+        // j / k walk the rows, in the order and filter they're shown in
+        if (vim === 'ArrowDown' || vim === 'ArrowUp') {
+          const rows = $$<HTMLButtonElement>('.row').filter((r) => !r.parentElement!.hidden);
+          const at = rows.indexOf(document.activeElement as HTMLButtonElement);
+          const to = rows[at < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, at + (vim === 'ArrowDown' ? 1 : -1)))];
+          to?.focus({ preventScroll: true });
+          to?.scrollIntoView({ block: 'nearest' });
+        }
+        return;
+      }
       if (e.key === '+' || e.key === '=') return zoomBy(1.3);
       if (e.key === '-' || e.key === '_') return zoomBy(1 / 1.3);
       if (e.key === '0') return applyFilter('all');
       if (/^[1-4]$/.test(e.key)) return applyFilter(L.rows[Number(e.key) - 1].section);
-      if (e.key.startsWith('Arrow')) {
+      const arrow = e.key.startsWith('Arrow') ? e.key : vim;
+      if (arrow) {
         e.preventDefault();
         const focused = document.activeElement as HTMLElement;
         const i = focused?.classList.contains('spec') ? Number(focused.dataset.i) : -1;
-        const next = i < 0 ? 0 : neighbour(i, e.key);
+        const next = i < 0 ? 0 : neighbour(i, arrow);
         if (next !== undefined) cards.find((c) => Number(c.dataset.i) === next)?.focus({ preventScroll: true });
       }
     });
 
     // ═══ Learning by doing ═══
-    // If a visitor sits still, one card lifts and shows its caption (once per
-    // visit); the first key press shows the keys (once, ever). ?nudge replays
-    // the nudge on demand.
+    // If a visitor sits still, one card shows its entry (once per
+    // visit); the first key press shows the keys and the first opened card
+    // points out its arrows (each once, ever). ?nudge replays both on demand.
     const store = (kind: 'local' | 'session') => {
       try {
         return kind === 'local' ? localStorage : sessionStorage;
@@ -921,11 +1083,12 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         return null;
       }
     };
+    const LOCAL = new Set(['df-keys', 'df-arrows']); // once ever; the rest once per visit
     const seen = {
-      has: (k: string) => store(k === 'df-keys' ? 'local' : 'session')?.getItem(k) === '1',
+      has: (k: string) => store(LOCAL.has(k) ? 'local' : 'session')?.getItem(k) === '1',
       mark: (k: string) => {
         try {
-          store(k === 'df-keys' ? 'local' : 'session')?.setItem(k, '1');
+          store(LOCAL.has(k) ? 'local' : 'session')?.setItem(k, '1');
         } catch {}
       },
     };
@@ -947,13 +1110,9 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     const nudgeTimer = window.setTimeout(() => {
       if ((!forceNudge && (engaged || seen.has('df-nudged'))) || !desktop.matches || document.body.classList.contains('modal') || !indexEl.hidden) return;
       const el = cards.find((c) => Number(c.dataset.i) === L.rows[1].first)!; // the first project
-      el.classList.add('nudge');
       seen.mark('df-nudged');
-      setTimeout(() => showTip(el), 450); // caption follows the lift
-      setTimeout(() => {
-        el.classList.remove('nudge');
-        if (hovered === el) hideTip();
-      }, 3400);
+      choose(el, true);
+      setTimeout(() => cur === el && document.activeElement !== el && drop(), 3400);
     }, forceNudge ? 2500 : 5000);
 
     const kchip = $('[data-kchip]');
@@ -1224,7 +1383,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     cursor: auto;
   }
   .i-name {
-    font-size: calc(var(--t) * 0.3);
+    font-size: max(1.125rem, calc(var(--t) * 0.3));
     letter-spacing: -0.02em;
     line-height: 1.1;
   }
@@ -1237,7 +1396,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   }
   .i-line {
     margin-top: 0.4em;
-    font-size: calc(var(--t) * 0.17);
+    font-size: max(0.75rem, calc(var(--t) * 0.17));
     line-height: 1.3;
     color: var(--ink-2);
     max-width: 44ch;
@@ -1245,18 +1404,38 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
   .label {
     place-items: center end;
-    align-content: center;
-    gap: 0.2rem;
     padding-right: calc(var(--t) * 0.2);
-    font-size: clamp(0.5625rem, calc(var(--t) * 0.13), 0.8125rem);
+    font-size: clamp(0.625rem, calc(var(--t) * 0.13), 0.8125rem);
     letter-spacing: 0.06em;
     text-align: right;
-    cursor: auto;
+    cursor: pointer;
+  }
+  /* The number is the section's key (1–4), drawn as one, so it reads as a
+     shortcut rather than a count or a chapter number. */
+  .l-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55em;
+  }
+  .label kbd {
+    font-size: 0.9em;
+    color: var(--ink-2);
+    transition:
+      border-color 0.2s,
+      color 0.2s;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .stage:not(.grabbing) .label:hover kbd {
+      border-color: var(--ink);
+      color: var(--ink);
+    }
   }
 
   .spec {
     position: relative;
-    width: var(--t);
+    /* the plate fills more of its cell than the tiles do: the floor keeps
+       its rhythm, the works get the room */
+    width: calc(var(--t) * 1.25);
     aspect-ratio: 4 / 5;
     transition:
       scale 0.45s var(--ease),
@@ -1264,6 +1443,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     z-index: 1;
     cursor: pointer;
   }
+
   .spec img {
     display: block;
     width: 100%;
@@ -1274,25 +1454,96 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   .spec.dim {
     opacity: 0.18;
   }
+  /* The current card grows a touch and shows its entry over the plate. */
+  .spec.cur {
+    scale: 1.08;
+    z-index: 3;
+    opacity: 1;
+  }
+  .spec.by-pointer:focus-visible {
+    outline: none;
+  }
   .spec:active {
     scale: 0.97;
   }
-  @media (hover: hover) and (pointer: fine) {
-    .stage:not(.nohover) .spec:hover {
-      scale: 1.08;
-      z-index: 2;
+  /* a drag that started on a card isn't pressing it */
+  .stage.grabbing .spec:active {
+    scale: 1;
+  }
+  .stage.grabbing .spec.cur:active {
+    scale: 1.08;
+  }
+
+  /* The entry, inside the card, sized to the card: on a small card the
+     number and title; the section, kind and year join on a roomier one. */
+  .spec {
+    container-type: inline-size;
+  }
+  .sheet {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(5px, 7cqi, 11px);
+    color: #efe8da;
+    background: linear-gradient(rgb(20 19 18 / 0.55), transparent 32%, transparent 38%, rgb(20 19 18 / 0.9) 84%);
+    text-align: left;
+    letter-spacing: normal;
+    text-transform: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease-out;
+  }
+  .s-kick {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5em;
+    font-size: clamp(9px, 8.5cqi, 11px);
+    letter-spacing: 0.06em;
+    color: rgb(239 232 218 / 0.75);
+  }
+  .s-kick > :first-child {
+    display: none;
+    margin-right: auto;
+  }
+  .s-body {
+    display: grid;
+    gap: 0.3em;
+  }
+  .s-title {
+    font-size: clamp(10px, 12.5cqi, 16px);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .s-meta {
+    display: none;
+    font-size: clamp(9px, 8.5cqi, 11px);
+    letter-spacing: 0.06em;
+    color: rgb(239 232 218 / 0.75);
+  }
+  @container (min-width: 110px) {
+    .s-kick > :first-child,
+    .s-meta {
+      display: block;
     }
   }
-  .spec:focus-visible {
-    scale: 1.08;
-    z-index: 2;
+  .spec.cur .sheet {
+    opacity: 1;
+    transition: opacity 0.3s var(--ease) 0.08s;
   }
 
   /* Cards develop into view in reading order, once, at load. */
   @media (prefers-reduced-motion: no-preference) {
     .spec img {
-      animation: develop 0.8s steps(8) both;
-      animation-delay: calc(0.25s + var(--k) * 45ms);
+      /* a continuous wipe, not stepped: stepped read as slow loading */
+      animation: develop 0.6s var(--ease) both;
+      animation-delay: calc(0.15s + var(--k) * 30ms);
     }
     .intro,
     .label {
@@ -1311,39 +1562,6 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     from {
       opacity: 0;
       translate: 0 6px;
-    }
-  }
-  /* The nudge: the card is picked up, held long enough to read, put down. */
-  .spec.nudge {
-    z-index: 2;
-    /* on the card, not its image: the image keeps its own reveal animation */
-    animation:
-      lift 3.4s var(--ease) both,
-      lift-shadow 3.4s var(--ease) both;
-  }
-  @keyframes lift {
-    0% {
-      scale: 1;
-      translate: 0 0;
-    }
-    14%,
-    82% {
-      scale: 1.16;
-      translate: 0 -8px;
-    }
-    100% {
-      scale: 1;
-      translate: 0 0;
-    }
-  }
-  @keyframes lift-shadow {
-    0%,
-    100% {
-      box-shadow: 0 0 0 rgb(20 19 18 / 0);
-    }
-    14%,
-    82% {
-      box-shadow: 0 22px 34px -14px rgb(20 19 18 / 0.45);
     }
   }
 
@@ -1433,31 +1651,6 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   .i-keys dt {
     display: flex;
     gap: 0.25rem;
-  }
-
-  /* ── Hover caption ── */
-  .tip {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 15;
-    width: 15rem;
-    padding: 0.7rem 0.85rem 0.8rem;
-    background: color-mix(in srgb, var(--bg) 92%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--rule);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s ease-out;
-  }
-  .tip.on {
-    opacity: 1;
-    transition-duration: 0.25s;
-  }
-  .t-title {
-    margin: 0.2rem 0 0.1rem;
-    line-height: 1.25;
   }
 
   /* ── Footer chrome ── */
@@ -1663,11 +1856,37 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     display: none;
   }
   .d-plate {
+    position: relative;
     display: grid;
     place-items: center;
     height: 100%;
     min-height: 0;
     cursor: zoom-out;
+  }
+  /* While passing, the plate's cell is the carousel's window. (Only then:
+     opening grows the plate from a card outside it.) */
+  .d-plate.passing {
+    overflow: clip;
+  }
+  /* the plate leaving, while the next one arrives */
+  .d-ghost {
+    position: absolute;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+  .d-text-ghost {
+    position: absolute;
+    margin: 0;
+    pointer-events: none;
+  }
+  .d-arrow.press {
+    animation: press 0.32s var(--ease);
+  }
+  @keyframes press {
+    30% {
+      scale: 0.9;
+      border-color: var(--ink);
+    }
   }
   .d-plate img {
     height: min(100%, 72svh);
@@ -1696,6 +1915,70 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       border-color: var(--ink);
     }
   }
+  .d-next-wrap {
+    position: relative;
+    justify-self: center;
+  }
+
+  /* First open: both arrows draw the eye (inked, a ring breathes out of
+     them) and a caption under → says how to browse. */
+  .detail.teach .d-arrow {
+    border-color: var(--ink);
+    animation: beckon 1.8s var(--ease) 0.1s 3;
+  }
+  @keyframes beckon {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--ink) 30%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 12px color-mix(in srgb, var(--ink) 0%, transparent);
+    }
+  }
+  .d-hint {
+    position: absolute;
+    top: calc(100% + 0.9rem);
+    right: 0;
+    width: max-content;
+    max-width: 14.5rem;
+    padding: 0.6rem 0.8rem 0.65rem;
+    /* opaque: on narrower screens it lies over the description */
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    box-shadow: 0 18px 36px -18px rgb(20 19 18 / 0.35);
+    color: var(--ink-2);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    pointer-events: none;
+    opacity: 0;
+    translate: 0 -4px;
+    transition:
+      opacity 0.2s ease-out,
+      translate 0.3s var(--ease);
+  }
+  /* caret, under the arrow's centre */
+  .d-hint::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: calc(1.5rem - 4px);
+    width: 8px;
+    height: 8px;
+    background: var(--bg);
+    border: solid var(--rule);
+    border-width: 1px 0 0 1px;
+    rotate: 45deg;
+  }
+  .detail.teach .d-hint {
+    opacity: 1;
+    translate: 0 0;
+    transition-duration: 0.35s, 0.5s;
+  }
+  /* the arrow's own key hint would sit on top of the caption */
+  .detail.teach .d-arrow::before {
+    display: none;
+  }
+
   .d-text {
     max-width: 28rem;
     display: flex;
@@ -1728,6 +2011,38 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   }
   .d-body {
     max-width: 34em;
+  }
+  /* only the words are the target, not the column's full width */
+  .d-link {
+    align-self: flex-start;
+  }
+  .d-arr {
+    display: inline-block;
+  }
+  /* After a few seconds on a card: the underline draws in, slower than on
+     hover, and stays; the arrow tugs twice toward where the link goes. */
+  .d-link {
+    transition: color 0.6s var(--ease);
+  }
+  /* takes the red that links take on hover elsewhere (Contact, the socials) */
+  .d-link.beckon {
+    color: var(--dot);
+  }
+  .d-link.beckon .ul {
+    background-size: 100% 1px;
+    transition-duration: 0.9s;
+  }
+  .d-link.beckon .d-arr {
+    animation: tug 1.1s var(--ease) 0.5s 3;
+  }
+  @keyframes tug {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    35% {
+      translate: 4px -4px;
+    }
   }
   .d-link[hidden] {
     display: none;
@@ -1881,7 +2196,6 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   @media (max-width: 760px) {
     .bar,
     .stage,
-    .tip,
     .foot,
     .index,
     .detail,
