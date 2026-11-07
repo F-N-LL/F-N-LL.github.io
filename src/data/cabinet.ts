@@ -125,11 +125,11 @@ export const specimens: Specimen[] = [
   },
   {
     slug: 'tui',
-    title: 'Software Engineer, TUI',
+    title: 'Fullstack Software Engineer, TUI',
     kind: 'Post',
     year: 'Current',
-    medium: 'AWS: Lambda, DynamoDB, IAM · JavaScript',
-    text: 'Cloud and backend systems for one of Europe’s largest travel groups.',
+    medium: 'AWS: Lambda, DynamoDB, S3 · Rust, Python, Vue',
+    text: 'Document and data platforms for one of Europe’s largest travel groups: critical Lambda services in Rust, the agentic infrastructure the team works with, and the design decisions made with stakeholders.',
   },
   {
     slug: 'uned',
