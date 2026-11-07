@@ -233,7 +233,7 @@ export const specimens: Specimen[] = [
 
 export const elsewhere = [
   { label: 'GitHub', handle: 'F-N-LL', href: 'https://github.com/F-N-LL' },
-  { label: 'X', handle: '@daniel0xFC', href: 'https://x.com/daniel0xFC' },
+  { label: 'X', handle: '@zumodeia', href: 'https://x.com/zumodeia' },
   { label: 'LinkedIn', handle: 'daniel-fenoll', href: 'https://www.linkedin.com/in/daniel-fenoll' },
   { label: 'Email', handle: 'dfenollapps@gmail.com', href: 'mailto:dfenollapps@gmail.com' },
 ];
