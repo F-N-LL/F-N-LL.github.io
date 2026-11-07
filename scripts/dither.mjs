@@ -170,6 +170,43 @@ const compositions = {
     <circle cx="124" cy="160" r="18" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
     <path d="M124 160 V148 M124 160 H116" stroke="${c('red')}" stroke-width="2"/>`,
 
+  // Teaching: a blackboard with code on it, chalk on the ledge.
+  immune: `
+    <defs>${grad('g', 'ochre', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="14" y="34" width="132" height="96" fill="${c('olive')}" stroke="${c('charcoal')}" stroke-width="4"/>
+    ${mono(24, 58, 'const app =', 'cream', 10)}
+    ${mono(34, 74, 'useState()', 'aegean', 10)}
+    ${mono(24, 90, '// why?', 'ochre', 10)}
+    <path d="M24 110 C44 102 60 116 80 106" stroke="${c('cream')}" stroke-width="1.5" fill="none"/>
+    <rect x="14" y="130" width="132" height="6" fill="${c('charcoal')}"/>
+    <rect x="100" y="125" width="16" height="5" fill="${c('cream')}"/>
+    ${[34, 62, 90, 118].map((x) => `<circle cx="${x}" cy="168" r="9" fill="${c('charcoal')}"/><rect x="${x - 12}" y="178" width="24" height="22" fill="${c('charcoal')}"/>`).join('')}`,
+
+  // Small business on the web: a shopfront with an awning, open.
+  afconsulting: `
+    <defs>${grad('g', 'aegean', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="22" y="60" width="116" height="118" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
+    ${[0, 1, 2, 3, 4, 5].map((i) => `<path d="M${22 + i * 19.33} 60 h19.33 v22 a9.67 9.67 0 0 1 -19.33 0 z" fill="${c(i % 2 ? 'cream' : 'red')}" stroke="${c('charcoal')}" stroke-width="1.5"/>`).join('')}
+    <rect x="34" y="102" width="50" height="40" fill="${c('aegean')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <rect x="96" y="102" width="30" height="76" fill="${c('olive')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <rect x="40" y="150" width="38" height="12" fill="${c('ochre')}"/>
+    ${mono(42, 159, 'OPEN', 'charcoal', 8)}
+    <path d="M0 178 H160" stroke="${c('charcoal')}" stroke-width="2"/>`,
+
+  // Water tech: a drop falling from a tap into a rising level.
+  fibsen: `
+    <defs>${grad('g', 'cream', 'aegean')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <path d="M40 30 H104 V44 H92 V58 H80 V44 H40 Z" fill="${c('charcoal')}"/>
+    <rect x="52" y="22" width="12" height="8" fill="${c('red')}"/>
+    <path d="M86 74 C86 74 74 92 74 100 A12 12 0 0 0 98 100 C98 92 86 74 86 74 Z" fill="${c('aegean')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <rect y="146" width="160" height="54" fill="${c('aegean')}"/>
+    <path d="M0 146 C30 138 50 154 80 146 S130 138 160 146" stroke="${c('cream')}" stroke-width="2" fill="none"/>
+    <circle cx="86" cy="146" r="10" fill="none" stroke="${c('cream')}" stroke-width="1.5"/>
+    <circle cx="86" cy="146" r="20" fill="none" stroke="${c('cream')}" stroke-width="1" opacity=".6"/>`,
+
   // UX: a user flow of three wireframes, one of them picked.
   nuclio: `
     <defs>${grad('g', 'cream', 'aegean')}</defs>

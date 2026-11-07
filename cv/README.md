@@ -7,4 +7,8 @@ brave-browser --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf
 pdfinfo Daniel-Fenoll-CV.pdf | grep Pages   # must stay at 1
 ```
 
-Not part of the site build: nothing here is copied to `public/`.
+The site links the copy in `public/`. After printing, update it:
+
+```sh
+cp Daniel-Fenoll-CV.pdf ../public/Daniel-Fenoll-CV.pdf
+```

@@ -8,10 +8,17 @@ import { specimens, flow, elsewhere } from '../data/cabinet';
 
 const bySlug = new Map(specimens.map((s) => [s.slug, s]));
 const pad = (n: number) => String(n).padStart(2, '0');
-const cards = flow.flatMap(({ section, slugs }) =>
-  slugs.map((slug, i) => ({ ...bySlug.get(slug)!, section, pos: `${pad(i + 1)}/${pad(slugs.length)}` })),
-);
-const starts = flow.map(({ section, slugs }) => ({
+// The introduction opens the flow on its own, printed on the Pyrenees plate,
+// so the work comes right after it; the plate is not repeated under About.
+const INTRO = 'pyrenees';
+const sections = flow.map(({ section, slugs }) => ({ section, slugs: slugs.filter((s) => s !== INTRO) }));
+const cards = [
+  { ...bySlug.get(INTRO)!, section: 'Introduction', pos: '' },
+  ...sections.flatMap(({ section, slugs }) =>
+    slugs.map((slug, i) => ({ ...bySlug.get(slug)!, section, pos: `${pad(i + 1)}/${pad(slugs.length)}` })),
+  ),
+];
+const starts = sections.map(({ section, slugs }) => ({
   section,
   count: slugs.length,
   index: cards.findIndex((c) => c.section === section),
@@ -39,7 +46,7 @@ const starts = flow.map(({ section, slugs }) => ({
               <div class="body">
                 <p class="kana pixel" lang="ja">{profile.kana}</p>
                 <h2 id={`f-t-${i}`} class="title">{profile.name}</h2>
-                <p class="meta caps">Software engineer & designer · Alicante</p>
+                <p class="meta caps">Senior software engineer · Alicante</p>
                 <p class="text">{profile.statement}</p>
                 <ul class="links">
                   {elsewhere.map((l) => (
@@ -103,6 +110,7 @@ const starts = flow.map(({ section, slugs }) => ({
     const segs = tabs.map((t) => t.querySelector<HTMLElement>('.f-seg')!);
     const secEl = root.querySelector<HTMLElement>('[data-f-sec]')!;
     const localEl = root.querySelector<HTMLElement>('[data-f-local]')!;
+    const whereEl = root.querySelector<HTMLElement>('.f-where')!;
     const totalEl = root.querySelector<HTMLElement>('[data-f-total]')!;
     const sections = tabs.map((t) => ({ name: t.dataset.fSection!, start: +t.dataset.fJump!, count: +t.dataset.fCount! }));
     let segBox: { x: number; w: number }[] = [];
@@ -219,6 +227,8 @@ const starts = flow.map(({ section, slugs }) => ({
         nearest = i;
         dot.setAttribute('aria-valuenow', String(i + 1));
         localEl.textContent = String(Math.max(1, Math.min(s.count, i - s.start + 1))).padStart(2, '0');
+        // the introduction belongs to no section: no counter over it
+        whereEl.style.visibility = i < sections[0].start ? 'hidden' : '';
       }
     }
 

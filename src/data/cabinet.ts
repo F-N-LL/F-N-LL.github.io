@@ -13,12 +13,13 @@ export type Specimen = {
   lang?: string;
 };
 
-// The phone reads the cabinet as a story: who, what gets made, where the work
-// happened, what got written. Slugs in reading order, grouped by section.
+// The phone reads the cabinet as a story: what gets made, where the work
+// happened, who's behind it, what got written. Slugs in reading order, grouped
+// by section. The phone opens on the introduction before all of them.
 export const flow: { section: string; slugs: string[] }[] = [
-  { section: 'About', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments', 'correspondence'] },
-  { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile','trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
-  { section: 'Experience', slugs: ['tui', 'nuclio', 'mitx', 'uv', 'uned', 'sfl', 'caritas'] },
+  { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile', 'trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
+  { section: 'Experience', slugs: ['tui', 'immune', 'afconsulting', 'fibsen', 'nuclio', 'mitx', 'uv', 'uned'] },
+  { section: 'About', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments', 'sfl', 'caritas', 'correspondence'] },
   { section: 'Posts', slugs: ['ui-ai', 'eficiencia', 'siglo-xx'] },
 ];
 
@@ -132,6 +133,30 @@ export const specimens: Specimen[] = [
     text: 'TUI Archive: 300M+ documents searched by 50,000+ people in under 200 ms, for one of Europe’s largest travel groups. Critical Lambda services in Rust, the agentic infrastructure the team works with, and the design decisions made with stakeholders.',
   },
   {
+    slug: 'immune',
+    title: 'Instructor, IMMUNE Technology Institute',
+    kind: 'Post',
+    year: '2024–25',
+    medium: 'Master in Web Development · JavaScript, React, AI/ML',
+    text: 'Taught dozens of students full-stack development, from JavaScript and React to AI for developers, and reviewed their code and final projects.',
+  },
+  {
+    slug: 'afconsulting',
+    title: 'Software Developer, AF Consulting',
+    kind: 'Post',
+    year: '2022–23',
+    medium: 'Web apps, e-commerce, SEO',
+    text: 'Web apps and online stores for small and medium businesses in Spain and abroad, from the client’s brief to production.',
+  },
+  {
+    slug: 'fibsen',
+    title: 'Developer & Designer, fibsen',
+    kind: 'Post',
+    year: '2019–20',
+    medium: 'Founding team · product, brand, web',
+    text: 'A water-tech startup, from the first sketches: its first digital and physical products, the brand, the website, and the pitch for its first funding.',
+  },
+  {
     slug: 'nuclio',
     title: 'Master in UX/UI Design & Full Stack Development',
     kind: 'Study',
@@ -236,4 +261,5 @@ export const elsewhere = [
   { label: 'X', handle: '@zumodeia', href: 'https://x.com/zumodeia' },
   { label: 'LinkedIn', handle: 'daniel-fenoll', href: 'https://www.linkedin.com/in/daniel-fenoll' },
   { label: 'Email', handle: 'dfenollapps@gmail.com', href: 'mailto:dfenollapps@gmail.com' },
+  { label: 'CV', handle: 'PDF, one page', href: '/Daniel-Fenoll-CV.pdf' },
 ];
