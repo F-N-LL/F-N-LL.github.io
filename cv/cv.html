@@ -10,24 +10,25 @@
   @font-face { font-family: "CMU Serif"; font-weight: 700; font-style: normal; src: url("fonts/cmu-serif-700-roman.woff2") format("woff2"); }
   @font-face { font-family: "CMU Serif"; font-weight: 700; font-style: italic; src: url("fonts/cmu-serif-700-italic.woff2") format("woff2"); }
 
-  @page { size: A4; margin: 14mm 17mm 12mm; }
+  @page { size: A4; margin: 13mm 16mm 11mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { background: #fff; color: #000; }
   body {
     font-family: "CMU Serif", serif;
     font-size: 10pt;
-    line-height: 1.3;
+    line-height: 1.28;
     hyphens: auto;
     font-kerning: normal;
     font-variant-ligatures: common-ligatures;
   }
   a { color: inherit; text-decoration: none; }
+  b { font-weight: 700; }
 
-  header { text-align: center; margin-bottom: 9pt; }
-  h1 { font-size: 20pt; font-weight: 400; letter-spacing: .02em; font-variant: small-caps; }
-  .role { margin-top: 1pt; font-size: 11pt; font-style: italic; }
+  header { text-align: center; margin-bottom: 4pt; }
+  h1 { font-size: 22pt; font-weight: 700; letter-spacing: .01em; }
   .contact { margin-top: 3pt; font-size: 9.5pt; }
   .contact span + span::before { content: "\00b7\00a0"; }
+  .headline { margin-top: 7pt; font-size: 12.5pt; font-weight: 700; text-align: center; }
 
   h2 {
     font-size: 11pt;
@@ -36,31 +37,33 @@
     letter-spacing: .04em;
     border-bottom: .5pt solid #000;
     padding-bottom: 1pt;
-    margin: 10pt 0 5pt;
+    margin: 9pt 0 4pt;
   }
   p { text-align: justify; }
 
-  .entry { margin-bottom: 6pt; break-inside: avoid; }
+  .entry { margin-bottom: 5pt; break-inside: avoid; }
   .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
-  .row b { font-weight: 700; }
-  .row .when { white-space: nowrap; }
-  .sub { font-style: italic; }
-  .entry p { margin-top: 1.5pt; }
+  .co { font-size: 11.5pt; font-weight: 700; }
+  .co .loc { font-size: 10pt; font-weight: 400; }
+  .when { white-space: nowrap; font-style: italic; }
+  .role { font-style: italic; }
 
-  ul.projects { list-style: none; }
-  ul.projects li { margin-bottom: 2pt; text-align: left;padding-left: 10pt; text-indent: -10pt; }
+  ul { list-style: none; }
+  .entry ul { margin-top: 1.5pt; }
+  .entry li, ul.projects li { padding-left: 11pt; text-indent: -8pt; margin-bottom: 1pt; text-align: left; }
+  .entry li::before { content: "\2022\00a0\00a0"; }
   ul.projects li::before { content: "\2013\00a0\00a0"; }
   ul.projects .tech { font-style: italic; }
 
-  .small { font-size: 9.5pt; }
-  .edu .row { margin-bottom: 1.5pt; }
+  .edu .row { margin-bottom: 1pt; }
+  .skills div { padding-left: 11pt; text-indent: -8pt; margin-bottom: 1pt; }
+  .skills div::before { content: "\2022\00a0\00a0"; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Daniel Fenoll</h1>
-  <div class="role">Senior Software Engineer</div>
   <div class="contact">
     <span>Alicante, Spain</span>
     <span><a href="mailto:dfenollapps@gmail.com">dfenollapps@gmail.com</a></span>
@@ -68,63 +71,59 @@
     <span><a href="https://github.com/F-N-LL">github.com/F-N-LL</a></span>
     <span><a href="https://www.linkedin.com/in/daniel-fenoll">linkedin.com/in/daniel-fenoll</a></span>
   </div>
+  <div class="headline">Senior Software Engineer | Fullstack, Cloud &amp; Agentic Platforms</div>
 </header>
 
 <h2>Summary</h2>
 <p>
   <b>Senior fullstack software engineer with 4+ years</b> building cloud platforms and the products on top of
   them. Proven record of owning systems end to end at TUI: critical Rust and Python services on AWS, the
-  agentic infrastructure my team builds with, and the design decisions made directly with stakeholders.
-  Former JavaScript and React instructor who enjoys mentoring, and maker of small, finished tools: an Android
-  e-ink reader, a macOS menu-bar app, a dumb-phone conversion for an old iPhone.
+  agentic infrastructure my team builds with, and design decisions made directly with stakeholders. Former
+  JavaScript and React instructor who enjoys mentoring engineers.
 </p>
 
-<h2>Experience</h2>
+<h2>Work experience</h2>
 
 <div class="entry">
-  <div class="row"><span><b>TUI Group</b>, Fullstack Software Engineer</span><span class="when">Jun 2024 – present</span></div>
-  <div class="row sub"><span>Europe’s largest leisure, travel and airline group</span><span>Hybrid</span></div>
-  <p>
-    I design and build in-house document and data platforms for logistics and TravelTech: ingestion, archiving
-    and processing pipelines on AWS (Lambda, DynamoDB, S3, IAM), Python and Rust services, and Vue applications
-    that teams across the company use daily. I write the critical Lambda services in Rust, own the agentic
-    infrastructure the team builds and works with, and added natural-language search and AI agents that take
-    repetitive document work off people’s hands. I work directly with stakeholders and make the key product and
-    design decisions on how these tools are used, then see them through to production.
-  </p>
+  <div class="row"><span class="co">TUI Group <span class="loc">— Spain, hybrid</span></span><span class="when">Jun 2024 – Present</span></div>
+  <div class="role">Fullstack Software Engineer (Cloud, Data &amp; AI) · Europe’s largest travel and leisure group</div>
+  <ul>
+    <li>Write the <b>critical AWS Lambda services in Rust</b> behind document and data platforms that archive, process and search logistics and travel documents at scale.</li>
+    <li>Own the <b>agentic infrastructure</b> the team builds and works with, and shipped <b>natural-language search and AI agents</b> that take repetitive document work off people’s hands.</li>
+    <li><b>Lead key product and design decisions directly with stakeholders</b>, then deliver them to production across Python services, AWS (Lambda, DynamoDB, S3, IAM) and Vue apps used daily across the company.</li>
+  </ul>
 </div>
 
 <div class="entry">
-  <div class="row"><span><b>IMMUNE Technology Institute</b>, Instructor, Master in Web Development</span><span class="when">Feb 2024 – Apr 2025</span></div>
-  <p>
-    Taught JavaScript, React, and prompt engineering and machine learning for developers. Reviewed students’
-    code and final projects, and learned to explain a design decision in a way that sticks.
-  </p>
+  <div class="row"><span class="co">IMMUNE Technology Institute <span class="loc">— Madrid, remote</span></span><span class="when">Feb 2024 – Apr 2025</span></div>
+  <div class="role">Instructor, Master in Web Development</div>
+  <ul>
+    <li>Taught <b>JavaScript, React, and AI/ML for developers</b>; reviewed students’ code and final projects.</li>
+  </ul>
 </div>
 
 <div class="entry">
-  <div class="row"><span><b>AF Consulting</b>, Software Developer</span><span class="when">Jun 2022 – Sep 2023</span></div>
-  <p>
-    Built, maintained and improved web apps and online stores for small and medium businesses in Spain and
-    abroad, focused on conversion, performance and search visibility. Owned each project from the client
-    conversation to production.
-  </p>
+  <div class="row"><span class="co">AF Consulting <span class="loc">— Alicante, remote</span></span><span class="when">Jun 2022 – Sep 2023</span></div>
+  <div class="role">Software Developer</div>
+  <ul>
+    <li>Built and maintained <b>web apps and online stores for SMEs</b> in Spain and abroad, owning each project from the client conversation to production, with a focus on conversion, performance and SEO.</li>
+  </ul>
 </div>
 
 <div class="entry">
-  <div class="row"><span><b>fibsen</b>, Developer &amp; Designer, founding team</span><span class="when">Jun 2019 – Jan 2020</span></div>
-  <p>
-    Water-tech startup. Designed its first digital and physical products, the brand and its web presence,
-    and worked on the pitch that led to its first funding.
-  </p>
+  <div class="row"><span class="co">fibsen <span class="loc">— Valencia</span></span><span class="when">Jun 2019 – Jan 2020</span></div>
+  <div class="role">Developer &amp; Designer, founding team</div>
+  <ul>
+    <li>Designed the <b>first digital and physical products</b>, brand and web presence of a water-tech startup, and worked on the pitch for its <b>first funding</b>.</li>
+  </ul>
 </div>
 
 <div class="entry">
-  <div class="row"><span><b>Innsomnia</b>, Project Manager (internship)</span><span class="when">Feb 2019 – Oct 2019</span></div>
-  <p>
-    Worked with the general manager of the accelerator on fintech, insurtech and industry 4.0 startups,
-    helping them plan and scale.
-  </p>
+  <div class="row"><span class="co">Innsomnia <span class="loc">— Valencia</span></span><span class="when">Feb 2019 – Oct 2019</span></div>
+  <div class="role">Project Manager (internship)</div>
+  <ul>
+    <li>Worked with the general manager of the accelerator on <b>fintech, insurtech and industry 4.0</b> startups.</li>
+  </ul>
 </div>
 
 <h2>Personal projects</h2>
@@ -145,9 +144,11 @@
   <div class="row"><span><b>Computer Engineering</b>, UNED <i>(coursework, not completed)</i></span><span class="when"></span></div>
 </div>
 
-<p class="small" style="margin-top:8pt">
-  <i>Languages and tools:</i> Python, TypeScript, Kotlin, Swift, Go, C, Rust · Vue, React · AWS · Spanish (native), English.
-</p>
+<h2>Skills</h2>
+<div class="skills">
+  <div><b>Languages:</b> Python, Rust, TypeScript, Kotlin, Swift, Go, C · Spanish (native), English</div>
+  <div><b>Technologies:</b> AWS (Lambda, DynamoDB, S3, IAM), Vue, React, AI agents, natural-language search</div>
+</div>
 
 </body>
 </html>
