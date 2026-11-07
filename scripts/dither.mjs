@@ -153,7 +153,9 @@ const compositions = {
     <rect y="126" width="160" height="74" fill="url(#w)"/>
     ${[136, 146, 158, 172].map((y, i) => `<path d="M${96 - i * 6} ${y} H${128 + i * 6}" stroke="${c('ochre')}" stroke-width="2" opacity="${0.9 - i * 0.18}"/>`).join('')}
     <path d="M18 70 C50 56 84 48 118 44" stroke="${c('cream')}" stroke-width="2.5" fill="none"/>
-    <path d="M118 40 l12 4 l-12 4 l2 -4 z M121 44 l-4 -7 l3 0 l6 7 z M121 44 l-4 7 l3 0 l6 -7 z" fill="${c('charcoal')}"/>`,
+    <path d="M118 40 l12 4 l-12 4 l2 -4 z M121 44 l-4 -7 l3 0 l6 7 z M121 44 l-4 7 l3 0 l6 -7 z" fill="${c('charcoal')}"/>
+    <text x="16" y="34" font-family="Noto Sans, sans-serif" font-size="24" font-weight="800" letter-spacing="-0.5" fill="${c('red')}">tui</text>
+    <path d="M18 40 C26 49 44 49 52 40" stroke="${c('red')}" stroke-width="3.5" stroke-linecap="round" fill="none"/>`,
 
   // An exam on paper, 08:00.
   uned: `
