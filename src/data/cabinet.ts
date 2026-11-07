@@ -18,7 +18,7 @@ export type Specimen = {
 export const flow: { section: string; slugs: string[] }[] = [
   { section: 'About', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments', 'correspondence'] },
   { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile','trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
-  { section: 'Experience', slugs: ['tui', 'uned', 'mitx', 'sfl', 'caritas'] },
+  { section: 'Experience', slugs: ['tui', 'nuclio', 'mitx', 'uv', 'uned', 'sfl', 'caritas'] },
   { section: 'Posts', slugs: ['ui-ai', 'eficiencia', 'siglo-xx'] },
 ];
 
@@ -132,11 +132,27 @@ export const specimens: Specimen[] = [
     text: 'Document and data platforms for one of Europe’s largest travel groups: critical Lambda services in Rust, the agentic infrastructure the team works with, and the design decisions made with stakeholders.',
   },
   {
+    slug: 'nuclio',
+    title: 'Master in UX/UI Design & Full Stack Development',
+    kind: 'Study',
+    year: '2023',
+    medium: 'Nuclio Digital School',
+    text: 'Research, interface design and a full stack to build it on. The final project, Homezzy, matched young professionals with a place to live by profile instead of by filters.',
+  },
+  {
+    slug: 'uv',
+    title: 'Political Science and Public Administration',
+    kind: 'Study',
+    year: '2014–19',
+    medium: 'Universitat de València',
+    text: 'Political theory, economics, statistics with SPSS, and a lot of debating. Where the habit of asking who a system is for comes from.',
+  },
+  {
     slug: 'uned',
     title: 'Computer Engineering, UNED',
     kind: 'Study',
-    year: '—',
-    medium: 'Distance learning, alongside work',
+    year: 'Coursework',
+    medium: 'Distance learning, alongside work, not completed',
     text: 'Algorithms, operating systems, C++ written on paper at eight in the morning. Studied to learn, not for the title.',
   },
   {

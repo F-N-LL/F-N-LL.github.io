@@ -33,8 +33,10 @@ export const work = [
 ];
 
 export const education = [
-  { period: '', title: 'Computer Engineering', org: 'UNED' },
+  { period: '2023', title: 'Master in UX/UI Design & Full Stack Development', org: 'Nuclio Digital School' },
   { period: '2020', title: 'MicroMasters, Statistics & Data Science', org: 'MITx' },
+  { period: '2014–19', title: 'Political Science and Public Administration', org: 'Universitat de València' },
+  { period: '', title: 'Computer Engineering (coursework)', org: 'UNED' },
 ];
 
 export const volunteering = [

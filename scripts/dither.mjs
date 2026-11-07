@@ -170,6 +170,36 @@ const compositions = {
     <circle cx="124" cy="160" r="18" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
     <path d="M124 160 V148 M124 160 H116" stroke="${c('red')}" stroke-width="2"/>`,
 
+  // UX: a user flow of three wireframes, one of them picked.
+  nuclio: `
+    <defs>${grad('g', 'cream', 'aegean')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    ${[[18, 40], [62, 40], [106, 40]].map(([x, y], i) => `
+      <rect x="${x}" y="${y}" width="36" height="64" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+      <rect x="${x + 5}" y="${y + 7}" width="26" height="16" fill="${c(i === 1 ? 'red' : 'aegean')}"/>
+      <rect x="${x + 5}" y="${y + 28}" width="20" height="3" fill="${c('charcoal')}"/>
+      <rect x="${x + 5}" y="${y + 35}" width="24" height="3" fill="${c('charcoal')}" opacity=".5"/>
+      <rect x="${x + 5}" y="${y + 50}" width="26" height="8" fill="${c('ochre')}"/>`).join('')}
+    <path d="M54 72 H62 M98 72 H106" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <path d="M30 128 C50 150 110 150 130 128" stroke="${c('charcoal')}" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
+    <path d="M86 132 l0 22 l6 -6 l5 10 l4 -2 l-5 -10 l8 0 z" fill="${c('charcoal')}"/>`,
+
+  // A parliament: the hemicycle, one seat in red.
+  uv: `
+    <defs>${grad('g', 'ochre', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    ${[30, 42, 54, 66].map((r, k) => {
+      const n = 7 + k * 3;
+      return Array.from({ length: n }, (_, i) => {
+        const a = Math.PI - (i / (n - 1)) * Math.PI;
+        const x = 80 + r * Math.cos(a);
+        const y = 132 - r * Math.sin(a);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" fill="${c(k === 2 && i === 9 ? 'red' : 'charcoal')}"/>`;
+      }).join('');
+    }).join('')}
+    <rect x="64" y="140" width="32" height="10" fill="${c('olive')}"/>
+    <path d="M10 156 H150" stroke="${c('charcoal')}" stroke-width="1.5"/>`,
+
   // Statistics: a bell curve over its histogram.
   mitx: `
     <defs>${grad('g', 'cream', 'ochre')}</defs>
