@@ -129,7 +129,7 @@ export const specimens: Specimen[] = [
     kind: 'Post',
     year: 'Current',
     medium: 'AWS: Lambda, DynamoDB, S3 · Rust, Python, Vue',
-    text: 'Document and data platforms for one of Europe’s largest travel groups: critical Lambda services in Rust, the agentic infrastructure the team works with, and the design decisions made with stakeholders.',
+    text: 'TUI Archive: 300M+ documents searched by 50,000+ people in under 200 ms, for one of Europe’s largest travel groups. Critical Lambda services in Rust, the agentic infrastructure the team works with, and the design decisions made with stakeholders.',
   },
   {
     slug: 'nuclio',
