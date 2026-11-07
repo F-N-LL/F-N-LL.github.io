@@ -40,6 +40,42 @@ const compositions = {
     <path d="M22 168 C70 166 92 150 108 110 S132 44 146 34" stroke="${c('charcoal')}" stroke-width="3.5" fill="none"/>
     <circle cx="108" cy="110" r="5" fill="${c('red')}"/>`,
 
+  // An e-ink reader: a scanned page on the left, the same words reflowed larger.
+  ligero: `
+    <defs>${grad('g', 'olive', 'charcoal')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="30" y="20" width="100" height="160" rx="6" fill="${c('charcoal')}" stroke="${c('cream')}" stroke-width="1.5"/>
+    <rect x="38" y="30" width="84" height="132" fill="${c('cream')}"/>
+    ${[38, 44, 50, 56, 62].map((y, i) => `<rect x="44" y="${y}" width="${72 - (i % 2) * 10}" height="2" fill="${c('charcoal')}" opacity=".55"/>`).join('')}
+    <path d="M44 72 H116" stroke="${c('red')}" stroke-width="1" stroke-dasharray="2 2"/>
+    ${[82, 96, 110, 124, 138].map((y, i) => `<rect x="44" y="${y}" width="${[70, 62, 72, 48, 30][i]}" height="7" fill="${c('charcoal')}"/>`).join('')}
+    <circle cx="80" cy="171" r="3" fill="${c('cream')}"/>`,
+
+  // An iPhone 4S gone quiet: black screen, a big clock, a list of words.
+  new_dumb_iPhone: `
+    <defs>${grad('g', 'aegean', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="42" y="18" width="76" height="164" rx="12" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
+    <rect x="48" y="40" width="64" height="112" fill="${c('charcoal')}"/>
+    <path d="M70 29 H90" stroke="${c('charcoal')}" stroke-width="2"/>
+    <circle cx="80" cy="166" r="7" fill="none" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    ${mono(55, 68, '9:41', 'cream', 20)}
+    ${['Phone', 'Messages', 'Camera', 'Music'].map((w, i) => mono(56, 92 + i * 13, w, i ? 'aegean' : 'ochre', 8)).join('')}`,
+
+  // A bell tower at dusk, and the cross that fills in the menu bar.
+  campanile: `
+    <defs>${grad('g', 'ochre', 'red')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect width="160" height="16" fill="${c('cream')}"/>
+    <path d="M136 4 V13 M132.5 7.5 H139.5" stroke="${c('red')}" stroke-width="2"/>
+    ${[110, 120].map((x) => `<rect x="${x}" y="6" width="6" height="4" fill="${c('charcoal')}" opacity=".5"/>`).join('')}
+    <path d="M58 200 V84 L80 50 L102 84 V200 Z" fill="${c('charcoal')}"/>
+    <rect x="68" y="92" width="24" height="34" fill="${c('cream')}"/>
+    <path d="M80 98 C72 98 72 112 70 118 H90 C88 112 88 98 80 98 Z" fill="${c('ochre')}"/>
+    <circle cx="80" cy="121" r="2.5" fill="${c('ochre')}"/>
+    <path d="M80 50 V38 M75 43 H85" stroke="${c('charcoal')}" stroke-width="2.5"/>
+    ${[146, 166].map((y) => `<rect x="76" y="${y}" width="8" height="12" fill="${c('olive')}"/>`).join('')}`,
+
   haskarm: `
     <defs><radialGradient id="g" cx=".7" cy=".25" r=".9"><stop offset="0" stop-color="${c('olive')}"/><stop offset="1" stop-color="${c('charcoal')}"/></radialGradient></defs>
     <rect width="160" height="200" fill="url(#g)"/>

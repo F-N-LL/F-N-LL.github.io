@@ -17,12 +17,40 @@ export type Specimen = {
 // happened, what got written. Slugs in reading order, grouped by section.
 export const flow: { section: string; slugs: string[] }[] = [
   { section: 'About', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments', 'correspondence'] },
-  { section: 'Projects', slugs: ['trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
+  { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile','trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
   { section: 'Experience', slugs: ['tui', 'uned', 'mitx', 'sfl', 'caritas'] },
   { section: 'Posts', slugs: ['ui-ai', 'eficiencia', 'siglo-xx'] },
 ];
 
 export const specimens: Specimen[] = [
+  {
+    slug: 'ligero',
+    title: 'Ligero',
+    kind: 'Work',
+    year: '2026',
+    medium: 'Kotlin, Android, on-device OCR · private',
+    text: 'A light PDF reader for an e-ink Boox. Scanned book pages are split at the fold, deskewed and reflowed at a larger size, or turned into an EPUB with offline OCR.',
+  },
+  {
+    slug: 'new_dumb_iPhone',
+    title: 'new_dumb_iPhone',
+    kind: 'Work',
+    year: '2026',
+    medium: 'Go, Logos tweak, shell, iOS 9',
+    text: 'An old iPhone 4S turned into a quiet phone: a black screen, a big clock and a list of words. One script and one cable, plus a small Go bridge that brings WhatsApp back to iOS 9.',
+    href: 'https://github.com/F-N-LL/new_dumb_iPhone',
+    link: 'View source',
+  },
+  {
+    slug: 'campanile',
+    title: 'Campanile',
+    kind: 'Work',
+    year: '2026',
+    medium: 'Swift, macOS menu bar, Python CI',
+    text: 'The hours of prayer in the Mac menu bar: a reminder at each hour, a cross that fills in when one is due, and a quiet reader for the traditional Office, rendered daily on CI.',
+    href: 'https://f-n-ll.github.io/campanile-office/',
+    link: 'Visit',
+  },
   {
     slug: 'trackpad-curve',
     title: 'trackpad-curve',

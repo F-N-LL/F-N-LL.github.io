@@ -1,0 +1,150 @@
+<!doctype html>
+<!-- One-page CV, set like a LaTeX article. Print: see cv/README.md -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daniel Fenoll — CV</title>
+<style>
+  @font-face { font-family: "CMU Serif"; font-weight: 400; font-style: normal; src: url("fonts/cmu-serif-500-roman.woff2") format("woff2"); }
+  @font-face { font-family: "CMU Serif"; font-weight: 400; font-style: italic; src: url("fonts/cmu-serif-500-italic.woff2") format("woff2"); }
+  @font-face { font-family: "CMU Serif"; font-weight: 700; font-style: normal; src: url("fonts/cmu-serif-700-roman.woff2") format("woff2"); }
+  @font-face { font-family: "CMU Serif"; font-weight: 700; font-style: italic; src: url("fonts/cmu-serif-700-italic.woff2") format("woff2"); }
+
+  @page { size: A4; margin: 14mm 17mm 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #fff; color: #000; }
+  body {
+    font-family: "CMU Serif", serif;
+    font-size: 10pt;
+    line-height: 1.3;
+    hyphens: auto;
+    font-kerning: normal;
+    font-variant-ligatures: common-ligatures;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  header { text-align: center; margin-bottom: 9pt; }
+  h1 { font-size: 20pt; font-weight: 400; letter-spacing: .02em; font-variant: small-caps; }
+  .contact { margin-top: 3pt; font-size: 9.5pt; }
+  .contact span + span::before { content: "\00b7\00a0"; }
+
+  h2 {
+    font-size: 11pt;
+    font-weight: 700;
+    font-variant: small-caps;
+    letter-spacing: .04em;
+    border-bottom: .5pt solid #000;
+    padding-bottom: 1pt;
+    margin: 10pt 0 5pt;
+  }
+  p { text-align: justify; }
+
+  .entry { margin-bottom: 6pt; break-inside: avoid; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
+  .row b { font-weight: 700; }
+  .row .when { white-space: nowrap; }
+  .sub { font-style: italic; }
+  .entry p { margin-top: 1.5pt; }
+
+  ul.projects { list-style: none; }
+  ul.projects li { margin-bottom: 2pt; text-align: left;padding-left: 10pt; text-indent: -10pt; }
+  ul.projects li::before { content: "\2013\00a0\00a0"; }
+  ul.projects .tech { font-style: italic; }
+
+  .small { font-size: 9.5pt; }
+  .edu .row { margin-bottom: 1.5pt; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Daniel Fenoll</h1>
+  <div class="contact">
+    <span>Alicante, Spain</span>
+    <span><a href="mailto:dfenollapps@gmail.com">dfenollapps@gmail.com</a></span>
+    <span><a href="https://zumodeia.com">zumodeia.com</a></span>
+    <span><a href="https://github.com/F-N-LL">github.com/F-N-LL</a></span>
+    <span><a href="https://www.linkedin.com/in/daniel-fenoll">linkedin.com/in/daniel-fenoll</a></span>
+  </div>
+</header>
+
+<h2>Summary</h2>
+<p>
+  Fullstack software engineer who likes owning a problem end to end, from the data model and the cloud
+  architecture to the interface people use every day. At TUI I build platforms that archive, process and
+  search large volumes of logistics and travel documents, with Python and Vue on AWS, and add AI where it
+  saves people real time. Before that I shipped web products for small businesses, helped found a startup
+  as its designer and developer, and taught JavaScript and React to developers. In my own time I build
+  small, finished tools: an Android reader for e-ink, a macOS menu-bar app, a dumb-phone conversion for an old iPhone.
+</p>
+
+<h2>Experience</h2>
+
+<div class="entry">
+  <div class="row"><span><b>TUI Group</b>, Fullstack Software Engineer</span><span class="when">Jun 2024 – present</span></div>
+  <div class="row sub"><span>Europe’s largest leisure, travel and airline group</span><span>Hybrid</span></div>
+  <p>
+    I design and build in-house document and data platforms for logistics and TravelTech: ingestion, archiving
+    and processing pipelines on AWS (Lambda, DynamoDB, S3, IAM), Python services behind them, and Vue
+    applications that teams across the company use daily. I added natural-language search over the archives
+    and AI agents that take repetitive document work off people’s hands, and I care about the parts that keep
+    a system healthy over time: clear interfaces, tests, and changes that can be rolled out safely.
+  </p>
+</div>
+
+<div class="entry">
+  <div class="row"><span><b>IMMUNE Technology Institute</b>, Instructor, Master in Web Development</span><span class="when">Feb 2024 – Apr 2025</span></div>
+  <p>
+    Taught JavaScript, React, and prompt engineering and machine learning for developers. Reviewed students’
+    code and final projects, and learned to explain a design decision in a way that sticks.
+  </p>
+</div>
+
+<div class="entry">
+  <div class="row"><span><b>AF Consulting</b>, Software Developer</span><span class="when">Jun 2022 – Sep 2023</span></div>
+  <p>
+    Built, maintained and improved web apps and online stores for small and medium businesses in Spain and
+    abroad, focused on conversion, performance and search visibility. Owned each project from the client
+    conversation to production.
+  </p>
+</div>
+
+<div class="entry">
+  <div class="row"><span><b>fibsen</b>, Developer &amp; Designer, founding team</span><span class="when">Jun 2019 – Jan 2020</span></div>
+  <p>
+    Water-tech startup. Designed its first digital and physical products, the brand and its web presence,
+    and worked on the pitch that led to its first funding.
+  </p>
+</div>
+
+<div class="entry">
+  <div class="row"><span><b>Innsomnia</b>, Project Manager (internship)</span><span class="when">Feb 2019 – Oct 2019</span></div>
+  <p>
+    Worked with the general manager of the accelerator on fintech, insurtech and industry 4.0 startups,
+    helping them plan and scale.
+  </p>
+</div>
+
+<h2>Personal projects</h2>
+<ul class="projects">
+  <li><b>Ligero</b> <span class="tech">(Kotlin, Android)</span>: e-ink PDF reader that reflows scanned books; offline OCR to EPUB.</li>
+  <li><b>Campanile</b> <span class="tech">(Swift, macOS)</span>: menu-bar prayer reminders and reader, fed daily by a Python CI job.</li>
+  <li><b>new_dumb_iPhone</b> <span class="tech">(Go, iOS)</span>: turns an iPhone 4S into a minimal phone, with a WhatsApp bridge in Go.</li>
+  <li><b>trackpad-curve</b> <span class="tech">(C, Go)</span>: libinput adapter with speed-dependent curves for Linux touchpads.</li>
+  <li><b>haskarm</b> <span class="tech">(Haskell, Python, ESP32)</span>: OpenCV tracks a hand; a Haskell control loop points a servo arm at it.</li>
+  <li><b>HTTPServer_C</b> <span class="tech">(C)</span>: an HTTP/1.1 server written from scratch on raw sockets.</li>
+</ul>
+
+<h2>Education</h2>
+<div class="edu">
+  <div class="row"><span><b>Computer Engineering</b>, UNED</span><span class="when"></span></div>
+  <div class="row"><span><b>Master in UX/UI &amp; Full Stack Development</b>, Nuclio Digital School</span><span class="when">2023</span></div>
+  <div class="row"><span><b>MicroMasters in Statistics &amp; Data Science</b>, MITx</span><span class="when">2020</span></div>
+</div>
+
+<p class="small" style="margin-top:8pt">
+  <i>Languages and tools:</i> Python, TypeScript, Kotlin, Swift, Go, C, Rust · Vue, React · AWS · Spanish (native), English.
+</p>
+
+</body>
+</html>

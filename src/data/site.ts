@@ -44,6 +44,29 @@ export const volunteering = [
 
 export const projects = [
   {
+    name: 'Ligero',
+    year: '2026',
+    lang: 'Kotlin',
+    medium: 'Kotlin, Android, on-device OCR',
+    note: 'A light PDF reader for e-ink Android: reflows scanned pages, converts them to EPUB with offline OCR.',
+  },
+  {
+    name: 'new_dumb_iPhone',
+    year: '2026',
+    lang: 'Go',
+    medium: 'Go, Logos tweak, shell, iOS 9',
+    href: 'https://github.com/F-N-LL/new_dumb_iPhone',
+    note: 'An old iPhone 4S turned into a Light Phone style dumb phone, with a Go WhatsApp bridge.',
+  },
+  {
+    name: 'Campanile',
+    year: '2026',
+    lang: 'Swift',
+    medium: 'Swift, macOS menu bar, Python CI',
+    href: 'https://f-n-ll.github.io/campanile-office/',
+    note: 'Prayer reminders and a quiet reader in the Mac menu bar.',
+  },
+  {
     name: 'trackpad-curve',
     year: '2026',
     lang: 'C',
