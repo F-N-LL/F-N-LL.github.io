@@ -40,6 +40,42 @@ const compositions = {
     <path d="M22 168 C70 166 92 150 108 110 S132 44 146 34" stroke="${c('charcoal')}" stroke-width="3.5" fill="none"/>
     <circle cx="108" cy="110" r="5" fill="${c('red')}"/>`,
 
+  // An e-ink reader: a scanned page on the left, the same words reflowed larger.
+  ligero: `
+    <defs>${grad('g', 'olive', 'charcoal')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="30" y="20" width="100" height="160" rx="6" fill="${c('charcoal')}" stroke="${c('cream')}" stroke-width="1.5"/>
+    <rect x="38" y="30" width="84" height="132" fill="${c('cream')}"/>
+    ${[38, 44, 50, 56, 62].map((y, i) => `<rect x="44" y="${y}" width="${72 - (i % 2) * 10}" height="2" fill="${c('charcoal')}" opacity=".55"/>`).join('')}
+    <path d="M44 72 H116" stroke="${c('red')}" stroke-width="1" stroke-dasharray="2 2"/>
+    ${[82, 96, 110, 124, 138].map((y, i) => `<rect x="44" y="${y}" width="${[70, 62, 72, 48, 30][i]}" height="7" fill="${c('charcoal')}"/>`).join('')}
+    <circle cx="80" cy="171" r="3" fill="${c('cream')}"/>`,
+
+  // An iPhone 4S gone quiet: black screen, a big clock, a list of words.
+  new_dumb_iPhone: `
+    <defs>${grad('g', 'aegean', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="42" y="18" width="76" height="164" rx="12" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
+    <rect x="48" y="40" width="64" height="112" fill="${c('charcoal')}"/>
+    <path d="M70 29 H90" stroke="${c('charcoal')}" stroke-width="2"/>
+    <circle cx="80" cy="166" r="7" fill="none" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    ${mono(55, 68, '9:41', 'cream', 20)}
+    ${['Phone', 'Messages', 'Camera', 'Music'].map((w, i) => mono(56, 92 + i * 13, w, i ? 'aegean' : 'ochre', 8)).join('')}`,
+
+  // A bell tower at dusk, and the cross that fills in the menu bar.
+  campanile: `
+    <defs>${grad('g', 'ochre', 'red')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect width="160" height="16" fill="${c('cream')}"/>
+    <path d="M136 4 V13 M132.5 7.5 H139.5" stroke="${c('red')}" stroke-width="2"/>
+    ${[110, 120].map((x) => `<rect x="${x}" y="6" width="6" height="4" fill="${c('charcoal')}" opacity=".5"/>`).join('')}
+    <path d="M58 200 V84 L80 50 L102 84 V200 Z" fill="${c('charcoal')}"/>
+    <rect x="68" y="92" width="24" height="34" fill="${c('cream')}"/>
+    <path d="M80 98 C72 98 72 112 70 118 H90 C88 112 88 98 80 98 Z" fill="${c('ochre')}"/>
+    <circle cx="80" cy="121" r="2.5" fill="${c('ochre')}"/>
+    <path d="M80 50 V38 M75 43 H85" stroke="${c('charcoal')}" stroke-width="2.5"/>
+    ${[146, 166].map((y) => `<rect x="76" y="${y}" width="8" height="12" fill="${c('olive')}"/>`).join('')}`,
+
   haskarm: `
     <defs><radialGradient id="g" cx=".7" cy=".25" r=".9"><stop offset="0" stop-color="${c('olive')}"/><stop offset="1" stop-color="${c('charcoal')}"/></radialGradient></defs>
     <rect width="160" height="200" fill="url(#g)"/>
@@ -133,6 +169,73 @@ const compositions = {
     </g>
     <circle cx="124" cy="160" r="18" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
     <path d="M124 160 V148 M124 160 H116" stroke="${c('red')}" stroke-width="2"/>`,
+
+  // Teaching: a blackboard with code on it, chalk on the ledge.
+  immune: `
+    <defs>${grad('g', 'ochre', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="14" y="34" width="132" height="96" fill="${c('olive')}" stroke="${c('charcoal')}" stroke-width="4"/>
+    ${mono(24, 58, 'const app =', 'cream', 10)}
+    ${mono(34, 74, 'useState()', 'aegean', 10)}
+    ${mono(24, 90, '// why?', 'ochre', 10)}
+    <path d="M24 110 C44 102 60 116 80 106" stroke="${c('cream')}" stroke-width="1.5" fill="none"/>
+    <rect x="14" y="130" width="132" height="6" fill="${c('charcoal')}"/>
+    <rect x="100" y="125" width="16" height="5" fill="${c('cream')}"/>
+    ${[34, 62, 90, 118].map((x) => `<circle cx="${x}" cy="168" r="9" fill="${c('charcoal')}"/><rect x="${x - 12}" y="178" width="24" height="22" fill="${c('charcoal')}"/>`).join('')}`,
+
+  // Small business on the web: a shopfront with an awning, open.
+  afconsulting: `
+    <defs>${grad('g', 'aegean', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="22" y="60" width="116" height="118" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
+    ${[0, 1, 2, 3, 4, 5].map((i) => `<path d="M${22 + i * 19.33} 60 h19.33 v22 a9.67 9.67 0 0 1 -19.33 0 z" fill="${c(i % 2 ? 'cream' : 'red')}" stroke="${c('charcoal')}" stroke-width="1.5"/>`).join('')}
+    <rect x="34" y="102" width="50" height="40" fill="${c('aegean')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <rect x="96" y="102" width="30" height="76" fill="${c('olive')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <rect x="40" y="150" width="38" height="12" fill="${c('ochre')}"/>
+    ${mono(42, 159, 'OPEN', 'charcoal', 8)}
+    <path d="M0 178 H160" stroke="${c('charcoal')}" stroke-width="2"/>`,
+
+  // Water tech: a drop falling from a tap into a rising level.
+  fibsen: `
+    <defs>${grad('g', 'cream', 'aegean')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <path d="M40 30 H104 V44 H92 V58 H80 V44 H40 Z" fill="${c('charcoal')}"/>
+    <rect x="52" y="22" width="12" height="8" fill="${c('red')}"/>
+    <path d="M86 74 C86 74 74 92 74 100 A12 12 0 0 0 98 100 C98 92 86 74 86 74 Z" fill="${c('aegean')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <rect y="146" width="160" height="54" fill="${c('aegean')}"/>
+    <path d="M0 146 C30 138 50 154 80 146 S130 138 160 146" stroke="${c('cream')}" stroke-width="2" fill="none"/>
+    <circle cx="86" cy="146" r="10" fill="none" stroke="${c('cream')}" stroke-width="1.5"/>
+    <circle cx="86" cy="146" r="20" fill="none" stroke="${c('cream')}" stroke-width="1" opacity=".6"/>`,
+
+  // UX: a user flow of three wireframes, one of them picked.
+  nuclio: `
+    <defs>${grad('g', 'cream', 'aegean')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    ${[[18, 40], [62, 40], [106, 40]].map(([x, y], i) => `
+      <rect x="${x}" y="${y}" width="36" height="64" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+      <rect x="${x + 5}" y="${y + 7}" width="26" height="16" fill="${c(i === 1 ? 'red' : 'aegean')}"/>
+      <rect x="${x + 5}" y="${y + 28}" width="20" height="3" fill="${c('charcoal')}"/>
+      <rect x="${x + 5}" y="${y + 35}" width="24" height="3" fill="${c('charcoal')}" opacity=".5"/>
+      <rect x="${x + 5}" y="${y + 50}" width="26" height="8" fill="${c('ochre')}"/>`).join('')}
+    <path d="M54 72 H62 M98 72 H106" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <path d="M30 128 C50 150 110 150 130 128" stroke="${c('charcoal')}" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
+    <path d="M86 132 l0 22 l6 -6 l5 10 l4 -2 l-5 -10 l8 0 z" fill="${c('charcoal')}"/>`,
+
+  // A parliament: the hemicycle, one seat in red.
+  uv: `
+    <defs>${grad('g', 'ochre', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    ${[30, 42, 54, 66].map((r, k) => {
+      const n = 7 + k * 3;
+      return Array.from({ length: n }, (_, i) => {
+        const a = Math.PI - (i / (n - 1)) * Math.PI;
+        const x = 80 + r * Math.cos(a);
+        const y = 132 - r * Math.sin(a);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" fill="${c(k === 2 && i === 9 ? 'red' : 'charcoal')}"/>`;
+      }).join('');
+    }).join('')}
+    <rect x="64" y="140" width="32" height="10" fill="${c('olive')}"/>
+    <path d="M10 156 H150" stroke="${c('charcoal')}" stroke-width="1.5"/>`,
 
   // Statistics: a bell curve over its histogram.
   mitx: `

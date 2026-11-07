@@ -11,7 +11,7 @@ import { PIGMENTS as TONES } from '../data/pigments';
 // set in a field of tesserae sampled from the Pyrenees panorama.
 const COLS = 29;
 const ROWS = 17;
-const PANEL = { col: 11, row: 6, w: 7, h: 5 }; // intro row + four section rows
+const PANEL = { col: 10, row: 6, w: 9, h: 5 }; // intro row + four section rows
 const LABEL_COL = PANEL.col;
 const FIRST_CARD_COL = PANEL.col + 1;
 
@@ -104,7 +104,8 @@ for (let r = 0; r < ROWS; r++) {
 const pad = (n: number) => String(n).padStart(2, '0');
 const year = new Date().getFullYear();
 const email = elsewhere.find((l) => l.href.startsWith('mailto:'))!;
-const social = elsewhere.filter((l) => l !== email);
+const cv = elsewhere.find((l) => l.href.endsWith('.pdf'))!;
+const social = elsewhere.filter((l) => l !== email && l !== cv);
 const shortcuts: [string[], string][] = [
   [['←', '↑', '→', '↓'], 'Move between cards'],
   [['H', 'J', 'K', 'L'], 'The same, vim-style; J K walk the index'],
@@ -135,6 +136,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     <nav class="b-right" aria-label="Site">
       <button type="button" data-toggle-index aria-pressed="false" data-key="I">Index</button>
       <button type="button" data-open-info>Information</button>
+      <a href={cv.href} class="b-contact" target="_blank" rel="noopener">CV</a>
       <a href={email.href} class="b-contact">Contact</a>
       <span class="b-clock"><span class="muted">Alicante</span> <time data-clock></time></span>
     </nav>

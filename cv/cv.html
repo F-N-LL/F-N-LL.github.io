@@ -1,0 +1,147 @@
+<!doctype html>
+<!-- One-page CV, set like a LaTeX article. Print: see cv/README.md -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daniel Fenoll — CV</title>
+<style>
+  @font-face { font-family: "CMU Serif"; font-weight: 400; font-style: normal; src: url("fonts/cmu-serif-500-roman.woff2") format("woff2"); }
+  @font-face { font-family: "CMU Serif"; font-weight: 400; font-style: italic; src: url("fonts/cmu-serif-500-italic.woff2") format("woff2"); }
+  @font-face { font-family: "CMU Serif"; font-weight: 700; font-style: normal; src: url("fonts/cmu-serif-700-roman.woff2") format("woff2"); }
+  @font-face { font-family: "CMU Serif"; font-weight: 700; font-style: italic; src: url("fonts/cmu-serif-700-italic.woff2") format("woff2"); }
+
+  @page { size: A4; margin: 13mm 16mm 11mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: #fff; color: #000; }
+  body {
+    font-family: "CMU Serif", serif;
+    font-size: 10pt;
+    line-height: 1.28;
+    hyphens: auto;
+    font-kerning: normal;
+    font-variant-ligatures: common-ligatures;
+  }
+  a { color: inherit; text-decoration: none; }
+  b { font-weight: 700; }
+
+  header { text-align: center; margin-bottom: 4pt; }
+  h1 { font-size: 22pt; font-weight: 700; letter-spacing: .01em; }
+  .contact { margin-top: 3pt; font-size: 9.5pt; }
+  .contact span + span::before { content: "\00b7\00a0"; }
+  .headline { margin-top: 7pt; font-size: 12.5pt; font-weight: 700; text-align: center; }
+
+  h2 {
+    font-size: 11pt;
+    font-weight: 700;
+    font-variant: small-caps;
+    letter-spacing: .04em;
+    border-bottom: .5pt solid #000;
+    padding-bottom: 1pt;
+    margin: 9pt 0 4pt;
+  }
+  p { text-align: justify; }
+
+  .entry { margin-bottom: 5pt; break-inside: avoid; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12pt; }
+  .co { font-size: 11.5pt; font-weight: 700; }
+  .co .loc { font-size: 10pt; font-weight: 400; }
+  .when { white-space: nowrap; font-style: italic; }
+  .role { font-style: italic; }
+
+  ul { list-style: none; }
+  .entry ul { margin-top: 1.5pt; }
+  .entry li, ul.projects li { padding-left: 11pt; text-indent: -8pt; margin-bottom: 1pt; text-align: left; }
+  .entry li::before { content: "\2022\00a0\00a0"; }
+  ul.projects li::before { content: "\2013\00a0\00a0"; }
+  ul.projects .tech { font-style: italic; }
+
+  .edu .row { margin-bottom: 1pt; }
+  .skills div { padding-left: 11pt; text-indent: -8pt; margin-bottom: 1pt; }
+  .skills div::before { content: "\2022\00a0\00a0"; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Daniel Fenoll</h1>
+  <div class="contact">
+    <span>Alicante, Spain</span>
+    <span><a href="mailto:dfenollapps@gmail.com">dfenollapps@gmail.com</a></span>
+    <span><a href="https://zumodeia.com">zumodeia.com</a></span>
+    <span><a href="https://github.com/F-N-LL">github.com/F-N-LL</a></span>
+    <span><a href="https://www.linkedin.com/in/daniel-fenoll">linkedin.com/in/daniel-fenoll</a></span>
+  </div>
+  <div class="headline">Senior Software Engineer | Fullstack, Cloud &amp; Agentic Platforms</div>
+</header>
+
+<h2>Summary</h2>
+<p>
+  <b>Senior fullstack software engineer with 4+ years</b> building cloud platforms and the products on top of
+  them. At TUI I own a document platform serving <b>50,000+ users and 300M+ documents</b> end to end: critical
+  Rust and Python services on AWS, the agentic infrastructure my team builds with, and design decisions made
+  directly with stakeholders. Former
+  JavaScript and React instructor who enjoys mentoring engineers.
+</p>
+
+<h2>Work experience</h2>
+
+<div class="entry">
+  <div class="row"><span class="co">TUI Group <span class="loc">— Spain, hybrid</span></span><span class="when">Jun 2024 – Present</span></div>
+  <div class="role">Fullstack Software Engineer (Cloud, Data &amp; AI) · Europe’s largest travel and leisure group</div>
+  <ul>
+    <li>Build <b>TUI Archive</b>, used by <b>50,000+ users</b> to search <b>300M+ documents</b> in <b>under 200 ms</b>: Vue frontend, Python and Rust services on AWS (Lambda, DynamoDB, S3, IAM).</li>
+    <li>Write the <b>critical AWS Lambda services in Rust</b> that process <b>thousands of events a day</b> across logistics and travel documents.</li>
+    <li>Own the <b>agentic infrastructure</b> used by <b>the whole development team</b>, and shipped <b>natural-language search and AI agents</b> that take repetitive document work off people’s hands.</li>
+    <li><b>Lead key product and design decisions with stakeholders</b>, from first conversation to production.</li>
+  </ul>
+</div>
+
+<div class="entry">
+  <div class="row"><span class="co">IMMUNE Technology Institute <span class="loc">— Madrid, remote</span></span><span class="when">Feb 2024 – Apr 2025</span></div>
+  <div class="role">Instructor, Master in Web Development</div>
+  <ul>
+    <li>Taught <b>dozens of students</b> full-stack development (<b>JavaScript, React, AI/ML</b>) and reviewed their projects.</li>
+  </ul>
+</div>
+
+<div class="entry">
+  <div class="row"><span class="co">AF Consulting <span class="loc">— Alicante, remote</span></span><span class="when">Jun 2022 – Sep 2023</span></div>
+  <div class="role">Software Developer</div>
+  <ul>
+    <li>Built and maintained <b>web apps and online stores for SMEs</b> in Spain and abroad.</li>
+  </ul>
+</div>
+
+<div class="entry">
+  <div class="row"><span class="co">fibsen <span class="loc">— Valencia</span></span><span class="when">Jun 2019 – Jan 2020</span></div>
+  <div class="role">Developer &amp; Designer, founding team</div>
+  <ul>
+    <li>Designed the first products and brand of a water-tech startup; worked on its <b>first funding</b> pitch.</li>
+  </ul>
+</div>
+
+<h2>Personal projects</h2>
+<ul class="projects">
+  <li><b>Ligero</b> <span class="tech">(Kotlin, Android)</span>: e-ink PDF reader that reflows scanned books; offline OCR to EPUB.</li>
+  <li><b>Campanile</b> <span class="tech">(Swift, macOS)</span>: menu-bar prayer reminders and reader, fed daily by a Python CI job.</li>
+  <li><b>new_dumb_iPhone</b> <span class="tech">(Go, iOS)</span>: turns an iPhone 4S into a minimal phone, with a WhatsApp bridge in Go.</li>
+  <li><b>trackpad-curve</b> <span class="tech">(C, Go)</span>: libinput adapter with speed-dependent curves for Linux touchpads.</li>
+  <li><b>haskarm</b> <span class="tech">(Haskell, Python, ESP32)</span>: OpenCV tracks a hand; a Haskell control loop points a servo arm at it.</li>
+  <li><b>HTTPServer_C</b> <span class="tech">(C)</span>: an HTTP/1.1 server written from scratch on raw sockets.</li>
+</ul>
+
+<h2>Education</h2>
+<div class="edu">
+  <div class="row"><span><b>Master in UX/UI Design &amp; Full Stack Development</b>, Nuclio Digital School</span><span class="when">2023</span></div>
+  <div class="row"><span><b>MicroMasters in Statistics &amp; Data Science</b>, MITx</span><span class="when">2020</span></div>
+  <div class="row"><span><b>BA in Political Science and Public Administration</b>, Universitat de València</span><span class="when">2019</span></div>
+</div>
+
+<h2>Skills</h2>
+<div class="skills">
+  <div><b>Languages:</b> Python, Rust, TypeScript, Kotlin, Swift, Go, C · Spanish (native), English</div>
+  <div><b>Technologies:</b> AWS (Lambda, DynamoDB, S3, IAM), Vue, React, AI agents, natural-language search</div>
+</div>
+
+</body>
+</html>

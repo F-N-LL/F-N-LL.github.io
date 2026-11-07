@@ -13,16 +13,45 @@ export type Specimen = {
   lang?: string;
 };
 
-// The phone reads the cabinet as a story: who, what gets made, where the work
-// happened, what got written. Slugs in reading order, grouped by section.
+// The phone reads the cabinet as a story: what gets made, where the work
+// happened, who's behind it, what got written. Slugs in reading order, grouped
+// by section. The phone opens on the introduction before all of them.
 export const flow: { section: string; slugs: string[] }[] = [
-  { section: 'About', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments', 'correspondence'] },
-  { section: 'Projects', slugs: ['trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
-  { section: 'Experience', slugs: ['tui', 'uned', 'mitx', 'sfl', 'caritas'] },
+  { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile', 'trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
+  { section: 'Experience', slugs: ['tui', 'immune', 'afconsulting', 'fibsen', 'nuclio', 'mitx', 'uv', 'uned'] },
+  { section: 'About', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments', 'sfl', 'caritas', 'correspondence'] },
   { section: 'Posts', slugs: ['ui-ai', 'eficiencia', 'siglo-xx'] },
 ];
 
 export const specimens: Specimen[] = [
+  {
+    slug: 'ligero',
+    title: 'Ligero',
+    kind: 'Work',
+    year: '2026',
+    medium: 'Kotlin, Android, on-device OCR · private',
+    text: 'A light PDF reader for an e-ink Boox. Scanned book pages are split at the fold, deskewed and reflowed at a larger size, or turned into an EPUB with offline OCR.',
+  },
+  {
+    slug: 'new_dumb_iPhone',
+    title: 'new_dumb_iPhone',
+    kind: 'Work',
+    year: '2026',
+    medium: 'Go, Logos tweak, shell, iOS 9',
+    text: 'An old iPhone 4S turned into a quiet phone: a black screen, a big clock and a list of words. One script and one cable, plus a small Go bridge that brings WhatsApp back to iOS 9.',
+    href: 'https://github.com/F-N-LL/new_dumb_iPhone',
+    link: 'View source',
+  },
+  {
+    slug: 'campanile',
+    title: 'Campanile',
+    kind: 'Work',
+    year: '2026',
+    medium: 'Swift, macOS menu bar, Python CI',
+    text: 'The hours of prayer in the Mac menu bar: a reminder at each hour, a cross that fills in when one is due, and a quiet reader for the traditional Office, rendered daily on CI.',
+    href: 'https://f-n-ll.github.io/campanile-office/',
+    link: 'Visit',
+  },
   {
     slug: 'trackpad-curve',
     title: 'trackpad-curve',
@@ -97,18 +126,58 @@ export const specimens: Specimen[] = [
   },
   {
     slug: 'tui',
-    title: 'Software Engineer, TUI',
+    title: 'Fullstack Software Engineer, TUI',
     kind: 'Post',
     year: 'Current',
-    medium: 'AWS: Lambda, DynamoDB, IAM · JavaScript',
-    text: 'Cloud and backend systems for one of Europe’s largest travel groups.',
+    medium: 'AWS: Lambda, DynamoDB, S3 · Rust, Python, Vue',
+    text: 'TUI Archive: 300M+ documents searched by 50,000+ people in under 200 ms, for one of Europe’s largest travel groups. Critical Lambda services in Rust, the agentic infrastructure the team works with, and the design decisions made with stakeholders.',
+  },
+  {
+    slug: 'immune',
+    title: 'Instructor, IMMUNE Technology Institute',
+    kind: 'Post',
+    year: '2024–25',
+    medium: 'Master in Web Development · JavaScript, React, AI/ML',
+    text: 'Taught dozens of students full-stack development, from JavaScript and React to AI for developers, and reviewed their code and final projects.',
+  },
+  {
+    slug: 'afconsulting',
+    title: 'Software Developer, AF Consulting',
+    kind: 'Post',
+    year: '2022–23',
+    medium: 'Web apps, e-commerce, SEO',
+    text: 'Web apps and online stores for small and medium businesses in Spain and abroad, from the client’s brief to production.',
+  },
+  {
+    slug: 'fibsen',
+    title: 'Developer & Designer, fibsen',
+    kind: 'Post',
+    year: '2019–20',
+    medium: 'Founding team · product, brand, web',
+    text: 'A water-tech startup, from the first sketches: its first digital and physical products, the brand, the website, and the pitch for its first funding.',
+  },
+  {
+    slug: 'nuclio',
+    title: 'Master in UX/UI Design & Full Stack Development',
+    kind: 'Study',
+    year: '2023',
+    medium: 'Nuclio Digital School',
+    text: 'Research, interface design and a full stack to build it on. The final project, Homezzy, matched young professionals with a place to live by profile instead of by filters.',
+  },
+  {
+    slug: 'uv',
+    title: 'Political Science and Public Administration',
+    kind: 'Study',
+    year: '2014–19',
+    medium: 'Universitat de València',
+    text: 'Political theory, economics, statistics with SPSS, and a lot of debating. Where the habit of asking who a system is for comes from.',
   },
   {
     slug: 'uned',
     title: 'Computer Engineering, UNED',
     kind: 'Study',
-    year: '—',
-    medium: 'Distance learning, alongside work',
+    year: 'Coursework',
+    medium: 'Distance learning, alongside work, not completed',
     text: 'Algorithms, operating systems, C++ written on paper at eight in the morning. Studied to learn, not for the title.',
   },
   {
@@ -189,7 +258,8 @@ export const specimens: Specimen[] = [
 
 export const elsewhere = [
   { label: 'GitHub', handle: 'F-N-LL', href: 'https://github.com/F-N-LL' },
-  { label: 'X', handle: '@daniel0xFC', href: 'https://x.com/daniel0xFC' },
+  { label: 'X', handle: '@zumodeia', href: 'https://x.com/zumodeia' },
   { label: 'LinkedIn', handle: 'daniel-fenoll', href: 'https://www.linkedin.com/in/daniel-fenoll' },
   { label: 'Email', handle: 'dfenollapps@gmail.com', href: 'mailto:dfenollapps@gmail.com' },
+  { label: 'CV', handle: 'PDF, one page', href: '/Daniel-Fenoll-CV.pdf' },
 ];
