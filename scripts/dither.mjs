@@ -175,6 +175,27 @@ const compositions = {
     <circle cx="124" cy="160" r="18" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
     <path d="M124 160 V148 M124 160 H116" stroke="${c('red')}" stroke-width="2"/>`,
 
+  // Self-portrait, as a juice box on a plinth.
+  daniel: `
+    <defs>${grad('g', 'aegean', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="46" y="150" width="68" height="34" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
+    <rect x="52" y="62" width="56" height="88" fill="${c('ochre')}" stroke="${c('charcoal')}" stroke-width="3"/>
+    <rect x="52" y="62" width="56" height="14" fill="${c('charcoal')}"/>
+    <rect x="53" y="112" width="54" height="22" fill="${c('cream')}"/>
+    <rect x="68" y="90" width="7" height="7" fill="${c('charcoal')}"/><rect x="86" y="90" width="7" height="7" fill="${c('charcoal')}"/>
+    <rect x="72" y="103" width="17" height="3" fill="${c('red')}"/>
+    <path d="M94 62 L100 26 L114 20" stroke="${c('red')}" stroke-width="5" fill="none"/>`,
+
+  // A door to the next planet: a small world hung in a frame.
+  gallery: `
+    <rect width="160" height="200" fill="${c('cream')}"/>
+    <rect x="22" y="34" width="116" height="132" fill="${c('charcoal')}" stroke="${c('ochre')}" stroke-width="6"/>
+    <circle cx="80" cy="100" r="40" fill="${c('aegean')}"/>
+    <path d="M46 84 C56 60 96 54 112 78 C118 96 100 104 84 100 C70 96 54 108 46 84 Z" fill="${c('olive')}"/>
+    <path d="M62 122 C72 114 92 116 100 126 C92 136 72 136 62 122 Z" fill="${c('ochre')}"/>
+    <circle cx="120" cy="56" r="8" fill="${c('cream')}"/>`,
+
   // Teaching: a blackboard with code on it, chalk on the ledge.
   immune: `
     <defs>${grad('g', 'ochre', 'cream')}</defs>

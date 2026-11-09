@@ -11,7 +11,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 // The introduction opens the flow on its own, printed on the Pyrenees plate,
 // so the work comes right after it; the plate is not repeated under About.
 const INTRO = 'pyrenees';
-const sections = flow.map(({ section, slugs }) => ({ section, slugs: slugs.filter((s) => s !== INTRO) }));
+// Door cards are for the desktop's planets; on the phone the next section is one swipe away.
+const sections = flow.map(({ section, slugs }) => ({ section, slugs: slugs.filter((s) => s !== INTRO && !bySlug.get(s)!.room) }));
 const cards = [
   { ...bySlug.get(INTRO)!, section: 'Introduction', pos: '' },
   ...sections.flatMap(({ section, slugs }) =>
@@ -629,8 +630,8 @@ const starts = sections.map(({ section, slugs }) => ({
       display: grid;
       /* auto tracks share the spare width, so the pills meet and the rail
          under them reads as one line with hairline breaks */
-      grid-template-columns: repeat(4, auto);
-      column-gap: 6px;
+      grid-template-columns: repeat(5, auto);
+      column-gap: 4px;
     }
     /* Sections are pills: the shape a phone reads as "tap me". The current
        one is solid; every pill answers the finger the moment it lands. */
@@ -655,7 +656,7 @@ const starts = sections.map(({ section, slugs }) => ({
     }
     .f-label {
       display: block;
-      padding: 0.42rem 0.7rem 0.38rem;
+      padding: 0.42rem 0.34rem 0.38rem;
       border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
       border-radius: 999px;
       text-align: center;

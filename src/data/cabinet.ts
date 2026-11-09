@@ -4,13 +4,14 @@
 export type Specimen = {
   slug: string;
   title: string;
-  kind: 'Work' | 'Essay' | 'Post' | 'Study' | 'Service' | 'Specimen' | 'Landscape' | 'Pigments' | 'Correspondence';
+  kind: 'Work' | 'Essay' | 'Post' | 'Study' | 'Service' | 'Specimen' | 'Landscape' | 'Pigments' | 'Correspondence' | 'Portrait' | 'Room';
   year: string;
   medium: string;
   text: string;
   href?: string;
   link?: string;
   lang?: string;
+  room?: string; // this card is a door: it leads to that section instead of opening
 };
 
 // The phone reads the cabinet as a story: what gets made, where the work
@@ -18,12 +19,31 @@ export type Specimen = {
 // by section. The phone opens on the introduction before all of them.
 export const flow: { section: string; slugs: string[] }[] = [
   { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile', 'trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
-  { section: 'Experience', slugs: ['tui', 'immune', 'afconsulting', 'fibsen', 'nuclio', 'mitx', 'uv', 'uned'] },
-  { section: 'About', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments', 'sfl', 'caritas', 'correspondence'] },
+  { section: 'Experience', slugs: ['tui', 'immune', 'afconsulting', 'fibsen', 'nuclio', 'mitx', 'uv', 'uned', 'sfl', 'caritas'] },
+  { section: 'About', slugs: ['daniel', 'correspondence', 'gallery'] },
+  { section: 'Gallery', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments'] },
   { section: 'Posts', slugs: ['ui-ai', 'eficiencia', 'siglo-xx'] },
 ];
 
 export const specimens: Specimen[] = [
+  {
+    slug: 'daniel',
+    title: 'Daniel Fenoll',
+    kind: 'Portrait',
+    year: 'Alicante',
+    medium: 'Senior software engineer and designer',
+    text: 'I build TUI Archive and the agentic infrastructure my team works with, in Rust, Python and AWS, and I design the interfaces I would want to use myself. Off the clock: small finished tools, good type, and tomatoes.',
+  },
+  {
+    slug: 'gallery',
+    title: 'The Gallery',
+    kind: 'Room',
+    year: 'Open',
+    medium: 'Photographs, specimens, pigments',
+    text: 'Landscapes, the huerta and its visitors, and the palette this whole site is printed in. It has a small planet of its own.',
+    room: 'Gallery',
+    link: 'Go there',
+  },
   {
     slug: 'ligero',
     title: 'Ligero',

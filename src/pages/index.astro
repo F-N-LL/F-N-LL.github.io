@@ -11,7 +11,7 @@ import { PIGMENTS as TONES } from '../data/pigments';
 // set in a field of tesserae sampled from the Pyrenees panorama.
 const COLS = 29;
 const ROWS = 17;
-const PANEL = { col: 10, row: 6, w: 9, h: 5 }; // intro row + four section rows
+const PANEL = { col: 9, row: 5, w: 11, h: 6 }; // intro row + five section rows
 const LABEL_COL = PANEL.col;
 const FIRST_CARD_COL = PANEL.col + 1;
 
@@ -107,14 +107,16 @@ const email = elsewhere.find((l) => l.href.startsWith('mailto:'))!;
 const cv = elsewhere.find((l) => l.href.endsWith('.pdf'))!;
 const social = elsewhere.filter((l) => l !== email && l !== cv);
 const shortcuts: [string[], string][] = [
-  [['←', '↑', '→', '↓'], 'Move between cards'],
-  [['H', 'J', 'K', 'L'], 'The same, vim-style; J K walk the index'],
+  [['←', '↑', '→', '↓'], 'Walk'],
+  [['W', 'A', 'S', 'D'], 'Walk, on the home row'],
+  [['H', 'J', 'K', 'L'], 'Walk, vim-style; J K walk the index'],
+  [['Space'], 'Jump'],
   [['Enter'], 'Open'],
-  [['Esc'], 'Close, or fit when nothing is open'],
+  [['Esc'], 'Close, or see the whole world'],
   [['+', '−'], 'Zoom'],
   [['←', '→', 'H', 'L'], 'Previous, next card (when open)'],
   [['K', 'J'], 'Previous, next card (when open)'],
-  [['1', '2', '3', '4'], 'Show a section'],
+  [['1', '2', '3', '4', '5'], 'Go to a section'],
   [['I'], 'Index'],
 ];
 const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, first: b.first, count: b.count, section: b.section })) };
@@ -136,6 +138,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     <nav class="b-right" aria-label="Site">
       <button type="button" data-toggle-index aria-pressed="false" data-key="I">Index</button>
       <button type="button" data-open-info>Information</button>
+      <button type="button" data-theme-toggle aria-pressed="false">Night</button>
       <a href={cv.href} class="b-contact" target="_blank" rel="noopener">CV</a>
       <a href={email.href} class="b-contact">Contact</a>
       <span class="b-clock"><span class="muted">Alicante</span> <time data-clock></time></span>
@@ -144,6 +147,26 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
   <main>
     <h1 class="sr-only">Daniel Fenoll — software engineer and designer, Alicante</h1>
+
+    <!-- World: desktop, where WebGL can carry it. The cabinet below stays as the fallback. -->
+    <script is:inline>
+      (function () {
+        if (!matchMedia('(min-width: 761px)').matches) return;
+        var force = /[?&]world\b/.test(location.search);
+        if (/[?&]floor\b/.test(location.search)) return;
+        var gl = document.createElement('canvas').getContext('webgl2', { failIfMajorPerformanceCaveat: !force });
+        if (gl) document.body.classList.add('world-on');
+      })();
+    </script>
+    <div class="world" data-world>
+      <canvas aria-hidden="true"></canvas>
+      <div class="w-id" data-w-id>
+        <p class="w-name">{profile.name} <span class="pixel" lang="ja">{profile.kana}</span></p>
+        <p class="w-line">{profile.statement}</p>
+        <p class="w-act"><a href={cv.href} target="_blank" rel="noopener">Read the CV</a><a href={email.href}>Write to me</a></p>
+      </div>
+      <div class="w-labels" data-w-labels></div>
+    </div>
 
     <!-- Cabinet -->
     <div class="stage" data-stage aria-label="Cabinet. Drag or scroll to move, pinch or Control-scroll to zoom.">
@@ -236,6 +259,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         ))}
       </ul>
       <p class="f-hint caps muted">Drag or scroll to move · Pinch or Ctrl + scroll to zoom · <kbd>?</kbd> Shortcuts</p>
+      <p class="f-hint w-hint caps muted">Arrows or drag to walk · Scroll to zoom · Space to jump · <kbd>?</kbd> Shortcuts</p>
       <div class="zoom" data-zoom>
         <button type="button" class="z-btn key-up" data-zoom-out aria-label="Zoom out" data-key="−">−</button>
         <div class="ruler" data-ruler role="slider" tabindex="0" aria-label="Zoom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -338,15 +362,17 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   <script type="application/json" id="layout" set:html={JSON.stringify(layout)} />
 
   <script>
+    import type { World } from '../scripts/world';
     type Item = {
       slug: string; title: string; kind: string; year: string; medium: string; text: string;
-      href?: string; link?: string; lang?: string; section: string; pos: number; count: number;
+      href?: string; link?: string; lang?: string; section: string; pos: number; count: number; room?: string;
     };
     type Layout = { COLS: number; ROWS: number; PANEL: { col: number; row: number; w: number; h: number }; rows: { row: number; first: number; count: number; section: string }[] };
     const S: Item[] = JSON.parse(document.getElementById('items')!.textContent!);
     const L: Layout = JSON.parse(document.getElementById('layout')!.textContent!);
     const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector(sel) as T;
     const $$ = <T extends Element = HTMLElement>(sel: string) => [...document.querySelectorAll<T>(sel)] as T[];
+    let world: World | null = null;
     const pad = (n: number) => String(n).padStart(2, '0');
     const root = document.documentElement;
     const reducedQ = matchMedia('(prefers-reduced-motion: reduce)');
@@ -358,6 +384,32 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     const tick = () => (clock.textContent = fmt.format(new Date()));
     tick();
     setInterval(tick, 15000);
+
+    // ═══ Day and night ═══
+    // The system decides, until the visitor says otherwise.
+    const scheme = matchMedia('(prefers-color-scheme: dark)');
+    const themeBtn = $('[data-theme-toggle]');
+    const isNight = () => (root.dataset.theme ? root.dataset.theme === 'dark' : scheme.matches);
+    function paintTheme() {
+      const night = isNight();
+      themeBtn.textContent = night ? 'Day' : 'Night';
+      themeBtn.setAttribute('aria-pressed', String(night));
+      themeBtn.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night');
+      world?.setNight(night);
+    }
+    themeBtn.addEventListener('click', () => {
+      const next = isNight() ? 'light' : 'dark';
+      const follows = (next === 'dark') === scheme.matches;
+      try {
+        if (follows) localStorage.removeItem('df-theme');
+        else localStorage.setItem('df-theme', next);
+      } catch {}
+      if (follows) delete root.dataset.theme;
+      else root.dataset.theme = next;
+      paintTheme();
+    });
+    scheme.addEventListener('change', paintTheme);
+    paintTheme();
 
     // ═══ Camera ═══
     // The floor is a canvas: position (x, y) and tile size t. Input writes to
@@ -429,7 +481,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     let shown = { x: NaN, y: NaN, t: NaN };
     function frame() {
       requestAnimationFrame(frame);
-      if (!desktop.matches) return;
+      if (!desktop.matches || world) return;
       const reduced = reducedQ.matches;
       if (!dragging && !wheel) {
         // momentum, then settle inside the bounds
@@ -695,7 +747,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       }
 
       $$('[data-row]').forEach((r) => (r.hidden = name !== 'all' && r.dataset.section !== name));
-      if (name === 'all') fit();
+      if (world) world.travel(name);
+      else if (name === 'all') fit();
       else {
         const b = L.rows.find((x) => x.section === name)!;
         frameCells(L.PANEL.col - 0.1, b.row - 0.35, L.PANEL.col + 1 + b.count + 0.1, b.row + 1.35, 150);
@@ -845,9 +898,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       $('[data-d-year]').textContent = it.year;
       $('[data-d-medium]').textContent = it.medium;
       $('[data-d-text]').textContent = it.text;
-      dLink.hidden = !it.href;
+      dLink.hidden = !it.href && !it.room;
       armLink();
-      if (it.href) {
+      if (it.room) {
+        dLink.href = '#';
+        dLink.removeAttribute('target');
+        $('[data-d-link-label]').textContent = it.link ?? 'Open';
+      } else if (it.href) {
         dLink.href = it.href;
         // the web opens in a new tab; email stays a plain mailto
         if (it.href.startsWith('http')) dLink.target = '_blank';
@@ -857,6 +914,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     }
 
     function open(i: number, from?: HTMLImageElement | null, fromHistory = false) {
+      // A door, not a card: go where it leads.
+      if (S[i].room && detail.hidden) return applyFilter(S[i].room!);
       if (detail.hidden) lastFocus = document.activeElement as HTMLElement;
       drop();
       fill(i);
@@ -990,6 +1049,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     $('[data-prev]').addEventListener('click', () => step(-1));
     $('[data-next]').addEventListener('click', () => step(1));
     $('[data-close]').addEventListener('click', close);
+    dLink.addEventListener('click', (e) => {
+      const room = S[current]?.room;
+      if (!room) return;
+      e.preventDefault();
+      close();
+      applyFilter(room);
+    });
     detail.addEventListener('click', (e) => {
       // A double-click on a card opens it with the first click; the second
       // lands on the backdrop and must not close it again.
@@ -1060,12 +1126,12 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         }
         return;
       }
-      if (e.key === '+' || e.key === '=') return zoomBy(1.3);
-      if (e.key === '-' || e.key === '_') return zoomBy(1 / 1.3);
+      if (e.key === '+' || e.key === '=') return world ? world.zoomBy(1.3) : zoomBy(1.3);
+      if (e.key === '-' || e.key === '_') return world ? world.zoomBy(1 / 1.3) : zoomBy(1 / 1.3);
       if (e.key === '0') return applyFilter('all');
-      if (/^[1-4]$/.test(e.key)) return applyFilter(L.rows[Number(e.key) - 1].section);
+      if (/^[1-5]$/.test(e.key)) return applyFilter(L.rows[Number(e.key) - 1].section);
       const arrow = e.key.startsWith('Arrow') ? e.key : vim;
-      if (arrow) {
+      if (arrow && !world) {
         e.preventDefault();
         const focused = document.activeElement as HTMLElement;
         const i = focused?.classList.contains('spec') ? Number(focused.dataset.i) : -1;
@@ -1110,7 +1176,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       }),
     );
     const nudgeTimer = window.setTimeout(() => {
-      if ((!forceNudge && (engaged || seen.has('df-nudged'))) || !desktop.matches || document.body.classList.contains('modal') || !indexEl.hidden) return;
+      if (world || (!forceNudge && (engaged || seen.has('df-nudged'))) || !desktop.matches || document.body.classList.contains('modal') || !indexEl.hidden) return;
       const el = cards.find((c) => Number(c.dataset.i) === L.rows[1].first)!; // the first project
       seen.mark('df-nudged');
       choose(el, true);
@@ -1136,10 +1202,29 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     requestAnimationFrame(frame);
     let lastW = vw();
     new ResizeObserver(() => {
-      if (Math.abs(vw() - lastW) < 2 && !desktop.matches) return;
+      if (world || (Math.abs(vw() - lastW) < 2 && !desktop.matches)) return;
       lastW = vw();
       applyFilter(document.body.dataset.filter ?? 'all');
     }).observe(stage);
+
+    // The world loads on its own, only where it will run. If anything goes
+    // wrong the cabinet underneath simply stays.
+    if (document.body.classList.contains('world-on')) {
+      import('../scripts/world')
+        .then(({ mountWorld }) => {
+          world = mountWorld({
+            root: $('[data-world]'),
+            items: S,
+            sections: L.rows.map((r) => r.section),
+            open: (i) => open(i, null),
+            select: (name) => applyFilter(name),
+            reduced: () => reducedQ.matches,
+            active: () => desktop.matches && !document.body.classList.contains('modal') && indexEl.hidden,
+            night: isNight(),
+          });
+        })
+        .catch(() => document.body.classList.remove('world-on'));
+    }
 
     // Deep links: /#moth opens that specimen.
     const fromHash = S.findIndex((s) => `#${s.slug}` === location.hash);
@@ -1315,6 +1400,148 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     .b-contact:hover {
       color: var(--dot);
       border-color: var(--dot);
+    }
+  }
+
+  /* ── World ── */
+  .world {
+    display: none;
+  }
+  :global(body.world-on) .world {
+    position: fixed;
+    inset: 3.6rem 0 3.9rem;
+    display: block;
+    overflow: hidden;
+  }
+  :global(body.world-on) .stage,
+  :global(body.world-on) .zoom > :not(.z-fit),
+  :global(body.world-on) .f-hint:not(.w-hint),
+  :global(body:not(.world-on)) .w-hint {
+    display: none;
+  }
+  :global(body.world-on.v-index) .world {
+    display: none;
+  }
+  :global(body.world-on) .bar,
+  :global(body.world-on) .foot {
+    background: var(--bg);
+  }
+  :global(body.world-on) .bar {
+    padding-bottom: 1.25rem;
+  }
+  .world canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+    touch-action: none;
+  }
+  .w-id {
+    position: absolute;
+    top: clamp(1.75rem, 6vh, 4rem);
+    left: var(--margin);
+    width: min(30rem, 36vw);
+    color: var(--ink);
+    transition: opacity 0.45s, transform 0.6s var(--ease);
+  }
+  .w-id.away {
+    opacity: 0;
+    transform: translateY(-14px);
+    pointer-events: none;
+  }
+  .w-name {
+    margin: 0 0 1.1rem;
+    font-size: clamp(2.75rem, 5.2vw, 5.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .w-name .pixel {
+    display: block;
+    margin-top: 0.7rem;
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+  }
+  .w-line {
+    margin: 0 0 1.4rem;
+    font-size: clamp(1.0625rem, 1.35vw, 1.3125rem);
+    line-height: 1.34;
+    letter-spacing: -0.012em;
+    text-wrap: pretty;
+  }
+  .w-act {
+    display: flex;
+    gap: 1.5rem;
+    margin: 0;
+  }
+  .w-act a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
+  }
+  .w-labels {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  :global(.w-zone),
+  :global(.w-tomb) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    border: 0;
+    color: var(--ink);
+    background: var(--bg);
+    font: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    cursor: pointer;
+  }
+  :global(.w-zone.on),
+  :global(.w-tomb.on),
+  :global(.w-tomb:focus-visible) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  :global(.w-zone) {
+    padding: 0.42rem 0.7rem 0.38rem;
+    white-space: nowrap;
+  }
+  :global(.w-tomb) {
+    display: block;
+    padding: 0.4rem 0.55rem 0.45rem;
+    font-size: 0.8125rem;
+    line-height: 1.22;
+    text-align: left;
+  }
+  :global(.w-tomb .t) {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    text-wrap: balance;
+  }
+  :global(.w-tomb .m) {
+    display: block;
+    margin-top: 0.12rem;
+    color: var(--ink-2);
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :global(.w-zone:hover),
+    :global(.w-tomb:hover .t) {
+      color: var(--dot);
+    }
+    .w-act a:hover {
+      color: var(--dot);
     }
   }
 
