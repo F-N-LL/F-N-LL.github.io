@@ -315,7 +315,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     <h3 class="caps muted">Contact</h3>
     <ul class="i-links">
       {elsewhere.map((l) => (
-        <li><a href={l.href} {...(l.href.startsWith('http') ? { target: '_blank', rel: 'me noopener' } : {})}><span class="muted">{l.label}</span> <span class="ul">{l.handle}</span></a></li>
+        <li><a href={l.href} {...(!l.href.startsWith('mailto:') ? { target: '_blank', rel: 'me noopener' } : {})}><span class="muted">{l.label}</span> <span class="ul">{l.handle}</span></a></li>
       ))}
     </ul>
     <h3 class="caps muted">Keyboard</h3>

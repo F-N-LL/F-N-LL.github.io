@@ -51,7 +51,7 @@ const starts = sections.map(({ section, slugs }) => ({
                 <p class="text">{profile.statement}</p>
                 <ul class="links">
                   {elsewhere.map((l) => (
-                    <li><a href={l.href} {...(l.href.startsWith('http') ? { target: '_blank', rel: 'me noopener' } : {})}>{l.label}</a></li>
+                    <li><a href={l.href} {...(!l.href.startsWith('mailto:') ? { target: '_blank', rel: 'me noopener' } : {})}>{l.label}</a></li>
                   ))}
                 </ul>
               </div>
