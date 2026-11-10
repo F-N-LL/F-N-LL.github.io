@@ -436,3 +436,72 @@ for (const [name, p] of Object.entries(photos)) {
 }
 // Wide panorama: the mosaic's source image and the social card.
 await dither(await sharp('art/pyrenees.jpg').toBuffer(), { width: 360, spread: 60, out: 'public/img/panorama.png' });
+
+// ── Horizons for the phone: the top of each world, dithered, on a clear sky ──
+const HW = 320;
+const HH = 130;
+const horizon = (body) =>
+  Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${HW}" height="${HH}" viewBox="0 0 ${HW} ${HH}">${body}</svg>`);
+// a vertical gradient over the visible strip only
+const band = (id, a, b) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="36" x2="0" y2="${HH}"><stop offset="0" stop-color="${c(a)}"/><stop offset="1" stop-color="${c(b)}"/></linearGradient>`;
+const top = (r) => `cx="160" cy="${40 + r}" r="${r}"`; // a circle whose top sits at y=40
+const horizons = {
+  home: `
+    <defs>${band('hg', 'olive', 'charcoal')}</defs>
+    <circle ${top(300)} fill="${c('ochre')}"/>
+    <circle cx="160" cy="346" r="300" fill="url(#hg)"/>
+    <ellipse cx="160" cy="58" rx="60" ry="14" fill="${c('cream')}"/>
+    ${[[60, 70], [92, 60], [236, 62], [268, 72], [36, 84], [292, 86]].map(([x, y]) => `<rect x="${x - 1}" y="${y - 2}" width="3" height="10" fill="${c('charcoal')}"/><circle cx="${x}" cy="${y - 6}" r="9" fill="${c('olive')}"/><circle cx="${x + 3}" cy="${y - 8}" r="2" fill="${c('ochre')}"/>`).join('')}
+    <rect x="140" y="30" width="34" height="22" fill="${c('cream')}"/>
+    <path d="M150 30 L162 20 L174 30 Z" fill="${c('red')}"/>
+    <rect x="146" y="40" width="6" height="12" fill="${c('aegean')}"/>
+    <circle cx="176" cy="40" r="6" fill="${c('red')}"/>
+    <path d="M206 54 C204 40 208 28 214 22" stroke="${c('ochre')}" stroke-width="3" fill="none"/>
+    <path d="M214 22 l-12 4 M214 22 l12 2 M214 22 l-6 -8 M214 22 l8 -6" stroke="${c('olive')}" stroke-width="3"/>
+    <rect x="116" y="44" width="10" height="6" fill="${c('charcoal')}"/><rect x="117" y="38" width="8" height="6" fill="${c('ochre')}"/>`,
+  pc: `
+    <defs>${band('pg', 'olive', 'charcoal')}</defs>
+    <circle ${top(300)} fill="url(#pg)"/>
+    ${[0, 1, 2, 3].map((i) => `<path d="M${40 + i * 70} ${120 - i * 4} V${78 - (i % 2) * 14} H${80 + i * 60}" stroke="${c('ochre')}" stroke-width="2" fill="none"/>`).join('')}
+    <ellipse cx="160" cy="54" rx="56" ry="12" fill="${c('aegean')}"/>
+    <rect x="138" y="34" width="44" height="16" fill="${c('charcoal')}"/>
+    ${[0, 1, 2, 3, 4, 5].map((i) => `<rect x="${141 + i * 7}" y="50" width="3" height="4" fill="${c('ochre')}"/>`).join('')}
+    <rect x="150" y="38" width="20" height="6" fill="${c('cream')}"/>
+    ${[[70, 70], [246, 66], [100, 92], [214, 90]].map(([x, y]) => `<rect x="${x}" y="${y}" width="16" height="9" fill="${c('charcoal')}"/>`).join('')}
+    ${[[44, 90], [282, 88], [120, 70]].map(([x, y]) => `<rect x="${x}" y="${y}" width="7" height="10" fill="${c('aegean')}"/><rect x="${x}" y="${y}" width="7" height="2" fill="${c('cream')}"/>`).join('')}`,
+  station: `
+    <rect x="0" y="72" width="70" height="20" fill="${c('aegean')}"/><rect x="250" y="72" width="70" height="20" fill="${c('aegean')}"/>
+    <rect x="0" y="81" width="320" height="2" fill="${c('charcoal')}"/>
+    <ellipse cx="160" cy="96" rx="170" ry="34" fill="none" stroke="${c('cream')}" stroke-width="5"/>
+    <defs>${band('sg', 'cream', 'aegean')}</defs>
+    <circle ${top(300)} fill="url(#sg)"/>
+    ${[[96, 66, 'aegean'], [196, 58, 'charcoal'], [226, 74, 'aegean'], [70, 90, 'ochre'], [128, 84, 'charcoal'], [250, 96, 'aegean']].map(([x, y, k]) => `<rect x="${x}" y="${y}" width="20" height="12" fill="${c(k)}"/>`).join('')}
+    <rect x="152" y="12" width="16" height="30" rx="6" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    <path d="M152 18 L160 2 L168 18 Z" fill="${c('red')}"/>
+    <circle cx="160" cy="24" r="3.5" fill="${c('aegean')}"/>
+    <path d="M152 36 l-6 8 h6 z M168 36 l6 8 h-6 z" fill="${c('red')}"/>`,
+};
+for (const [name, body] of Object.entries(horizons)) {
+  const { data, info } = await sharp(horizon(body)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const pal = ALL.map((k) => PIGMENTS[k]);
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      const i = (y * info.width + x) * 4;
+      if (data[i + 3] < 128) {
+        data[i + 3] = 0;
+        continue;
+      }
+      const t = B8[y % 8][x % 8] * 40;
+      let best = pal[0];
+      let bestD = Infinity;
+      for (const p of pal) {
+        const d = 2 * (data[i] + t - p[0]) ** 2 + 4 * (data[i + 1] + t - p[1]) ** 2 + 3 * (data[i + 2] + t - p[2]) ** 2;
+        if (d < bestD) (bestD = d), (best = p);
+      }
+      data.set(best, i);
+      data[i + 3] = 255;
+    }
+  }
+  await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png({ compressionLevel: 9 }).toFile(`public/img/w-${name}.png`);
+  console.log(`public/img/w-${name}.png  ${info.width}×${info.height}`);
+}

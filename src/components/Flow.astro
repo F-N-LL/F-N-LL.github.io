@@ -4,7 +4,7 @@
 // scroll position. When scrolling settles, the centred card dims and its
 // catalogue entry rises over it.
 import { profile } from '../data/site';
-import { specimens, flow, elsewhere } from '../data/cabinet';
+import { specimens, flow, elsewhere, cicerone } from '../data/cabinet';
 
 const bySlug = new Map(specimens.map((s) => [s.slug, s]));
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -19,13 +19,24 @@ const cards = [
     slugs.map((slug, i) => ({ ...bySlug.get(slug)!, section, pos: `${pad(i + 1)}/${pad(slugs.length)}` })),
   ),
 ];
+// Which of the desktop's worlds each section lives on: the phone's sky follows it.
+const WORLD: Record<string, string> = { Projects: 'pc', Experience: 'pc', Garden: 'home', Gallery: 'station', Posts: 'station' };
 const starts = sections.map(({ section, slugs }) => ({
   section,
   count: slugs.length,
   index: cards.findIndex((c) => c.section === section),
 }));
 ---
-<div class="flow" data-flow>
+<div class="flow" data-flow data-world="home">
+  <div class="f-sky" aria-hidden="true">
+    <i class="f-stars"></i>
+    <i class="f-scan"></i>
+    {['home', 'pc', 'station'].map((w) => <img class="f-world" data-w={w} src={`/img/w-${w}.png`} width="320" height="130" alt="" />)}
+  </div>
+  <p class="f-zumo on" data-f-zumo data-lines={JSON.stringify(cicerone.phone)} data-worlds={JSON.stringify(WORLD)} aria-live="polite">
+    <img src="/favicon.svg" width="30" height="30" alt="" />
+    <span class="f-say" data-f-say>{cicerone.phone.intro}</span>
+  </p>
   <header class="f-bar caps">
     <span>Daniel Fenoll</span>
     <span class="f-where" aria-live="polite">
@@ -113,6 +124,12 @@ const starts = sections.map(({ section, slugs }) => ({
     const localEl = root.querySelector<HTMLElement>('[data-f-local]')!;
     const whereEl = root.querySelector<HTMLElement>('.f-where')!;
     const totalEl = root.querySelector<HTMLElement>('[data-f-total]')!;
+    const zumo = root.querySelector<HTMLElement>('[data-f-zumo]')!;
+    const say = root.querySelector<HTMLElement>('[data-f-say]')!;
+    const lines: Record<string, string> = JSON.parse(zumo.dataset.lines!);
+    const worlds: Record<string, string> = JSON.parse(zumo.dataset.worlds!);
+    let here = 'intro';
+    let hush = 0;
     const sections = tabs.map((t) => ({ name: t.dataset.fSection!, start: +t.dataset.fJump!, count: +t.dataset.fCount! }));
     let segBox: { x: number; w: number }[] = [];
     let current = -1; // section index
@@ -230,7 +247,22 @@ const starts = sections.map(({ section, slugs }) => ({
         localEl.textContent = String(Math.max(1, Math.min(s.count, i - s.start + 1))).padStart(2, '0');
         // the introduction belongs to no section: no counter over it
         whereEl.style.visibility = i < sections[0].start ? 'hidden' : '';
+        travel(i < sections[0].start ? 'intro' : worlds[s.name]);
       }
+    }
+
+    // The sky turns into the world the cards belong to, and the juice box says where you are.
+    function travel(w: string) {
+      if (w === here) return;
+      here = w;
+      root.dataset.world = w === 'intro' ? 'home' : w;
+      clearTimeout(hush);
+      zumo.classList.remove('on');
+      window.setTimeout(() => {
+        say.textContent = lines[w] ?? '';
+        zumo.classList.add('on');
+        if (w !== 'intro') hush = window.setTimeout(() => zumo.classList.remove('on'), 3800);
+      }, 180);
     }
 
     function open(i: number) {
@@ -569,7 +601,144 @@ const starts = sections.map(({ section, slugs }) => ({
       position: fixed;
       inset: 0;
       z-index: 10;
-      background: var(--bg);
+      /* The sky of the world the cards belong to, as on the desktop: a day
+         sky at home, a dark screen inside the computer, space at the
+         station. Text on it is white. */
+      --sky: #3e9ab2;
+      --bg: var(--sky);
+      --ink: #fff;
+      --ink-2: rgb(255 255 255 / 0.74);
+      --rule: rgb(255 255 255 / 0.3);
+      color: var(--ink);
+      background-color: var(--sky);
+      transition: background-color 0.7s var(--ease);
+    }
+    .flow[data-world='pc'] {
+      --sky: #262e3a;
+    }
+    .flow[data-world='station'] {
+      --sky: #1b222b;
+    }
+    :global(html[data-theme='dark']) .flow[data-world='home'] {
+      --sky: #26303d;
+    }
+    @media (prefers-color-scheme: dark) {
+      :global(html:not([data-theme='light'])) .flow[data-world='home'] {
+        --sky: #26303d;
+      }
+      :global(html:not([data-theme='light'])) .flow .f-stars {
+        opacity: 1;
+      }
+    }
+    .f-bar,
+    .f-label,
+    .f-zumo {
+      text-shadow: 0 1px 2px rgb(38 46 58 / 0.5);
+    }
+    .f-tabs button[aria-current='true'] .f-label {
+      text-shadow: none;
+    }
+
+    .f-sky,
+    .f-stars,
+    .f-scan {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .f-stars {
+      opacity: 0;
+      background-image:
+        radial-gradient(circle at 18px 26px, #fff 1.2px, transparent 1.6px),
+        radial-gradient(circle at 92px 70px, #fff 1px, transparent 1.4px),
+        radial-gradient(circle at 54px 128px, rgb(255 255 255 / 0.7) 1px, transparent 1.4px),
+        radial-gradient(circle at 136px 104px, #fff 1.2px, transparent 1.6px);
+      background-size: 150px 170px;
+      transition: opacity 0.7s;
+    }
+    .f-scan {
+      opacity: 0;
+      background: repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.22) 0 2px, transparent 2px 6px);
+      transition: opacity 0.7s;
+    }
+    .flow[data-world='station'] .f-stars,
+    :global(html[data-theme='dark']) .flow .f-stars {
+      opacity: 1;
+    }
+    .flow[data-world='pc'] .f-stars {
+      opacity: 0.45;
+    }
+    .flow[data-world='pc'] .f-scan {
+      opacity: 1;
+    }
+    /* The top of the world, under the cards and over the tab bar. */
+    .f-world {
+      position: absolute;
+      left: 0;
+      bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px));
+      width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+      opacity: 0;
+      translate: 0 12%;
+      transition:
+        opacity 0.6s var(--ease),
+        translate 0.8s var(--ease);
+    }
+    .flow[data-world='home'] .f-world[data-w='home'],
+    .flow[data-world='pc'] .f-world[data-w='pc'],
+    .flow[data-world='station'] .f-world[data-w='station'] {
+      opacity: 1;
+      translate: 0 0;
+    }
+    /* The juice box, standing on the world, with a word for each one. */
+    .f-zumo {
+      position: absolute;
+      z-index: 1;
+      left: var(--margin);
+      right: var(--margin);
+      bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px) + 23vw);
+      display: flex;
+      align-items: flex-end;
+      gap: 0.6rem;
+      margin: 0;
+      color: var(--ink);
+      pointer-events: none;
+    }
+    .f-zumo img {
+      flex: none;
+      width: 30px;
+      height: 30px;
+      image-rendering: pixelated;
+    }
+    .f-say {
+      position: relative;
+      padding: 0.5rem 0.75rem 0.46rem;
+      border-radius: 0.9rem;
+      color: #262e3a;
+      background: #f8f0de;
+      font-size: 0.8125rem;
+      line-height: 1.3;
+      text-shadow: none;
+      opacity: 0;
+      translate: 0 6px;
+      transition:
+        opacity 0.25s ease-out,
+        translate 0.3s var(--ease);
+    }
+    .f-say::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      bottom: 9px;
+      width: 10px;
+      height: 10px;
+      background: inherit;
+      rotate: 45deg;
+    }
+    .f-zumo.on .f-say {
+      opacity: 1;
+      translate: 0 0;
     }
 
     .caps {
@@ -669,7 +838,7 @@ const starts = sections.map(({ section, slugs }) => ({
     .f-tabs button[aria-current='true'] .f-label {
       background: var(--ink);
       border-color: var(--ink);
-      color: var(--bg);
+      color: #262e3a;
     }
     .f-tabs button:active .f-label {
       scale: 0.95;

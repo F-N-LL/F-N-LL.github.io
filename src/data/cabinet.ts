@@ -364,4 +364,11 @@ export const cicerone = {
     Station: 'The station: posts, links and the gallery. The rocket takes you home.',
     Home: 'Home again.',
   } as Record<string, string>,
+  // On the phone the worlds pass by as you swipe; it names each one as it comes.
+  phone: {
+    intro: 'Hi, I’m Zumo! Swipe up to walk through Daniel’s universe.',
+    pc: 'Inside the computer: projects and work.',
+    home: 'Back home: the huerta and the workbench.',
+    station: 'Up on the station: pictures and posts.',
+  } as Record<string, string>,
 };
