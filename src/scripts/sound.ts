@@ -198,13 +198,16 @@ function wake() {
   if (on && !document.hidden) startMusic();
 }
 if (typeof window !== 'undefined') {
+  // A finger only counts as a go-ahead once it lifts, and a swipe may not
+  // count at all, so keep asking on every touch until the audio is running.
+  const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const;
   const first = () => {
-    removeEventListener('pointerdown', first, true);
-    removeEventListener('keydown', first, true);
     wake();
+    if (ctx?.state !== 'running') return void ctx?.resume().then(() => ctx!.state === 'running' && quit(), () => {});
+    quit();
   };
-  addEventListener('pointerdown', first, true);
-  addEventListener('keydown', first, true);
+  const quit = () => GESTURES.forEach((g) => removeEventListener(g, first, true));
+  GESTURES.forEach((g) => addEventListener(g, first, true));
   document.addEventListener('visibilitychange', () => {
     if (!ctx) return;
     if (document.hidden) {
