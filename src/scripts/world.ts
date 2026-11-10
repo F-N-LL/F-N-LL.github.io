@@ -772,9 +772,25 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
 
     const solids: Solid[] = [];
     const basis = new Matrix4();
+    // The ground as drawn: the mesh runs straight between its corners, so on a
+    // slope it sits below the height at a point. The lowest height a step round
+    // a point is where anything planted there should stand, so nothing floats;
+    // the spread says how steep it is there.
+    const footing = (d: Vector3) => {
+      const { u, v } = frameAt(d);
+      let lo = height(d);
+      let hi = lo;
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2;
+        const h = height(d.clone().multiplyScalar(R).addScaledVector(u, Math.cos(a) * 0.6).addScaledVector(v, Math.sin(a) * 0.6).normalize());
+        lo = Math.min(lo, h);
+        hi = Math.max(hi, h);
+      }
+      return { lo, hi };
+    };
     const at = (obj: Object3D, dir: Vector3, u: Vector3, v: Vector3, x: number, z: number, yaw = 0, lift = 0) => {
       const d = dir.clone().multiplyScalar(R).addScaledVector(u, x).addScaledVector(v, z).normalize();
-      obj.position.copy(d).multiplyScalar(R + Math.max(height(d), SEA) + lift);
+      obj.position.copy(d).multiplyScalar(R + Math.max(footing(d).lo, SEA) + lift);
       const inward = new Vector3().copy(v).negate().addScaledVector(d, v.dot(d)).normalize();
       const right = new Vector3().crossVectors(d, inward).normalize();
       basis.makeBasis(right, d, inward);
@@ -792,8 +808,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       const out: { d: Vector3; h: number }[] = [];
       for (let tries = 0; out.length < n && tries < n * 80; tries++) {
         const d = new Vector3(rand() - 0.5, rand() * 0.8 - 0.1, rand() - 0.5).normalize();
-        const h = height(d);
-        if (!test(d) || h < lo || h > hi) continue;
+        const f = footing(d);
+        const h = f.lo;
+        // not on the cliffs between terraces: half the roots would hang in the air
+        if (!test(d) || h < lo || h > hi || f.hi - f.lo > 0.45) continue;
         out.push({ d, h });
       }
       return out;
