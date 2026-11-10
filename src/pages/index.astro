@@ -138,10 +138,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     <nav class="b-right" aria-label="Site">
       <button type="button" data-toggle-index aria-pressed="false" data-key="I">Index</button>
       <button type="button" data-open-info>Information</button>
-      <button type="button" data-theme-toggle aria-pressed="false">Night</button>
       <a href={cv.href} class="b-contact" target="_blank" rel="noopener">CV</a>
       <a href={email.href} class="b-contact">Contact</a>
       <span class="b-clock"><span class="muted">Alicante</span> <time data-clock></time></span>
+      <button type="button" class="b-theme" data-theme-toggle aria-pressed="false" aria-label="Switch to night">
+        <svg class="i-moon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13.2 10.1A5.8 5.8 0 0 1 5.9 2.8a5.8 5.8 0 1 0 7.3 7.3Z" /></svg>
+        <svg class="i-sun" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="3" /><path d="M8 1.2v1.9M8 12.9v1.9M1.2 8h1.9M12.9 8h1.9M3.2 3.2l1.3 1.3M11.5 11.5l1.3 1.3M3.2 12.8l1.3-1.3M11.5 4.5l1.3-1.3" /></svg>
+      </button>
     </nav>
   </header>
 
@@ -392,7 +395,6 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     const isNight = () => (root.dataset.theme ? root.dataset.theme === 'dark' : scheme.matches);
     function paintTheme() {
       const night = isNight();
-      themeBtn.textContent = night ? 'Day' : 'Night';
       themeBtn.setAttribute('aria-pressed', String(night));
       themeBtn.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night');
       world?.setNight(night);
@@ -1388,6 +1390,44 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   }
   .b-clock {
     white-space: nowrap;
+  }
+  .b-right .b-theme {
+    align-self: center;
+    position: relative;
+    display: block;
+    width: 16px;
+    height: 16px;
+    margin-left: -0.5rem;
+    color: var(--ink);
+  }
+  /* a comfortable target around a small mark */
+  .b-theme::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+  .b-theme svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition:
+      opacity 0.25s,
+      transform 0.45s var(--ease);
+  }
+  /* the mark shows where a press takes you */
+  .b-theme .i-sun,
+  .b-theme[aria-pressed='true'] .i-moon {
+    opacity: 0;
+    transform: rotate(-40deg) scale(0.7);
+  }
+  .b-theme[aria-pressed='true'] .i-sun {
+    opacity: 1;
+    transform: none;
   }
   .b-clock time {
     font-variant-numeric: tabular-nums;
