@@ -35,6 +35,7 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   Points,
+  PointLight,
   PointsMaterial,
   Quaternion,
   Raycaster,
@@ -737,6 +738,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   }
 
   let tabbing = false;
+  // Lights that only come on after dark: lanterns, the house's windows, the juice box's own glow.
+  const lamps: PointLight[] = [];
   function makePlanet(name: string, look: Look, names: string[], R: number, detail: number, coast: number, trees: number, ridge?: Vector3): Planet {
     const group = new Group();
     const ds = districts(names, R);
@@ -906,6 +909,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       pool.rotation.x = -Math.PI / 2;
       pool.position.y = 0.06;
       g.add(l, pool);
+      // at home, a real light too, that warms the ground, the walls and the hero when it is dark
+      if (look === 'earth') {
+        const lamp = new PointLight(hex('ochre'), 0, 9, 1.4);
+        lamp.position.y = 1.67;
+        g.add(lamp);
+        lamps.push(lamp);
+      }
       at(g, dir, frameAt(dir).u, frameAt(dir).v, 0, 0);
     };
     ds.forEach((z) => {
@@ -965,7 +975,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (lift === 0) p.solids.push(...footprint(obj));
   };
   const poleFrame = frameAt(NORTH);
-  placeOn(home, casita(), NORTH, poleFrame.u, poleFrame.v, 0, -3.4, Math.PI);
+  const house = casita();
+  // the windows throw a warm light out onto the terrace
+  const window1 = new PointLight(hex('ochre'), 0, 8, 1.4);
+  window1.position.set(-0.4, 1.3, 2.6);
+  house.add(window1);
+  lamps.push(window1);
+  placeOn(home, house, NORTH, poleFrame.u, poleFrame.v, 0, -3.4, Math.PI);
   placeOn(home, palm(), NORTH, poleFrame.u, poleFrame.v, 4.2, -2.6);
   placeOn(pc, cpu(), NORTH, poleFrame.u, poleFrame.v, 0, -3.4);
   const backs: Record<string, () => Group> = { Projects: rack, Experience: milestones, Education: shelf };
@@ -1039,6 +1055,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
 
   const hero = juiceBox();
   scene.add(hero.g);
+  // a soft glow that keeps the hero readable at night, wherever it wanders
+  const heroGlow = new PointLight(hex('cream'), 0, 5, 1.6);
+  heroGlow.position.set(0.6, 1.9, 1.2);
+  hero.g.add(heroGlow);
   const heroHits: Object3D[] = [];
   hero.g.traverse((o) => (o as Mesh).isMesh && heroHits.push(o));
 
@@ -1052,13 +1072,14 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     return { m, t: 1, big: 1 };
   });
   let rippleK = 0;
-  const ripple = (big = 1) => {
+  const ripple = (big = 1, spot?: Vector3) => {
     const r = ripples[rippleK++ % ripples.length];
+    const d = spot ?? under;
     r.m.removeFromParent();
     cur.group.add(r.m);
-    // where the hero stands, in the planet's own frame, just over the water
-    r.m.position.copy(under).multiplyScalar(cur.R + SEA + 0.04);
-    r.m.quaternion.setFromUnitVectors(axisUp, under);
+    // where the hero stands (or a fish went in), in the planet's own frame, just over the water
+    r.m.position.copy(d).multiplyScalar(cur.R + SEA + 0.04);
+    r.m.quaternion.setFromUnitVectors(axisUp, d);
     r.t = 0;
     r.big = big;
     r.m.visible = true;
@@ -1083,6 +1104,228 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     dropT = 0;
     ripple(1.6);
   };
+
+  // ═══ Passers-by ═══
+  // Now and then something lives here too: a cat crossing the terrace, a
+  // hedgehog after dark, a mouse in a hurry, a crab on the sand, gulls over
+  // the coast, a fish leaping, butterflies by day. Never many, never for long.
+  // Shells lie on the beaches all the time.
+  const critter = {
+    cat() {
+      const g = new Group();
+      const k: Pigment = Math.random() < 0.5 ? 'ochre' : 'ink';
+      g.add(box(0.24, 0.24, 0.56, k, 0, 0.16), box(0.26, 0.24, 0.22, k, 0, 0.32, 0.34));
+      g.add(cone(0.06, 0.12, k, -0.08, 0.56, 0.34, 4), cone(0.06, 0.12, k, 0.08, 0.56, 0.34, 4));
+      g.add(box(0.05, 0.05, 0.02, k === 'ink' ? 'ochre' : 'ink', -0.06, 0.44, 0.46), box(0.05, 0.05, 0.02, k === 'ink' ? 'ochre' : 'ink', 0.06, 0.44, 0.46));
+      const tail = cyl(0.035, 0.5, k, 0, 0.2, -0.3, 5);
+      tail.rotation.x = -0.6;
+      g.add(tail);
+      [-0.08, 0.08].forEach((x) => [-0.18, 0.18].forEach((z) => g.add(box(0.07, 0.16, 0.07, k, x, 0, z))));
+      return g;
+    },
+    hedgehog() {
+      const g = new Group();
+      g.add(blob(0.24, 'ink', 0, 0.18, 0, 0.72), box(0.14, 0.12, 0.14, 'ochre', 0, 0.1, 0.24), box(0.05, 0.05, 0.04, 'ink', 0, 0.12, 0.32));
+      for (let i = 0; i < 9; i++) {
+        const sp = cone(0.05, 0.16, 'ochre', 0, 0, 0, 4);
+        const a = (i / 9) * Math.PI * 2;
+        sp.position.set(Math.cos(a) * 0.16, 0.26, Math.sin(a) * 0.14 - 0.03);
+        sp.rotation.set(Math.sin(a) * 0.7, 0, -Math.cos(a) * 0.7);
+        g.add(sp);
+      }
+      return g;
+    },
+    mouse() {
+      const g = new Group();
+      g.add(box(0.12, 0.1, 0.2, 'cream', 0, 0.02), box(0.08, 0.08, 0.08, 'cream', 0, 0.05, 0.13), box(0.05, 0.05, 0.02, 'red', -0.04, 0.13, 0.1), box(0.05, 0.05, 0.02, 'red', 0.04, 0.13, 0.1));
+      g.add(tilt(box(0.015, 0.015, 0.22, 'red', 0, 0.04, -0.2), 0.3, 0, 0));
+      return g;
+    },
+    crab() {
+      const g = new Group();
+      g.add(box(0.3, 0.1, 0.2, 'red', 0, 0.08), box(0.04, 0.08, 0.04, 'ink', -0.06, 0.18, 0.06), box(0.04, 0.08, 0.04, 'ink', 0.06, 0.18, 0.06));
+      [-1, 1].forEach((sx) => {
+        g.add(box(0.1, 0.08, 0.08, 'red', sx * 0.2, 0.12, 0.12));
+        [-0.06, 0.04].forEach((z) => g.add(box(0.12, 0.03, 0.03, 'red', sx * 0.2, 0.04, z)));
+      });
+      return g;
+    },
+    gull() {
+      const g = new Group();
+      g.add(box(0.18, 0.16, 0.6, 'cream'), box(0.08, 0.05, 0.12, 'ochre', 0, 0.04, 0.34), box(0.16, 0.04, 0.2, 'ink', 0, 0.04, -0.34));
+      const wings = [-1, 1].map((sx) => {
+        const w = new Group();
+        w.add(box(0.7, 0.03, 0.26, 'cream', sx * 0.35, 0), box(0.2, 0.035, 0.26, 'ink', sx * 0.62, 0));
+        w.position.y = 0.1;
+        g.add(w);
+        return w;
+      });
+      g.userData.wings = wings;
+      return g;
+    },
+    fish() {
+      const g = new Group();
+      const body = new Group();
+      body.add(box(0.12, 0.2, 0.42, Math.random() < 0.5 ? 'blue' : 'ochre', 0, -0.1), box(0.04, 0.2, 0.14, 'cream', 0, -0.1, -0.26), box(0.13, 0.04, 0.04, 'ink', 0, 0, 0.14));
+      g.add(body);
+      g.userData.body = body;
+      return g;
+    },
+    butterfly() {
+      const g = new Group();
+      const k: Pigment = Math.random() < 0.5 ? 'cream' : 'ochre';
+      g.add(box(0.03, 0.03, 0.14, 'ink'));
+      const wings = [-1, 1].map((sx) => {
+        const w = new Group();
+        w.add(box(0.16, 0.01, 0.14, k, sx * 0.08, 0, 0.02), box(0.1, 0.01, 0.08, 'red', sx * 0.06, 0, -0.08));
+        g.add(w);
+        return w;
+      });
+      g.userData.wings = wings;
+      return g;
+    },
+  };
+  type Kind = keyof typeof critter;
+  type Life = { kind: Kind; g: Group; p: Vector3; h: Vector3; t: number; dur: number; speed: number; alt: number; still: number };
+  const living: Life[] = [];
+  let nextCritter = performance.now() + 9000;
+  const onLand = (d: Vector3) => home.height(d) > SEA + 0.12;
+  const onSand = (d: Vector3) => home.height(d) > SEA + 0.02 && home.height(d) < SEA + 0.4;
+  // Somewhere a few steps from the hero that suits the kind.
+  // In front of the hero, where the camera looks, rather than behind it.
+  const near = (test: (d: Vector3) => boolean, lo: number, hi: number) => {
+    const back = new Quaternion().copy(home.q).invert();
+    const fwd = new Vector3(0, 0, -1).applyQuaternion(back);
+    const right = new Vector3(1, 0, 0).applyQuaternion(back);
+    for (let i = 0; i < 40; i++) {
+      const a = (Math.random() - 0.5) * 1.6;
+      const r = lo + Math.random() * (hi - lo);
+      const d = under.clone().multiplyScalar(home.R).addScaledVector(fwd, Math.cos(a) * r).addScaledVector(right, Math.sin(a) * r).normalize();
+      if (test(d)) return d;
+    }
+    return null;
+  };
+  const tangent = (p: Vector3) => {
+    const { u, v } = frameAt(p);
+    const a = Math.random() * Math.PI * 2;
+    return u.multiplyScalar(Math.cos(a)).addScaledVector(v, Math.sin(a)).normalize();
+  };
+  function spawn(force?: Kind) {
+    const dark = nightNow > 0.5;
+    const pool: Kind[] = dark ? ['hedgehog', 'hedgehog', 'cat', 'mouse', 'fish', 'crab'] : ['cat', 'mouse', 'crab', 'gull', 'gull', 'fish', 'butterfly', 'butterfly', 'hedgehog'];
+    const kind = force ?? pool[Math.floor(Math.random() * pool.length)];
+    const test = kind === 'fish' ? (d: Vector3) => home.height(d) < SEA - 0.5 : kind === 'crab' ? onSand : kind === 'gull' ? () => true : onLand;
+    const p = near(test, 3, kind === 'fish' ? 13 : 7.5);
+    if (!p) return;
+    const flock = kind === 'gull' ? 2 + Math.floor(Math.random() * 2) : kind === 'butterfly' ? 2 : 1;
+    for (let i = 0; i < flock; i++) {
+      const g = critter[kind]();
+      home.group.add(g);
+      const q = i ? p.clone().multiplyScalar(home.R).add(new Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).multiplyScalar(2.4)).normalize() : p.clone();
+      const life: Life = {
+        kind,
+        g,
+        p: q,
+        h: i && living.length ? living[living.length - 1].h.clone() : tangent(q),
+        t: 0,
+        dur: { cat: 11, hedgehog: 13, mouse: 6, crab: 8, gull: 12, fish: 1.1, butterfly: 12 }[kind],
+        speed: { cat: 0.9, hedgehog: 0.35, mouse: 2.6, crab: 0.6, gull: 3.2, fish: 0, butterfly: 0.7 }[kind],
+        alt: kind === 'gull' ? 6 + Math.random() * 2 : kind === 'butterfly' ? 0.8 : 0,
+        still: 0,
+      };
+      living.push(life);
+    }
+    if (kind === 'cat' && Math.random() < 0.6) window.setTimeout(() => play('meow'), 800);
+    if (kind === 'gull') window.setTimeout(() => play('gull'), 600);
+    if (kind === 'mouse') play('squeak');
+    if (kind === 'fish') play('splash');
+  }
+  const basisM = new Matrix4();
+  const side = new Vector3();
+  function lives(dt: number, now: number) {
+    if (cur === home && !busy() && !aboard && zoom > 0.5 && now > nextCritter) {
+      if (living.length < 4) spawn();
+      nextCritter = now + 14000 + Math.random() * 22000;
+    }
+    for (let i = living.length - 1; i >= 0; i--) {
+      const L = living[i];
+      L.t += dt;
+      const end = L.t >= L.dur || cur !== home;
+      if (end) {
+        L.g.removeFromParent();
+        living.splice(i, 1);
+        continue;
+      }
+      // in and out by growing and shrinking, like the hero between worlds
+      const grow = Math.min(1, L.t / 0.4, (L.dur - L.t) / 0.5);
+      if (L.kind === 'fish') {
+        // a leap: out of the water and back in, with a ring each way
+        const t = L.t / L.dur;
+        const y = Math.sin(t * Math.PI) * 1.5;
+        L.g.position.copy(L.p).multiplyScalar(home.R + SEA - 0.1 + y);
+        side.crossVectors(L.p, L.h).normalize();
+        basisM.makeBasis(side, L.p, L.h);
+        L.g.quaternion.setFromRotationMatrix(basisM);
+        (L.g.userData.body as Group).rotation.x = -Math.cos(t * Math.PI) * 0.9;
+        L.g.position.addScaledVector(L.h, (t - 0.5) * 1.6);
+        if (L.t - dt < 0.02) ripple(0.7, L.p);
+        if (t > 0.92 && !L.still) {
+          L.still = 1;
+          ripple(0.8, L.g.position.clone().normalize());
+          play('splash');
+        }
+        L.g.scale.setScalar(1.6);
+        continue;
+      }
+      // the mouse darts and stops; the cat sits a while halfway; butterflies wander
+      let go = L.speed;
+      if (L.kind === 'mouse') go *= Math.sin(L.t * 5) > -0.2 ? 1 : 0;
+      if (L.kind === 'cat' && L.t > L.dur * 0.4 && L.t < L.dur * 0.62) go = 0;
+      if (L.kind === 'butterfly' || L.kind === 'gull') {
+        const turn = L.kind === 'butterfly' ? Math.sin(L.t * 2.3 + i) * 1.8 : 0.22;
+        L.h.applyAxisAngle(L.p, turn * dt);
+      }
+      const step = (go * dt) / home.R;
+      const next = L.p.clone().addScaledVector(L.h, step).normalize();
+      const ok = L.alt > 0 || (L.kind === 'crab' ? onSand(next) : onLand(next));
+      if (ok) L.p.copy(next);
+      else L.h.negate(); // the water's edge: turn back
+      L.h.addScaledVector(L.p, -L.h.dot(L.p)).normalize();
+      const ground = L.alt > 0 ? 0 : Math.max(home.height(L.p), SEA);
+      const bob = L.kind === 'butterfly' ? Math.sin(L.t * 9) * 0.15 : L.kind === 'gull' ? Math.sin(L.t * 0.8) * 0.4 : go ? Math.abs(Math.sin(L.t * go * 9)) * 0.04 : 0;
+      L.g.position.copy(L.p).multiplyScalar(home.R + ground + L.alt + bob);
+      // crabs walk sideways
+      const face = L.kind === 'crab' ? side.crossVectors(L.p, L.h).normalize().clone() : L.h;
+      side.crossVectors(L.p, face).normalize();
+      basisM.makeBasis(side, L.p, face);
+      L.g.quaternion.setFromRotationMatrix(basisM);
+      if (L.kind === 'gull') L.g.rotateZ(-0.35); // banking round the turn
+      const wings = L.g.userData.wings as Group[] | undefined;
+      if (wings) {
+        const f = L.kind === 'butterfly' ? Math.sin(now * 0.03) * 1.1 : Math.sin(now * 0.008) * 0.45;
+        wings[0].rotation.z = f;
+        wings[1].rotation.z = -f;
+      }
+      // a touch larger than life, so they read from the camera
+      L.g.scale.setScalar(Math.max(0.001, grow) * (L.kind === 'gull' ? 1.8 : L.kind === 'butterfly' ? 2.2 : 1.6));
+    }
+  }
+  // Shells on the sand: scallops and cockles, a few on every beach.
+  for (let n = 0, tries = 0; n < 16 && tries < 3000; tries++) {
+    const d = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    if (!onSand(d)) continue;
+    const shell = new Group();
+    const k: Pigment = (['cream', 'red', 'ochre'] as Pigment[])[n % 3];
+    const fan = cone(0.14, 0.05, k, 0, 0, 0, 7);
+    fan.scale.z = 0.8;
+    shell.add(fan, box(0.06, 0.03, 0.05, k, 0, 0, -0.1));
+    shell.position.copy(d).multiplyScalar(home.R + home.height(d) + 0.02);
+    shell.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), d);
+    shell.rotateY(Math.random() * 6);
+    home.group.add(shell);
+    n++;
+  }
+
   let wet = 0; // 0 on land, 1 up to the knees in the sea
   let wasWet = false;
   let lapse = 0; // time since the last ring, while standing in the water
@@ -1705,9 +1948,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     uniforms.space.value = orbiting;
     uniforms.scan.value = cur === pc ? 1 : 0;
     uniforms.time.value = now / 1000;
-    ambient.intensity = lerp(1.75, 1.3, dusk);
+    // At home after dark the moon is dim and blue, and the lamps do the work.
+    const lampNight = dusk * (cur === home ? 1 : 0.35);
+    ambient.intensity = lerp(1.75, lerp(1.3, 0.75, lampNight), dusk);
+    lamps.forEach((l) => (l.intensity = lampNight * 14 * (0.94 + Math.sin(now * 0.011 + l.id) * 0.06)));
+    heroGlow.intensity = lampNight * 5;
     ambient.color.copy(white).lerp(moonlight, dusk * 0.55);
-    sun.intensity = lerp(2.8, 2.3, dusk);
+    sun.intensity = lerp(2.8, lerp(2.3, 1.1, lampNight), dusk);
     sun.color.copy(white).lerp(moonlight, dusk * 0.55);
     lit.color.copy(hex('ink')).lerp(hex('ochre'), cur === pc ? 1 : smooth(0.45, 0.9, Math.max(dusk, orbiting)));
     glass.color.copy(hex('cream')).lerp(hex('ochre'), smooth(0.45, 0.9, Math.max(dusk, orbiting)));
@@ -1810,6 +2057,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       dropMat.opacity = 1 - dropT ** 2;
     }
     drops.visible = dropT < 1;
+    lives(dt, now);
     // Between worlds the hero is gone: it shrinks away, and arrives the same way.
     let present = warp ? Math.abs(f * 2 - 1) ** 2 : 1;
     if (aboard) {

@@ -134,7 +134,7 @@ export function setEngine(level: number) {
 // How much of the juice box is in the water, from 0 to 1.
 export function setSea(level: number) {
   if (!ctx || ctx.state !== 'running' || (!sea && level <= 0)) return;
-  holdSea()!.gain.setTargetAtTime(level * 0.5, ctx.currentTime, 0.35);
+  holdSea()!.gain.setTargetAtTime(level * 0.08, ctx.currentTime, 0.35);
 }
 
 // ── Voices ──
@@ -158,6 +158,26 @@ function tone(freq: number, dur: number, { type = 'sine', gain = 0.2, at = 0, at
 function bar(freq: number, dur: number, gain: number, at = 0, out?: AudioNode) {
   tone(freq, dur, { gain, at, out });
   tone(freq * 4, dur * 0.18, { gain: gain * 0.35, at, out });
+}
+// A voice that bends through several pitches: [seconds, hertz] pairs.
+function sweep(points: [number, number][], { type = 'triangle' as OscillatorType, gain = 0.05, at = 0 } = {}) {
+  if (!ctx) return;
+  const t = ctx.currentTime + at;
+  const end = points[points.length - 1][0];
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  const f = ctx.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.value = 2400;
+  o.type = type;
+  points.forEach(([s, hz], i) => (i ? o.frequency.linearRampToValueAtTime(hz, t + s) : o.frequency.setValueAtTime(hz, t + s)));
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + 0.04);
+  g.gain.setValueAtTime(gain, t + end * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + end);
+  o.connect(f).connect(g).connect(sfx);
+  o.start(t);
+  o.stop(t + end + 0.05);
 }
 type Hiss = { gain?: number; at?: number; freq?: number; to?: number; q?: number; kind?: BiquadFilterType; attack?: number };
 function hiss(dur: number, { gain = 0.2, at = 0, freq = 1000, to, q = 1, kind = 'bandpass', attack = 0.005 }: Hiss = {}) {
@@ -315,6 +335,10 @@ const EFFECTS = {
     hiss(0.6, { freq: 2200, to: 300, q: 0.8, gain: 0.45 });
     [0, 0.07, 0.15, 0.26].forEach((at, i) => tone(300 + i * 140 + Math.random() * 80, 0.1, { to: 1000, gain: 0.07, at: at + 0.05 }));
   },
+  // the passers-by: a cat's mew, gulls calling over the water, a mouse
+  meow: () => sweep([[0, 560], [0.12, 820], [0.42, 600], [0.55, 470]], { type: 'sawtooth', gain: 0.035 }),
+  gull: () => [0, 0.32, 0.6].forEach((at, i) => sweep([[0, 1300 - i * 60], [0.07, 1850 - i * 80], [0.24, 1150]], { type: 'sawtooth', gain: 0.022, at })),
+  squeak: () => [0, 0.11].forEach((at) => tone(2700 + Math.random() * 400, 0.06, { to: 3300, gain: 0.03, at })),
   jump: () => tone(330, 0.2, { type: 'triangle', to: 780, gain: 0.12 }),
   open: () => {
     bar(midi(77), 0.5, 0.12);
