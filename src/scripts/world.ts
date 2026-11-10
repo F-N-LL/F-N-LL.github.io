@@ -1074,6 +1074,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const hero = juiceBox();
   scene.add(hero.g);
   // a soft glow that keeps the hero readable at night, wherever it wanders
+  // At night, whatever the hero walks up to lights up, as if a lamp came on over it.
+  const spotLamp = new PointLight(hex('cream'), 0, 9, 1.3);
+  scene.add(spotLamp);
+  let spotAt: Spot | null = null;
   // its glow comes from the lantern in its hand
   const heroGlow = new PointLight(hex('ochre'), 0, 6, 1.5);
   heroGlow.position.set(0, -0.4, 0.3);
@@ -2252,6 +2256,19 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       }
     }
     const aimed: Spot | null = busy() ? null : hovered ?? chosen;
+    {
+      // fade out, move over, fade back in
+      const want = dusk > 0.05 && aimed && !aimed.card ? aimed : null;
+      if (want !== spotAt && spotLamp.intensity < 0.3) spotAt = want;
+      const goal = spotAt && spotAt === want ? dusk * 11 : 0;
+      spotLamp.intensity += (goal - spotLamp.intensity) * Math.min(1, dt * (goal ? 3 : 6));
+      if (spotAt) {
+        // above the thing and a little out in front of it, where the hero stands
+        spotAt.g.getWorldPosition(w);
+        up.copy(w).normalize();
+        spotLamp.position.copy(w).addScaledVector(up, 2.6 * spotAt.scale).add(v.copy(spotAt.inward).applyQuaternion(cur.group.quaternion).multiplyScalar(1.4));
+      }
+    }
     const heroScreen = toScreen(v.set(0, heroY, 0));
     const rects: { l: number; r: number; t: number; b: number; depth: number; p: Spot }[] = [];
     for (const p of cur.spots) {
