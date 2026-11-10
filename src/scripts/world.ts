@@ -171,6 +171,53 @@ function makeGround(R: number, ds: District[], coast: number, look: Look, ridge?
   return { height, paved };
 }
 
+// ═══ The sea ═══
+// Deep water darker than the sky, turquoise over the shallows, a line of foam
+// breathing along every beach, and white wave crests drifting across, so the
+// sea never reads as more sky.
+const seaTime = { value: 0 };
+function water(R: number, detail: number, height: (d: Vector3) => number) {
+  const geo = new IcosahedronGeometry(R + SEA, detail);
+  const pos = geo.getAttribute('position') as BufferAttribute;
+  const shallow = new Float32Array(pos.count);
+  const d = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    d.fromBufferAttribute(pos, i).normalize();
+    shallow[i] = smooth(SEA - 1.25, SEA + 0.05, height(d));
+  }
+  geo.setAttribute('shallow', new BufferAttribute(shallow, 1));
+  const m = new MeshLambertMaterial({ color: 0xffffff });
+  const vec = (c: Color) => `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`;
+  const deep = hex('blue').lerp(hex('ink'), 0.55);
+  const shoal = hex('blue').lerp(hex('cream'), 0.3);
+  const foam = hex('cream');
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.seaTime = seaTime;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float shallow;\nvarying float vShallow;\nvarying vec3 vSea;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvShallow = shallow;\nvSea = position;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float seaTime;\nvarying float vShallow;\nvarying vec3 vSea;')
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        float t = seaTime;
+        vec3 c = mix(${vec(deep)}, ${vec(shoal)}, smoothstep(0.15, 0.9, vShallow));
+        // crests: two slow wave trains crossing, only their highest peaks show
+        // (each bent by a slower swell, so they never line up in a grid)
+        float w = sin(dot(vSea, vec3(1.9, 0.4, 1.1)) + t * 0.9 + 1.8 * sin(dot(vSea, vec3(0.3, -0.5, 0.7)) + t * 0.2))
+          * sin(dot(vSea, vec3(-0.7, 1.3, 0.5)) * 1.3 - t * 0.6 + 1.4 * sin(dot(vSea, vec3(-0.6, 0.2, 0.4)) - t * 0.15));
+        float crest = smoothstep(0.78, 0.9, w) * (1.0 - smoothstep(0.4, 0.8, vShallow));
+        // the surf, coming in and going out along the shore
+        float surf = smoothstep(0.86, 0.95, vShallow + 0.06 * sin(t * 1.4 + dot(vSea, vec3(2.3, 1.7, 2.9))));
+        c = mix(c, ${vec(foam)}, max(crest * 0.85, surf));
+        diffuseColor.rgb = c;`,
+      );
+  };
+  const mesh = new Mesh(geo, m);
+  return mesh;
+}
+
 type Paint = (c: Vector3, h: number, slope: number, paved: number, n: number) => Pigment;
 function terrain(R: number, detail: number, height: (d: Vector3) => number, paved: (d: Vector3) => number, paint: Paint) {
   const geo = new IcosahedronGeometry(1, detail);
@@ -765,7 +812,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const garden = ds.find((z) => z.section === 'Garden');
     const paint = look === 'chip' ? paintChip : look === 'hull' ? paintHull : paintEarth((c) => !!garden && c.angleTo(garden.dir) * R < garden.ring + 2.4);
     group.add(terrain(R, detail, height, paved, paint));
-    const sea = new Mesh(new IcosahedronGeometry(R + SEA, Math.max(10, Math.round(detail * 0.5))), new MeshLambertMaterial({ color: look === 'chip' ? hex('ink').multiplyScalar(0.7) : hex('blue').multiplyScalar(0.6) }));
+    const sea = look === 'earth' ? water(R, detail, height) : new Mesh(new IcosahedronGeometry(R + SEA, Math.max(10, Math.round(detail * 0.5))), new MeshLambertMaterial({ color: hex('ink').multiplyScalar(0.7) }));
     sea.receiveShadow = true;
     sea.visible = look !== 'hull';
     group.add(sea);
@@ -1989,6 +2036,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     uniforms.space.value = orbiting;
     uniforms.scan.value = cur === pc ? 1 : 0;
     uniforms.time.value = now / 1000;
+    seaTime.value = reduced() ? 0 : now / 1000;
     // At home after dark the moon is dim and blue, and the lamps do the work.
     const lampNight = dusk * (cur === home ? 1 : 0.35);
     ambient.intensity = lerp(1.75, lerp(1.3, 0.75, lampNight), dusk);
