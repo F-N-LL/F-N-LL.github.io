@@ -1705,6 +1705,25 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     camera.updateMatrixWorld();
     uniforms.coarse.value = pixelate;
 
+    // Close up, a cloud that comes between the camera and the hero puffs away,
+    // and drifts back once it is out of the way. From afar they all stay.
+    if (clouds.visible) {
+      clouds.updateMatrixWorld(true);
+      const span = w.copy(camTarget).sub(camPos);
+      const len2 = span.lengthSq() || 1;
+      const clearance = 2.6 * clouds.scale.x + 3.5;
+      for (const c of clouds.children) {
+        c.getWorldPosition(v).sub(camPos);
+        const t = Math.min(1, Math.max(0, v.dot(span) / len2));
+        const d = v.addScaledVector(span, -t).length();
+        const goal = e > 0.3 && d < clearance ? 0 : 1;
+        const s = (c.userData.s ?? 1) + (goal - (c.userData.s ?? 1)) * Math.min(1, dt * (goal ? 2 : 7));
+        c.userData.s = s;
+        c.scale.setScalar(Math.max(0.001, s));
+        c.visible = s > 0.02;
+      }
+    }
+
     // Sun overhead up close, low and to the side from afar: that is what makes it a globe.
     sun.position.set(lerp(-46, -14, e), lerp(30, 56, e), lerp(26, 18, e)).multiplyScalar(Math.max(0.55, k));
     sun.position.y += heroY * e;
