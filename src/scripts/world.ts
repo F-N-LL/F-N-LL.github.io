@@ -172,10 +172,12 @@ function makeGround(R: number, ds: District[], coast: number, look: Look, ridge?
 }
 
 // ═══ The sea ═══
-// Deep water darker than the sky, turquoise over the shallows, a line of foam
-// breathing along every beach, and white wave crests drifting across, so the
-// sea never reads as more sky.
+// Flat colours, the way a print has them, so the dither lays an even weave
+// rather than a smear: deep water a step darker than the sky, a band of
+// turquoise over the shallows, a crisp line of surf on every beach, and short
+// white wave lines drifting across the open sea.
 const seaTime = { value: 0 };
+const seaLight = { value: 1 };
 function water(R: number, detail: number, height: (d: Vector3) => number) {
   const geo = new IcosahedronGeometry(R + SEA, detail);
   const pos = geo.getAttribute('position') as BufferAttribute;
@@ -188,34 +190,34 @@ function water(R: number, detail: number, height: (d: Vector3) => number) {
   geo.setAttribute('shallow', new BufferAttribute(shallow, 1));
   const m = new MeshLambertMaterial({ color: 0xffffff });
   const vec = (c: Color) => `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`;
-  const deep = hex('blue').lerp(hex('ink'), 0.55);
-  const shoal = hex('blue').lerp(hex('cream'), 0.3);
+  const deep = hex('blue').lerp(hex('ink'), 0.5);
+  const shoal = hex('blue').lerp(hex('cream'), 0.4);
   const foam = hex('cream');
   m.onBeforeCompile = (sh) => {
     sh.uniforms.seaTime = seaTime;
+    sh.uniforms.seaLight = seaLight;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float shallow;\nvarying float vShallow;\nvarying vec3 vSea;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvShallow = shallow;\nvSea = position;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float seaTime;\nvarying float vShallow;\nvarying vec3 vSea;')
+      .replace('#include <common>', '#include <common>\nuniform float seaTime;\nuniform float seaLight;\nvarying float vShallow;\nvarying vec3 vSea;')
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
         float t = seaTime;
-        vec3 c = mix(${vec(deep)}, ${vec(shoal)}, smoothstep(0.15, 0.9, vShallow));
-        // crests: two slow wave trains crossing, only their highest peaks show
-        // (each bent by a slower swell, so they never line up in a grid)
-        float w = sin(dot(vSea, vec3(1.9, 0.4, 1.1)) + t * 0.9 + 1.8 * sin(dot(vSea, vec3(0.3, -0.5, 0.7)) + t * 0.2))
-          * sin(dot(vSea, vec3(-0.7, 1.3, 0.5)) * 1.3 - t * 0.6 + 1.4 * sin(dot(vSea, vec3(-0.6, 0.2, 0.4)) - t * 0.15));
-        float crest = smoothstep(0.78, 0.9, w) * (1.0 - smoothstep(0.4, 0.8, vShallow));
-        // the surf, coming in and going out along the shore
-        float surf = smoothstep(0.86, 0.95, vShallow + 0.06 * sin(t * 1.4 + dot(vSea, vec3(2.3, 1.7, 2.9))));
-        c = mix(c, ${vec(foam)}, max(crest * 0.85, surf));
-        diffuseColor.rgb = c;`,
-      );
+        // the surf line breathes in and out a little
+        float edge = vShallow + 0.035 * sin(t * 1.3 + dot(vSea, vec3(1.7, 1.1, 2.3)));
+        vec3 seaC = edge > 0.9 ? ${vec(foam)} : edge > 0.55 ? ${vec(shoal)} : ${vec(deep)};
+        // wave lines: rings round a tilted axis, bent by a slow swell, cut into short dashes
+        float v = dot(vSea, vec3(0.28, 0.82, 0.5)) + 0.45 * sin(dot(vSea, vec3(0.9, -0.2, 0.6)) + t * 0.5);
+        float dist = abs(fract(v / 2.6 + t * 0.025) - 0.5) * 2.6;
+        float dash = sin(dot(vSea, vec3(-0.5, 0.3, 1.1)) * 1.1 + t * 0.35) * sin(dot(vSea, vec3(0.8, 0.5, -0.3)) * 0.8);
+        if (edge < 0.45 && dist < 0.09 && dash > 0.25) seaC = ${vec(foam)};`,
+      )
+      // lit evenly, not shaded round the sphere: shading would only smear the dither
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance = seaC * seaLight;\ndiffuseColor.rgb = vec3(0.0);');
   };
-  const mesh = new Mesh(geo, m);
-  return mesh;
+  return new Mesh(geo, m);
 }
 
 type Paint = (c: Vector3, h: number, slope: number, paved: number, n: number) => Pigment;
@@ -2037,6 +2039,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     uniforms.scan.value = cur === pc ? 1 : 0;
     uniforms.time.value = now / 1000;
     seaTime.value = reduced() ? 0 : now / 1000;
+    seaLight.value = lerp(1, 0.42, dusk);
     // At home after dark the moon is dim and blue, and the lamps do the work.
     const lampNight = dusk * (cur === home ? 1 : 0.35);
     ambient.intensity = lerp(1.75, lerp(1.3, 0.75, lampNight), dusk);
