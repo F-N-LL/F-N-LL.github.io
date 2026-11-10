@@ -902,7 +902,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       forest(new IcosahedronGeometry(0.15, 1), soft('ochre'), fruit, 0, 1);
       const pines = spots(Math.round(trees * 0.3));
       pines.forEach(({ d }) => solids.push({ dir: d, r: 0.3 }));
-      forest(new CylinderGeometry(0.1, 0.16, 1, 7), soft('ink'), pines, 1.2, 2.4, 1);
+      // the trunk runs from the ground up into the crown (it used to start a metre up, and the pines hovered)
+      forest(new CylinderGeometry(0.08, 0.13, 1, 7), soft('ink'), pines, 0.5, 3, 1);
       forest(new IcosahedronGeometry(1, 2), soft('olive'), pines, 2.75, 1.25, 0.42);
       spots(Math.round(trees * 0.12), clear, SEA + 0.5, SEA + 1.6).forEach(({ d }) => {
         stand(palm(), d);
