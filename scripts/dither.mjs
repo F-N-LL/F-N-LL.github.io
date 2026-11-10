@@ -280,6 +280,44 @@ const compositions = {
 
 
 
+  // The phone's first card: the home planet in miniature, Zumo on top, the station in orbit.
+  planet: `
+    <defs>
+      ${grad('sky', 'charcoal', 'aegean')}
+      <radialGradient id="land" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="${c('olive')}"/><stop offset=".75" stop-color="${c('olive')}"/><stop offset="1" stop-color="${c('charcoal')}"/></radialGradient>
+      <radialGradient id="sea" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="${c('aegean')}"/><stop offset="1" stop-color="${c('charcoal')}"/></radialGradient>
+      <clipPath id="ball"><circle cx="80" cy="128" r="58"/></clipPath>
+    </defs>
+    <rect width="160" height="200" fill="url(#sky)"/>
+    ${[[14, 14], [60, 22], [150, 10], [120, 46], [8, 80], [150, 92], [20, 180], [146, 170]].map(([x, y]) => `<rect x="${x}" y="${y}" width="2" height="2" fill="${c('cream')}"/>`).join('')}
+    <circle cx="80" cy="128" r="66" fill="${c('aegean')}" opacity=".6"/>
+    <circle cx="80" cy="128" r="58" fill="url(#sea)"/>
+    <g clip-path="url(#ball)">
+      <path d="M26 112 C30 84 56 70 82 70 C110 70 134 86 138 112 C130 126 118 132 108 150 C96 168 70 170 58 156 C46 142 30 136 26 112 Z" fill="${c('ochre')}"/>
+      <path d="M30 112 C34 88 58 75 82 75 C108 75 130 89 134 112 C126 124 114 130 104 146 C94 162 72 164 61 152 C50 140 34 134 30 112 Z" fill="url(#land)"/>
+      <ellipse cx="82" cy="82" rx="26" ry="8" fill="${c('cream')}"/>
+      ${[[48, 100], [60, 92], [112, 98], [120, 110], [44, 118], [98, 130], [70, 140]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="${c('olive')}" stroke="${c('charcoal')}" stroke-width=".8"/><circle cx="${x + 1.5}" cy="${y - 1}" r="1.2" fill="${c('ochre')}"/>`).join('')}
+      <ellipse cx="88" cy="112" rx="10" ry="4" fill="${c('cream')}"/>
+      <rect x="84" y="106" width="3" height="6" fill="${c('red')}"/>
+    </g>
+    <rect x="62" y="68" width="16" height="11" fill="${c('cream')}"/>
+    <path d="M66 68 L72 62 L78 68 Z" fill="${c('red')}"/>
+    <rect x="64" y="72" width="3" height="7" fill="${c('aegean')}"/>
+    <path d="M100 79 C99 72 101 66 104 62" stroke="${c('ochre')}" stroke-width="1.6" fill="none"/>
+    <path d="M104 62 l-6 2 M104 62 l6 1 M104 62 l-3 -4 M104 62 l4 -3" stroke="${c('olive')}" stroke-width="1.6"/>
+    <rect x="84" y="62" width="9" height="12" fill="${c('ochre')}" stroke="${c('charcoal')}" stroke-width="1"/>
+    <rect x="84" y="62" width="9" height="2.5" fill="${c('charcoal')}"/>
+    <rect x="86" y="67" width="1.5" height="1.5" fill="${c('charcoal')}"/><rect x="89.5" y="67" width="1.5" height="1.5" fill="${c('charcoal')}"/>
+    <path d="M91 62 L92.5 54" stroke="${c('red')}" stroke-width="1.2"/>
+    <path d="M104 26 C112 20 126 20 132 26 C138 24 144 30 140 34 H102 C98 32 100 26 104 26 Z" fill="${c('cream')}"/>
+    <circle cx="136" cy="64" r="11" fill="${c('ochre')}"/>
+    <g transform="translate(34 40) rotate(-14)">
+      <ellipse rx="15" ry="5" fill="none" stroke="${c('cream')}" stroke-width="1.6"/>
+      <circle r="8" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="1"/>
+      <rect x="-5" y="-3" width="4" height="3" fill="${c('aegean')}"/><rect x="1" y="1" width="4" height="3" fill="${c('charcoal')}"/>
+      <rect x="-24" y="-1" width="7" height="3" fill="${c('aegean')}"/><rect x="17" y="-1" width="7" height="3" fill="${c('aegean')}"/>
+    </g>`,
+
   // ── The huerta ──
   eggplant: `
     <defs>${grad('g', 'cream', 'olive')}</defs>

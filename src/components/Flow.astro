@@ -8,13 +8,14 @@ import { specimens, flow, elsewhere, cicerone } from '../data/cabinet';
 
 const bySlug = new Map(specimens.map((s) => [s.slug, s]));
 const pad = (n: number) => String(n).padStart(2, '0');
-// The introduction opens the flow on its own, printed on the Pyrenees plate,
-// so the work comes right after it; the plate is not repeated under About.
-const INTRO = 'pyrenees';
+// The introduction opens the flow on its own, printed on a miniature of the
+// home planet (plate s-planet, drawn by scripts/dither.mjs), so the visitor
+// starts where the desktop does: on Zumo's world.
+const INTRO = 'planet';
 // Door cards are for the desktop's planets; on the phone the next section is one swipe away.
-const sections = flow.map(({ section, slugs }) => ({ section, slugs: slugs.filter((s) => s !== INTRO && !bySlug.get(s)!.room) }));
+const sections = flow.map(({ section, slugs }) => ({ section, slugs: slugs.filter((s) => !bySlug.get(s)!.room) }));
 const cards = [
-  { ...bySlug.get(INTRO)!, section: 'Introduction', pos: '' },
+  { slug: INTRO, title: profile.name, section: 'Introduction', pos: '' } as (typeof specimens)[number] & { section: string; pos: string },
   ...sections.flatMap(({ section, slugs }) =>
     slugs.map((slug, i) => ({ ...bySlug.get(slug)!, section, pos: `${pad(i + 1)}/${pad(slugs.length)}` })),
   ),
