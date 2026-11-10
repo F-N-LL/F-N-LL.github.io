@@ -1569,11 +1569,28 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     text-wrap: balance;
   }
   :global(.w-tomb .m) {
-    display: block;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
     margin-top: 0.12rem;
     color: var(--ink-2);
     font-size: 0.6875rem;
     font-variant-numeric: tabular-nums;
+  }
+  :global(.w-tomb .k) {
+    display: none;
+  }
+  /* the plate Enter will open */
+  :global(.w-tomb.chosen) {
+    color: var(--bg);
+    background: var(--ink);
+  }
+  :global(.w-tomb.chosen .m) {
+    color: color-mix(in srgb, var(--bg) 72%, var(--ink));
+  }
+  :global(.w-tomb.chosen .k) {
+    display: inline;
+    color: var(--bg);
   }
   @media (hover: hover) and (pointer: fine) {
     :global(.w-zone:hover),

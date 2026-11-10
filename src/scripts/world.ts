@@ -516,11 +516,14 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'w-tomb';
-        b.innerHTML = `<span class="t"></span><span class="m"></span>`;
+        b.innerHTML = `<span class="t"></span><span class="m"><span class="mt"></span><span class="k">Enter</span></span>`;
         b.querySelector('.t')!.textContent = items[i].title;
-        b.querySelector('.m')!.textContent = `${items[i].kind} · ${items[i].year}`;
+        b.querySelector('.mt')!.textContent = `${items[i].kind} · ${items[i].year}`;
         const plate: Plate = { i, dir, g, face, zone: zi, label: b, size: 0 };
-        b.addEventListener('click', () => visit(plate));
+        b.addEventListener('click', () => {
+          if (!tabbing) b.blur();
+          visit(plate);
+        });
         b.addEventListener('focus', () => {
           if (b.matches(':focus-visible')) go(dir, 1);
         });
@@ -718,6 +721,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
   const touch = () => {
     lastInput = performance.now();
     intro = 0;
+    hovered = null; // the ground is about to move under a still cursor
   };
   function roll(x: number, z: number) {
     // x turns the planet about +X (walking away from the camera), z about +Z (walking right)
@@ -739,6 +743,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
   // Into a district, turned so its open side faces the camera.
   function arrive(z: District) {
     if (warp) return;
+    heading.set(0, -1);
     const to = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3().crossVectors(z.dir, z.v).negate().normalize(), z.dir, z.v.clone().negate())).invert();
     trip = { from: cur.q.clone(), to, t0: performance.now(), dur: reduced() ? 1 : 1300 };
     zoomGoal = 1;
@@ -785,6 +790,9 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
   let down: { x: number; y: number; moved: boolean } | null = null;
   let hovered: Plate | null = null;
   let chosen: Plate | null = null; // the plate within reach: what Enter opens
+  let tabbing = false;
+  let lastPtr = { x: -1, y: -1 };
+  const heading = new Vector2(0, -1); // where the hero last walked; into the screen on arrival
   const pick = (cx: number, cy: number) => {
     const r = canvas.getBoundingClientRect();
     ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
@@ -815,6 +823,9 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!down) {
+      // Browsers also send moves when things slide under a still cursor: only a real one counts.
+      if (e.clientX === lastPtr.x && e.clientY === lastPtr.y) return;
+      lastPtr = { x: e.clientX, y: e.clientY };
       hovered = warp ? null : pick(e.clientX, e.clientY);
       canvas.style.cursor = hovered || skyAt(e.clientX, e.clientY) ? 'pointer' : 'grab';
       return;
@@ -867,13 +878,14 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
     if (!active() || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = keyName(e);
     if (k === 'Enter') {
-      // A control the keyboard is on keeps its own Enter.
+      // A control reached with Tab keeps its own Enter; one merely left focused by a click does not.
       const on = document.activeElement as HTMLElement | null;
-      if (on?.matches('a, button') && on.matches(':focus-visible')) return;
-      const p = hovered ?? chosen;
-      if (!p || warp || e.repeat) return;
+      if (tabbing && on?.matches('a, button')) return;
       e.preventDefault();
-      visit(p);
+      if (warp || e.repeat) return;
+      const p = hovered ?? chosen;
+      if (p) visit(p);
+      else if (zoom < 0.55) zoomGoal = 1; // from afar, Enter takes you down to the ground
       return;
     }
     if (k === ' ' && (e.target as HTMLElement).tagName !== 'BUTTON') {
@@ -889,6 +901,8 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
     zoomGoal = 1;
     touch();
   });
+  addEventListener('keydown', (e) => e.key === 'Tab' && (tabbing = true), true);
+  addEventListener('pointerdown', () => (tabbing = false), true);
   addEventListener('keyup', (e) => keys.delete(keyName(e)));
   addEventListener('blur', () => keys.clear());
 
@@ -1019,6 +1033,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
       let diff = yaw - heroYaw;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       heroYaw += diff * Math.min(1, dt * 12);
+      heading.set(dq.z * s, -dq.x * s).normalize();
       stride += (speed * cur.R * dt * 62) / 20;
       hop = Math.abs(Math.sin(stride)) * 0.3;
     } else {
@@ -1117,17 +1132,25 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
     camLocal.copy(camera.position).applyQuaternion(inv);
     camUp.set(0, 1, 0).applyQuaternion(camera.quaternion).applyQuaternion(inv);
     const showTombs = zoom > 0.55 && !warp;
+    // Within reach, and favouring what the hero is walking towards; a small
+    // bias to the current pick keeps it from flickering between two equals.
+    const held: Plate | null = chosen;
     chosen = null;
     if (showTombs) {
-      let best = 8.5;
+      let best = Infinity;
       for (const p of cur.plates) {
-        const a = p.dir.angleTo(under) * cur.R;
-        if (a < best) {
-          best = a;
+        w.copy(p.dir).applyQuaternion(cur.q);
+        const a = w.angleTo(NORTH) * cur.R;
+        if (a > 9.5) continue;
+        const along = (w.x * heading.x + w.z * heading.y) / (Math.hypot(w.x, w.z) || 1);
+        const score = a + (1 - along) * 3.2 - (p === held ? 0.7 : 0);
+        if (score < best) {
+          best = score;
           chosen = p;
         }
       }
     }
+    const aimed: Plate | null = hovered ?? chosen;
     const heroScreen = toScreen(v.set(0, heroY, 0));
     const rects: { l: number; r: number; t: number; b: number; depth: number; p: Plate }[] = [];
     for (const p of cur.plates) {
@@ -1140,7 +1163,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
       up.crossVectors(forward, right).normalize();
       look.makeBasis(right, up, forward);
       p.g.quaternion.setFromRotationMatrix(look);
-      const lift = p === hovered || (!hovered && p === chosen) ? 1.08 : 1;
+      const lift = p === aimed ? 1.08 : 1;
       p.g.scale.setScalar(p.g.scale.x + (lift - p.g.scale.x) * 0.2);
       p.g.updateMatrixWorld(true);
       const a = toScreen(p.face.localToWorld(w.set(-FACE_W, FACE_H, 0)));
@@ -1150,7 +1173,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
       rects.push({ l: Math.min(a.x, b.x), r: Math.max(a.x, b.x), t: Math.min(a.y, b.y), b: Math.max(a.y, b.y), depth, p });
     }
     // Nearest first: a sign that would land on one already placed stays away.
-    rects.sort((a, b) => a.depth - b.depth);
+    rects.sort((a, b) => Number(b.p === aimed) - Number(a.p === aimed) || a.depth - b.depth);
     const placed: { l: number; r: number; t: number; b: number }[] = [];
     for (const rc of rects) {
       const { p } = rc;
@@ -1169,13 +1192,14 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
       const signY = Math.max(above ? 54 : 6, Math.min(H - 54, y));
       const sign = { l: x - width / 2 - 4, r: x + width / 2 + 4, t: above ? signY - 52 : signY, b: above ? signY : signY + 52 };
       const clash = placed.some((o) => sign.l < o.r && sign.r > o.l && sign.t < o.b && sign.b > o.t);
-      const on = (p === hovered || p === chosen || focused || (showTombs && close && !hidden && !clash)) && facing > 0.08 && inFrame;
+      const on = (p === aimed || focused || (showTombs && close && !hidden && !clash)) && facing > 0.08 && inFrame;
       if (on) placed.push(sign);
       if (on && width !== p.size) {
         p.size = width;
         p.label.style.width = `${width}px`;
       }
       place(p.label, on, x, signY, above);
+      p.label.classList.toggle('chosen', p === aimed);
       p.label.style.zIndex = String(1000 - Math.round(rc.depth * 8));
     }
     cur.ds.forEach((z) => {
