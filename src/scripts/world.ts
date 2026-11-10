@@ -1104,6 +1104,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let hop = 0;
   let jumpV = 0;
   let jumpY = 0;
+  let ahead = 0; // how much the camera leans to show what lies ahead of the hero
   let nightNow = startNight ? 1 : 0;
   let nightGoal = nightNow;
   const started = performance.now();
@@ -1603,6 +1604,20 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       heading.set(dq.z * s, -dq.x * s).normalize();
       stride += (speed * cur.R * dt * 62) / 20;
       hop = Math.abs(Math.sin(stride)) * 0.3;
+      // The view comes round behind the hero, slowly, so what it walks towards
+      // ends up in front of the camera. Not while dragging: the ground would
+      // slip out from under the cursor. Walking at the camera turns nothing;
+      // the camera lifts and backs off instead (below).
+      const err = Math.atan2(heading.x, -heading.y);
+      if (!down && !trip && !reduced() && Math.abs(err) < 1.9) {
+        const a = err * Math.min(1, dt * 1.3);
+        dq.setFromAxisAngle(axisY, a);
+        cur.q.premultiply(dq).normalize();
+        const c = Math.cos(a);
+        const sn = Math.sin(a);
+        heading.set(heading.x * c + heading.y * sn, -heading.x * sn + heading.y * c);
+        vel = { x: vel.x * c + vel.z * sn, z: -vel.x * sn + vel.z * c };
+      }
     } else {
       let diff = -heroYaw;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -1646,8 +1661,9 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     // a wider district needs the camera a little further back
     const nearest = cur.ds.reduce((a, b) => (under.angleTo(a.dir) < under.angleTo(b.dir) ? a : b));
     const room = lerp(1, 1.24, smooth(4.5, 7, nearest.ring));
-    camPos.lerp(w.set(0, heroY + 9.6 * n * room, 13 * n * room), e);
-    camTarget.lerp(w.set(0, heroY + 0.5, -0.5), e);
+    ahead += ((walking && !down ? Math.max(0, heading.y) : 0) - ahead) * Math.min(1, dt * 2);
+    camPos.lerp(w.set(0, heroY + 9.6 * n * room * (1 + 0.8 * ahead), 13 * n * room * (1 + 0.1 * ahead)), e);
+    camTarget.lerp(w.set(0, heroY + 0.5, -0.5 + 2.5 * ahead), e);
     // Following a rocket up, the camera looks up after it.
     if (launch) {
       const t = Math.min(1, (now - launch.t0) / launch.dur);
