@@ -393,15 +393,18 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     // ═══ Day and night ═══
     // The system decides, until the visitor says otherwise.
     const scheme = matchMedia('(prefers-color-scheme: dark)');
-    const themeBtn = $('[data-theme-toggle]');
+    // one button in the desktop header, one in the phone's
+    const themeBtns = $$('[data-theme-toggle]');
     const isNight = () => (root.dataset.theme ? root.dataset.theme === 'dark' : scheme.matches);
     function paintTheme() {
       const night = isNight();
-      themeBtn.setAttribute('aria-pressed', String(night));
-      themeBtn.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night');
+      themeBtns.forEach((b) => {
+        b.setAttribute('aria-pressed', String(night));
+        b.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night');
+      });
       world?.setNight(night);
     }
-    themeBtn.addEventListener('click', () => {
+    themeBtns.forEach((b) => b.addEventListener('click', () => {
       const next = isNight() ? 'light' : 'dark';
       const follows = (next === 'dark') === scheme.matches;
       try {
@@ -411,7 +414,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       if (follows) delete root.dataset.theme;
       else root.dataset.theme = next;
       paintTheme();
-    });
+    }));
     scheme.addEventListener('change', paintTheme);
     paintTheme();
 
