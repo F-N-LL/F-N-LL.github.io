@@ -49,6 +49,7 @@ import {
   WebGLRenderTarget,
 } from 'three';
 import { PIGMENTS } from '../data/pigments';
+import { play } from './sound';
 
 export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
 export type WorldOptions = {
@@ -1215,6 +1216,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   }
   function visit(s: Spot) {
     if (busy()) return;
+    play('tap');
     const it = items[s.i];
     // The web opens now, while the click still counts as one.
     if (it.href) {
@@ -1229,6 +1231,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     vel = { x: 0, z: 0 };
     keys.clear();
     warp = { from: cur, to, t0: performance.now(), dur: ms(1700), then };
+    play('warp');
     cur.spots.forEach((p) => p.label.classList.remove('on'));
     to.slot = -1;
     touch();
@@ -1237,6 +1240,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   function fly(to: Planet, then?: Then) {
     aboard = true;
     zoomGoal = 0.55; // back far enough to watch it go
+    play('launch');
     launch = {
       p: cur,
       t0: performance.now(),
@@ -1245,6 +1249,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         to.q.copy(facing(padOf(to)!));
         jump(to, () => {
           zoomGoal = 1;
+          play('land');
           land = {
             p: to,
             t0: performance.now(),
@@ -1261,6 +1266,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   }
   function enterPC(then?: Then) {
     qDesk = home.q.clone();
+    play('dive');
     dive = {
       dir: 1,
       t0: performance.now(),
@@ -1285,6 +1291,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     heroY = home.R + GROUND;
     burst = performance.now();
     dive = { dir: -1, t0: performance.now(), dur: ms(1400), then };
+    play('surface');
     touch();
   }
   // Names a place: a district, a world, or 'all' for the whole home planet.
@@ -1441,7 +1448,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     }
     if (k === ' ' && (e.target as HTMLElement).tagName !== 'BUTTON') {
       e.preventDefault();
-      if (jumpY === 0 && !aboard) jumpV = 7;
+      if (jumpY === 0 && !aboard) {
+        jumpV = 7;
+        play('jump');
+      }
       touch();
       return;
     }
@@ -1670,7 +1680,9 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       heroYaw += diff * Math.min(1, dt * 12);
       heading.set(dq.z * s, -dq.x * s).normalize();
+      const foot = Math.floor(stride / Math.PI);
       stride += (speed * cur.R * dt * 62) / 20;
+      if (Math.floor(stride / Math.PI) !== foot && !jumpY) play('step', cur.look);
       hop = Math.abs(Math.sin(stride)) * 0.3;
       // The view comes round behind the hero, slowly, so what it walks towards
       // ends up in front of the camera. Not while dragging: the ground would
@@ -1970,8 +1982,12 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (talk && speaking) {
       const line = talk.lines[talk.k];
       if (talk.shown < line.length) {
+        const was = Math.floor(talk.shown);
         talk.shown = reduced() ? line.length : Math.min(line.length, talk.shown + dt * 52);
-        sayTxt.textContent = line.slice(0, Math.floor(talk.shown));
+        const n = Math.floor(talk.shown);
+        sayTxt.textContent = line.slice(0, n);
+        // a syllable every few letters, as the juice box talks
+        if (Math.floor(n / 3) > Math.floor(was / 3) && line[n - 1] !== ' ') play('blip');
       } else if (sayTxt.textContent !== line) sayTxt.textContent = line;
       sayN.textContent = talk.tour ? `${talk.k + 1}/${talk.lines.length}` : '';
       sayNext.textContent = talk.k + 1 >= talk.lines.length ? 'Done' : 'Next';

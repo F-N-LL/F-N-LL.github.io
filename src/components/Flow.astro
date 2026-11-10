@@ -44,6 +44,10 @@ const starts = sections.map(({ section, slugs }) => ({
         <svg class="i-moon" viewBox="0 0 9 9" width="18" height="18" shape-rendering="crispEdges" aria-hidden="true"><rect x="4" y="0" width="1" height="1"/><rect x="2" y="1" width="1" height="1"/><rect x="3" y="1" width="1" height="1"/><rect x="1" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="7" y="6" width="1" height="1"/><rect x="2" y="7" width="1" height="1"/><rect x="3" y="7" width="1" height="1"/><rect x="4" y="7" width="1" height="1"/><rect x="5" y="7" width="1" height="1"/><rect x="6" y="7" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/></svg>
         <svg class="i-sun" viewBox="0 0 9 9" width="18" height="18" shape-rendering="crispEdges" aria-hidden="true"><rect x="4" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="5" y="3" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="5" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="8" y="4" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="7" y="1" width="1" height="1"/><rect x="1" y="7" width="1" height="1"/><rect x="7" y="7" width="1" height="1"/></svg>
       </button>
+      <button type="button" class="f-theme f-sound" data-sound-toggle aria-pressed="true" aria-label="Mute sound">
+        <svg class="i-loud" viewBox="0 0 9 9" width="18" height="18" shape-rendering="crispEdges" aria-hidden="true"><rect x="0" y="3" width="2" height="3"/><rect x="2" y="2" width="1" height="5"/><rect x="3" y="1" width="1" height="7"/><rect x="5" y="3" width="1" height="3"/><rect x="6" y="1" width="1" height="1"/><rect x="7" y="2" width="1" height="5"/><rect x="6" y="7" width="1" height="1"/></svg>
+        <svg class="i-mute" viewBox="0 0 9 9" width="18" height="18" shape-rendering="crispEdges" aria-hidden="true"><rect x="0" y="3" width="2" height="3"/><rect x="2" y="2" width="1" height="5"/><rect x="3" y="1" width="1" height="7"/><rect x="5" y="3" width="1" height="1"/><rect x="8" y="3" width="1" height="1"/><rect x="6" y="4" width="2" height="1"/><rect x="6" y="5" width="2" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/></svg>
+      </button>
     </span>
     <span class="f-where" aria-live="polite">
       <span class="f-sec"><span data-f-sec>{starts[0].section}</span></span>
@@ -111,6 +115,7 @@ const starts = sections.map(({ section, slugs }) => ({
 </div>
 
 <script>
+  import { play } from '../scripts/sound';
   const phone = matchMedia('(max-width: 760px)');
   let started = false;
 
@@ -339,6 +344,7 @@ const starts = sections.map(({ section, slugs }) => ({
       const s = progress(at);
       const i = Math.max(0, Math.min(n - 1, Math.round(at)));
       if (i !== nearest) {
+        if (nearest >= 0) play('flip');
         nearest = i;
         dot.setAttribute('aria-valuenow', String(i + 1));
         localEl.textContent = String(Math.max(1, Math.min(s.count, i - s.start + 1))).padStart(2, '0');
@@ -358,6 +364,7 @@ const starts = sections.map(({ section, slugs }) => ({
       window.setTimeout(() => {
         say.textContent = lines[w] ?? '';
         zumo.classList.add('on');
+        [0, 90, 180, 270].forEach((t) => window.setTimeout(() => play('blip'), t));
         if (w !== 'intro') hush = window.setTimeout(() => zumo.classList.remove('on'), 3800);
       }, 180);
     }
@@ -367,11 +374,13 @@ const starts = sections.map(({ section, slugs }) => ({
       close();
       active = i;
       cards[i].classList.add('open');
+      play('open');
     }
     function close() {
       if (active < 0) return;
       cards[active].classList.remove('open');
       active = -1;
+      play('close');
     }
     // Resting: the card the flow stopped on shows its plate clean; its entry
     // rises after a beat (see settle).
@@ -400,6 +409,7 @@ const starts = sections.map(({ section, slugs }) => ({
 
     // Settled = resting exactly on a card.
     function settle() {
+      if (!step) return; // not laid out: the phone flow is hidden on a desktop
       const i = Math.round(pos / step);
       if (Math.abs(pos - i * step) > 2) return;
       const k = Math.max(0, Math.min(n - 1, i));
@@ -765,6 +775,19 @@ const starts = sections.map(({ section, slugs }) => ({
     .f-theme[aria-pressed='true'] .i-moon {
       opacity: 0;
       rotate: 90deg;
+    }
+    /* the speaker, with its waves, or crossed out */
+    .f-sound .i-mute {
+      opacity: 0;
+    }
+    .f-sound[aria-pressed='false'] .i-mute {
+      opacity: 1;
+    }
+    .f-sound[aria-pressed='false'] .i-loud {
+      opacity: 0;
+    }
+    .f-me .f-sound {
+      margin-left: -0.75rem;
     }
     .f-theme:active svg {
       scale: 0.85;

@@ -141,6 +141,10 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       <a href={cv.href} class="b-contact" target="_blank" rel="noopener">CV</a>
       <a href={email.href} class="b-contact">Contact</a>
       <span class="b-clock"><span class="muted">Alicante</span> <time data-clock></time></span>
+      <button type="button" class="b-theme b-sound" data-sound-toggle aria-pressed="true" aria-label="Mute sound">
+        <svg class="i-loud" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2.2 6.1h2.6L8.4 3v10L4.8 9.9H2.2Z" /><path d="M10.9 5.8a3 3 0 0 1 0 4.4M12.9 3.8a5.8 5.8 0 0 1 0 8.4" /></svg>
+        <svg class="i-mute" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2.2 6.1h2.6L8.4 3v10L4.8 9.9H2.2Z" /><path d="M10.8 6.2l3.6 3.6M14.4 6.2l-3.6 3.6" /></svg>
+      </button>
       <button type="button" class="b-theme" data-theme-toggle aria-pressed="false" aria-label="Switch to night">
         <svg class="i-moon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13.2 10.1A5.8 5.8 0 0 1 5.9 2.8a5.8 5.8 0 1 0 7.3 7.3Z" /></svg>
         <svg class="i-sun" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="3" /><path d="M8 1.2v1.9M8 12.9v1.9M1.2 8h1.9M12.9 8h1.9M3.2 3.2l1.3 1.3M11.5 11.5l1.3 1.3M3.2 12.8l1.3-1.3M11.5 4.5l1.3-1.3" /></svg>
@@ -368,6 +372,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
   <script>
     import type { World } from '../scripts/world';
+    import { play, setSound, soundOn, onSound, setSoundNight } from '../scripts/sound';
     type Item = {
       slug: string; title: string; kind: string; year: string; medium: string; text: string;
       href?: string; link?: string; lang?: string; section: string; pos: number; count: number; room?: string;
@@ -403,9 +408,11 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         b.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night');
       });
       world?.setNight(night);
+      setSoundNight(night);
     }
     themeBtns.forEach((b) => b.addEventListener('click', () => {
       const next = isNight() ? 'light' : 'dark';
+      play(next === 'dark' ? 'night' : 'day');
       const follows = (next === 'dark') === scheme.matches;
       try {
         if (follows) localStorage.removeItem('df-theme');
@@ -417,6 +424,17 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     }));
     scheme.addEventListener('change', paintTheme);
     paintTheme();
+
+    // ═══ Sound ═══
+    // A quiet tune and small sounds, from the first touch on; one button mutes them.
+    const soundBtns = $$('[data-sound-toggle]');
+    onSound((on) =>
+      soundBtns.forEach((b) => {
+        b.setAttribute('aria-pressed', String(on));
+        b.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
+      }),
+    );
+    soundBtns.forEach((b) => b.addEventListener('click', () => setSound(!soundOn())));
 
     // ═══ Camera ═══
     // The floor is a canvas: position (x, y) and tile size t. Input writes to
@@ -761,7 +779,12 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         frameCells(L.PANEL.col - 0.1, b.row - 0.35, L.PANEL.col + 1 + b.count + 0.1, b.row + 1.35, 150);
       }
     }
-    filterBtns.forEach((b) => b.addEventListener('click', () => applyFilter(b.dataset.filter!)));
+    filterBtns.forEach((b) =>
+      b.addEventListener('click', () => {
+        play('tap');
+        applyFilter(b.dataset.filter!);
+      }),
+    );
     $$('[data-label]').forEach((l) => l.addEventListener('click', () => applyFilter(l.dataset.label!)));
     $('[data-home]').addEventListener('click', (e) => {
       e.preventDefault();
@@ -933,6 +956,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         } else history.replaceState({ slug: S[i].slug }, '', `#${S[i].slug}`);
       }
       const wasHidden = detail.hidden;
+      if (wasHidden) play('open');
       detail.hidden = false;
       document.body.classList.add('modal');
       if (wasHidden) {
@@ -964,6 +988,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     }
     function hide() {
       teach(false);
+      play('close');
       clearTimeout(linkTimer);
       detail.hidden = true;
       detail.classList.remove('in');
@@ -1435,6 +1460,19 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   .b-theme[aria-pressed='true'] .i-sun {
     opacity: 1;
     transform: none;
+  }
+  /* sound: the speaker shows what is on now, struck through when muted */
+  .b-sound .i-loud {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  .b-sound[aria-pressed='true'] .i-loud {
+    opacity: 1;
+    transform: none;
+  }
+  .b-sound[aria-pressed='true'] .i-mute {
+    opacity: 0;
+    transform: scale(0.7);
   }
   .b-clock time {
     font-variant-numeric: tabular-nums;
