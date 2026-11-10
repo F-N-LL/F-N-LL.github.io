@@ -271,6 +271,8 @@ const soft = (k: Pigment) => {
 };
 // Windows and lanterns: dark by day, lit by night.
 const lit = new MeshBasicMaterial({ color: hex('ink') });
+// Lantern glass: pale by day, glowing by night.
+const glass = new MeshBasicMaterial({ color: hex('cream') });
 const flameMat = new MeshBasicMaterial({ color: hex('ochre') });
 const flameCore = new MeshBasicMaterial({ color: hex('cream') });
 function shade<T extends Mesh>(m: T, x = 0, y = 0, z = 0) {
@@ -849,9 +851,9 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     // Lanterns along the roads, and fireflies once it is dark.
     const lantern = (dir: Vector3) => {
       const g = new Group();
-      g.add(cyl(0.06, 1.5, 'ink'));
-      const l = new Mesh(new IcosahedronGeometry(0.17, 1), lit);
-      l.position.y = 1.6;
+      g.add(cyl(0.06, 1.45, 'ink'), box(0.36, 0.06, 0.36, 'ink', 0, 1.42), cone(0.3, 0.22, 'red', 0, 1.86, 0, 4));
+      const l = new Mesh(new BoxGeometry(0.26, 0.38, 0.26), glass);
+      l.position.y = 1.67;
       const pool = new Mesh(new CircleGeometry(2.8, 18), haloMat);
       pool.rotation.x = -Math.PI / 2;
       pool.position.y = 0.06;
@@ -941,7 +943,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     placeOn(station, antenna(), z.dir, z.u, z.v, z.ring + 2.5, z.ring + 1.6);
   });
 
-  // Clouds ride above the camera's path, so they shade the ground and never block it.
+  // Clouds ride above the camera's path. They cast no shadow: they hang still
+  // over the hero while the ground turns, so their shade would follow it about.
   const clouds = new Group();
   for (let i = 0; i < 9; i++) {
     const c = new Group();
@@ -957,6 +960,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     c.rotateY(rand() * 6);
     clouds.add(c);
   }
+  clouds.traverse((o) => (o.castShadow = false));
   scene.add(clouds);
   // One plane on its way to somewhere warm.
   const orbit = new Group();
@@ -1578,6 +1582,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     sun.intensity = lerp(2.8, 2.3, dusk);
     sun.color.copy(white).lerp(moonlight, dusk * 0.55);
     lit.color.copy(hex('ink')).lerp(hex('ochre'), cur === pc ? 1 : smooth(0.45, 0.9, Math.max(dusk, orbiting)));
+    glass.color.copy(hex('cream')).lerp(hex('ochre'), smooth(0.45, 0.9, Math.max(dusk, orbiting)));
     haloMat.uniforms.amount.value = Math.max(dusk, orbiting * 0.6) * 1.7;
     fliesMat.opacity = cur === home ? dusk : cur === pc ? 1 : 0;
 
@@ -1739,6 +1744,15 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       const isTo = warp?.to === p;
       p.sea.rotation.y += dt * 0.012;
       p.group.visible = inside ? p === pc : p !== pc;
+      // A world hung in the sky casts no shadow on the one underfoot.
+      const aloft = p.slot >= 0 && !isTo;
+      if (p.group.userData.aloft !== aloft) {
+        p.group.userData.aloft = aloft;
+        p.group.traverse((o) => {
+          if (o.userData.cast === undefined) o.userData.cast = o.castShadow;
+          o.castShadow = !aloft && o.userData.cast;
+        });
+      }
       if (p.slot < 0 && !isFrom && !isTo) {
         p.group.position.set(0, 0, 0);
         p.group.scale.setScalar(1);
