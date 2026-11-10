@@ -784,6 +784,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
   const ndc = new Vector2();
   let down: { x: number; y: number; moved: boolean } | null = null;
   let hovered: Plate | null = null;
+  let chosen: Plate | null = null; // the plate within reach: what Enter opens
   const pick = (cx: number, cy: number) => {
     const r = canvas.getBoundingClientRect();
     ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
@@ -865,6 +866,16 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
   addEventListener('keydown', (e) => {
     if (!active() || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = keyName(e);
+    if (k === 'Enter') {
+      // A control the keyboard is on keeps its own Enter.
+      const on = document.activeElement as HTMLElement | null;
+      if (on?.matches('a, button') && on.matches(':focus-visible')) return;
+      const p = hovered ?? chosen;
+      if (!p || warp || e.repeat) return;
+      e.preventDefault();
+      visit(p);
+      return;
+    }
     if (k === ' ' && (e.target as HTMLElement).tagName !== 'BUTTON') {
       e.preventDefault();
       if (jumpY === 0) jumpV = 7;
@@ -1106,6 +1117,17 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
     camLocal.copy(camera.position).applyQuaternion(inv);
     camUp.set(0, 1, 0).applyQuaternion(camera.quaternion).applyQuaternion(inv);
     const showTombs = zoom > 0.55 && !warp;
+    chosen = null;
+    if (showTombs) {
+      let best = 8.5;
+      for (const p of cur.plates) {
+        const a = p.dir.angleTo(under) * cur.R;
+        if (a < best) {
+          best = a;
+          chosen = p;
+        }
+      }
+    }
     const heroScreen = toScreen(v.set(0, heroY, 0));
     const rects: { l: number; r: number; t: number; b: number; depth: number; p: Plate }[] = [];
     for (const p of cur.plates) {
@@ -1118,7 +1140,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
       up.crossVectors(forward, right).normalize();
       look.makeBasis(right, up, forward);
       p.g.quaternion.setFromRotationMatrix(look);
-      const lift = p === hovered ? 1.06 : 1;
+      const lift = p === hovered || (!hovered && p === chosen) ? 1.08 : 1;
       p.g.scale.setScalar(p.g.scale.x + (lift - p.g.scale.x) * 0.2);
       p.g.updateMatrixWorld(true);
       const a = toScreen(p.face.localToWorld(w.set(-FACE_W, FACE_H, 0)));
@@ -1147,7 +1169,7 @@ export function mountWorld({ root, items, sections, open, select, reduced, activ
       const signY = Math.max(above ? 54 : 6, Math.min(H - 54, y));
       const sign = { l: x - width / 2 - 4, r: x + width / 2 + 4, t: above ? signY - 52 : signY, b: above ? signY : signY + 52 };
       const clash = placed.some((o) => sign.l < o.r && sign.r > o.l && sign.t < o.b && sign.b > o.t);
-      const on = (p === hovered || focused || (showTombs && close && !hidden && !clash)) && facing > 0.08 && inFrame;
+      const on = (p === hovered || p === chosen || focused || (showTombs && close && !hidden && !clash)) && facing > 0.08 && inFrame;
       if (on) placed.push(sign);
       if (on && width !== p.size) {
         p.size = width;
