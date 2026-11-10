@@ -1,9 +1,10 @@
-// The floor's six pigments, sampled from the Pompeii palette.
+// The six pigments of the whole site: a Mediterranean coast in late summer,
+// Jávea more than Pompeii. Slate shade, pine, terracotta, lemon, whitewash, sea.
 export const PIGMENTS: Record<string, [number, number, number]> = {
-  ink: [43, 41, 38],
-  olive: [98, 96, 68],
-  red: [158, 63, 50],
-  ochre: [197, 138, 61],
-  cream: [226, 214, 192],
-  blue: [107, 141, 160],
+  ink: [38, 46, 58],
+  olive: [96, 138, 82],
+  red: [210, 96, 70],
+  ochre: [236, 182, 86],
+  cream: [248, 240, 222],
+  blue: [62, 154, 178],
 };

@@ -3,7 +3,7 @@ import sharp from 'sharp';
 import Base from '../layouts/Base.astro';
 import Flow from '../components/Flow.astro';
 import { profile } from '../data/site';
-import { specimens, flow, elsewhere } from '../data/cabinet';
+import { specimens, flow, elsewhere, worldOnly, cicerone } from '../data/cabinet';
 import { PIGMENTS as TONES } from '../data/pigments';
 
 // Desktop: a Roman floor you can move around. A framed emblema holds an intro
@@ -11,7 +11,7 @@ import { PIGMENTS as TONES } from '../data/pigments';
 // set in a field of tesserae sampled from the Pyrenees panorama.
 const COLS = 29;
 const ROWS = 17;
-const PANEL = { col: 10, row: 6, w: 9, h: 5 }; // intro row + four section rows
+const PANEL = { col: 9, row: 5, w: 11, h: 6 }; // intro row + five section rows
 const LABEL_COL = PANEL.col;
 const FIRST_CARD_COL = PANEL.col + 1;
 
@@ -107,14 +107,16 @@ const email = elsewhere.find((l) => l.href.startsWith('mailto:'))!;
 const cv = elsewhere.find((l) => l.href.endsWith('.pdf'))!;
 const social = elsewhere.filter((l) => l !== email && l !== cv);
 const shortcuts: [string[], string][] = [
-  [['←', '↑', '→', '↓'], 'Move between cards'],
-  [['H', 'J', 'K', 'L'], 'The same, vim-style; J K walk the index'],
+  [['←', '↑', '→', '↓'], 'Walk'],
+  [['W', 'A', 'S', 'D'], 'Walk, on the home row'],
+  [['H', 'J', 'K', 'L'], 'Walk, vim-style; J K walk the index'],
+  [['Space'], 'Jump'],
   [['Enter'], 'Open'],
-  [['Esc'], 'Close, or fit when nothing is open'],
+  [['Esc'], 'Close, or see the whole world'],
   [['+', '−'], 'Zoom'],
   [['←', '→', 'H', 'L'], 'Previous, next card (when open)'],
   [['K', 'J'], 'Previous, next card (when open)'],
-  [['1', '2', '3', '4'], 'Show a section'],
+  [['1', '2', '3', '4', '5'], 'Go to a section'],
   [['I'], 'Index'],
 ];
 const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, first: b.first, count: b.count, section: b.section })) };
@@ -139,11 +141,39 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       <a href={cv.href} class="b-contact" target="_blank" rel="noopener">CV</a>
       <a href={email.href} class="b-contact">Contact</a>
       <span class="b-clock"><span class="muted">Alicante</span> <time data-clock></time></span>
+      <button type="button" class="b-theme b-sound" data-sound-toggle aria-pressed="true" aria-label="Mute sound">
+        <svg class="i-loud" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2.2 6.1h2.6L8.4 3v10L4.8 9.9H2.2Z" /><path d="M10.9 5.8a3 3 0 0 1 0 4.4M12.9 3.8a5.8 5.8 0 0 1 0 8.4" /></svg>
+        <svg class="i-mute" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2.2 6.1h2.6L8.4 3v10L4.8 9.9H2.2Z" /><path d="M10.8 6.2l3.6 3.6M14.4 6.2l-3.6 3.6" /></svg>
+      </button>
+      <button type="button" class="b-theme" data-theme-toggle aria-pressed="false" aria-label="Switch to night">
+        <svg class="i-moon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13.2 10.1A5.8 5.8 0 0 1 5.9 2.8a5.8 5.8 0 1 0 7.3 7.3Z" /></svg>
+        <svg class="i-sun" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="3" /><path d="M8 1.2v1.9M8 12.9v1.9M1.2 8h1.9M12.9 8h1.9M3.2 3.2l1.3 1.3M11.5 11.5l1.3 1.3M3.2 12.8l1.3-1.3M11.5 4.5l1.3-1.3" /></svg>
+      </button>
     </nav>
   </header>
 
   <main>
     <h1 class="sr-only">Daniel Fenoll — software engineer and designer, Alicante</h1>
+
+    <!-- World: desktop, where WebGL can carry it. The cabinet below stays as the fallback. -->
+    <script is:inline>
+      (function () {
+        if (!matchMedia('(min-width: 761px)').matches) return;
+        var force = /[?&]world\b/.test(location.search);
+        if (/[?&]floor\b/.test(location.search)) return;
+        var gl = document.createElement('canvas').getContext('webgl2', { failIfMajorPerformanceCaveat: !force });
+        if (gl) document.body.classList.add('world-on');
+      })();
+    </script>
+    <div class="world" data-world>
+      <canvas aria-hidden="true"></canvas>
+      <div class="w-id" data-w-id>
+        <p class="w-name">{profile.name} <span class="pixel" lang="ja">{profile.kana}</span></p>
+        <p class="w-line">{profile.statement}</p>
+        <p class="w-act"><a href={cv.href} target="_blank" rel="noopener">Read the CV</a><a href={email.href}>Write to me</a></p>
+      </div>
+      <div class="w-labels" data-w-labels></div>
+    </div>
 
     <!-- Cabinet -->
     <div class="stage" data-stage aria-label="Cabinet. Drag or scroll to move, pinch or Control-scroll to zoom.">
@@ -236,6 +266,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         ))}
       </ul>
       <p class="f-hint caps muted">Drag or scroll to move · Pinch or Ctrl + scroll to zoom · <kbd>?</kbd> Shortcuts</p>
+      <p class="f-hint w-hint caps muted">Arrows or drag to walk · Scroll to zoom · Space to jump · <kbd>?</kbd> Shortcuts</p>
       <div class="zoom" data-zoom>
         <button type="button" class="z-btn key-up" data-zoom-out aria-label="Zoom out" data-key="−">−</button>
         <div class="ruler" data-ruler role="slider" tabindex="0" aria-label="Zoom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -246,7 +277,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
           <span class="pct caps" data-pct></span>
         </div>
         <button type="button" class="z-btn key-up" data-zoom-in aria-label="Zoom in" data-key="+">+</button>
-        <button type="button" class="z-fit caps key-up" data-fit data-key="Esc">Fit</button>
+        <button type="button" class="z-fit caps" data-fit aria-keyshortcuts="Escape"><kbd>Esc</kbd> Back home</button>
       </div>
     </footer>
   </main>
@@ -291,7 +322,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     <h3 class="caps muted">Contact</h3>
     <ul class="i-links">
       {elsewhere.map((l) => (
-        <li><a href={l.href} {...(l.href.startsWith('http') ? { target: '_blank', rel: 'me noopener' } : {})}><span class="muted">{l.label}</span> <span class="ul">{l.handle}</span></a></li>
+        <li><a href={l.href} {...(!l.href.startsWith('mailto:') ? { target: '_blank', rel: 'me noopener' } : {})}><span class="muted">{l.label}</span> <span class="ul">{l.handle}</span></a></li>
       ))}
     </ul>
     <h3 class="caps muted">Keyboard</h3>
@@ -305,9 +336,10 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     </dl>
     <h3 class="caps muted">Colophon</h3>
     <p class="muted">
-      Every plate is ordered-dithered (Bayer 8×8) into six pigments from Pompeii. The floor is laid like a Roman mosaic:
-      a framed emblema of specimens in a field of tesserae, each coloured from the Pyrenees. Set in Geist. Built with
-      Astro. © {year} {profile.name}.
+      Every plate, and the three small worlds on a large screen, are ordered-dithered (Bayer 8×8) into six pigments
+      from the Mediterranean coast: slate, pine, terracotta, lemon, whitewash and sea. Where the worlds can't run, the
+      floor is laid like a Roman mosaic in tesserae coloured from the Pyrenees. Set in Geist. Built with Astro and
+      three.js. © {year} {profile.name}.
     </p>
   </aside>
 
@@ -329,24 +361,28 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   <p class="kchip caps" data-kchip aria-hidden="true">
     <span><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd> Move</span>
     <span><kbd>Enter</kbd> Open</span>
-    <span><kbd>Esc</kbd> Fit</span>
+    <span><kbd>Esc</kbd> Back home</span>
   </p>
 
   <Flow />
 
   <script type="application/json" id="items" set:html={JSON.stringify(items)} />
+  <script type="application/json" id="world-data" set:html={JSON.stringify({ things: worldOnly, guide: cicerone })} />
   <script type="application/json" id="layout" set:html={JSON.stringify(layout)} />
 
   <script>
+    import type { World } from '../scripts/world';
+    import { play, setSound, soundOn, onSound, setSoundNight } from '../scripts/sound';
     type Item = {
       slug: string; title: string; kind: string; year: string; medium: string; text: string;
-      href?: string; link?: string; lang?: string; section: string; pos: number; count: number;
+      href?: string; link?: string; lang?: string; section: string; pos: number; count: number; room?: string;
     };
     type Layout = { COLS: number; ROWS: number; PANEL: { col: number; row: number; w: number; h: number }; rows: { row: number; first: number; count: number; section: string }[] };
     const S: Item[] = JSON.parse(document.getElementById('items')!.textContent!);
     const L: Layout = JSON.parse(document.getElementById('layout')!.textContent!);
     const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector(sel) as T;
     const $$ = <T extends Element = HTMLElement>(sel: string) => [...document.querySelectorAll<T>(sel)] as T[];
+    let world: World | null = null;
     const pad = (n: number) => String(n).padStart(2, '0');
     const root = document.documentElement;
     const reducedQ = matchMedia('(prefers-reduced-motion: reduce)');
@@ -358,6 +394,47 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     const tick = () => (clock.textContent = fmt.format(new Date()));
     tick();
     setInterval(tick, 15000);
+
+    // ═══ Day and night ═══
+    // The system decides, until the visitor says otherwise.
+    const scheme = matchMedia('(prefers-color-scheme: dark)');
+    // one button in the desktop header, one in the phone's
+    const themeBtns = $$('[data-theme-toggle]');
+    const isNight = () => (root.dataset.theme ? root.dataset.theme === 'dark' : scheme.matches);
+    function paintTheme() {
+      const night = isNight();
+      themeBtns.forEach((b) => {
+        b.setAttribute('aria-pressed', String(night));
+        b.setAttribute('aria-label', night ? 'Switch to day' : 'Switch to night');
+      });
+      world?.setNight(night);
+      setSoundNight(night);
+    }
+    themeBtns.forEach((b) => b.addEventListener('click', () => {
+      const next = isNight() ? 'light' : 'dark';
+      play(next === 'dark' ? 'night' : 'day');
+      const follows = (next === 'dark') === scheme.matches;
+      try {
+        if (follows) localStorage.removeItem('df-theme');
+        else localStorage.setItem('df-theme', next);
+      } catch {}
+      if (follows) delete root.dataset.theme;
+      else root.dataset.theme = next;
+      paintTheme();
+    }));
+    scheme.addEventListener('change', paintTheme);
+    paintTheme();
+
+    // ═══ Sound ═══
+    // A quiet tune and small sounds, from the first touch on; one button mutes them.
+    const soundBtns = $$('[data-sound-toggle]');
+    onSound((on) =>
+      soundBtns.forEach((b) => {
+        b.setAttribute('aria-pressed', String(on));
+        b.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
+      }),
+    );
+    soundBtns.forEach((b) => b.addEventListener('click', () => setSound(!soundOn())));
 
     // ═══ Camera ═══
     // The floor is a canvas: position (x, y) and tile size t. Input writes to
@@ -429,7 +506,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     let shown = { x: NaN, y: NaN, t: NaN };
     function frame() {
       requestAnimationFrame(frame);
-      if (!desktop.matches) return;
+      if (!desktop.matches || world) return;
       const reduced = reducedQ.matches;
       if (!dragging && !wheel) {
         // momentum, then settle inside the bounds
@@ -695,13 +772,19 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       }
 
       $$('[data-row]').forEach((r) => (r.hidden = name !== 'all' && r.dataset.section !== name));
-      if (name === 'all') fit();
+      if (world) world.travel(name);
+      else if (name === 'all') fit();
       else {
         const b = L.rows.find((x) => x.section === name)!;
         frameCells(L.PANEL.col - 0.1, b.row - 0.35, L.PANEL.col + 1 + b.count + 0.1, b.row + 1.35, 150);
       }
     }
-    filterBtns.forEach((b) => b.addEventListener('click', () => applyFilter(b.dataset.filter!)));
+    filterBtns.forEach((b) =>
+      b.addEventListener('click', () => {
+        play('tap');
+        applyFilter(b.dataset.filter!);
+      }),
+    );
     $$('[data-label]').forEach((l) => l.addEventListener('click', () => applyFilter(l.dataset.label!)));
     $('[data-home]').addEventListener('click', (e) => {
       e.preventDefault();
@@ -845,9 +928,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       $('[data-d-year]').textContent = it.year;
       $('[data-d-medium]').textContent = it.medium;
       $('[data-d-text]').textContent = it.text;
-      dLink.hidden = !it.href;
+      dLink.hidden = !it.href && !it.room;
       armLink();
-      if (it.href) {
+      if (it.room) {
+        dLink.href = '#';
+        dLink.removeAttribute('target');
+        $('[data-d-link-label]').textContent = it.link ?? 'Open';
+      } else if (it.href) {
         dLink.href = it.href;
         // the web opens in a new tab; email stays a plain mailto
         if (it.href.startsWith('http')) dLink.target = '_blank';
@@ -857,6 +944,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     }
 
     function open(i: number, from?: HTMLImageElement | null, fromHistory = false) {
+      // A door, not a card: go where it leads.
+      if (S[i].room && detail.hidden) return applyFilter(S[i].room!);
       if (detail.hidden) lastFocus = document.activeElement as HTMLElement;
       drop();
       fill(i);
@@ -867,6 +956,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         } else history.replaceState({ slug: S[i].slug }, '', `#${S[i].slug}`);
       }
       const wasHidden = detail.hidden;
+      if (wasHidden) play('open');
       detail.hidden = false;
       document.body.classList.add('modal');
       if (wasHidden) {
@@ -898,6 +988,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     }
     function hide() {
       teach(false);
+      play('close');
       clearTimeout(linkTimer);
       detail.hidden = true;
       detail.classList.remove('in');
@@ -990,6 +1081,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     $('[data-prev]').addEventListener('click', () => step(-1));
     $('[data-next]').addEventListener('click', () => step(1));
     $('[data-close]').addEventListener('click', close);
+    dLink.addEventListener('click', (e) => {
+      const room = S[current]?.room;
+      if (!room) return;
+      e.preventDefault();
+      close();
+      applyFilter(room);
+    });
     detail.addEventListener('click', (e) => {
       // A double-click on a card opens it with the first click; the second
       // lands on the backdrop and must not close it again.
@@ -1038,7 +1136,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         if (vim === 'ArrowUp') press(-1);
         return;
       }
-      // Esc steps back out of whatever is open; with nothing open, it fits.
+      // Esc steps back out of whatever is open; with nothing open, it goes back home.
       if (e.key === 'Escape') {
         if (!keys.hidden) toggleKeys(false);
         else if (!info.hidden) closeInfo();
@@ -1060,12 +1158,12 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         }
         return;
       }
-      if (e.key === '+' || e.key === '=') return zoomBy(1.3);
-      if (e.key === '-' || e.key === '_') return zoomBy(1 / 1.3);
+      if (e.key === '+' || e.key === '=') return world ? world.zoomBy(1.3) : zoomBy(1.3);
+      if (e.key === '-' || e.key === '_') return world ? world.zoomBy(1 / 1.3) : zoomBy(1 / 1.3);
       if (e.key === '0') return applyFilter('all');
-      if (/^[1-4]$/.test(e.key)) return applyFilter(L.rows[Number(e.key) - 1].section);
+      if (/^[1-5]$/.test(e.key)) return applyFilter(L.rows[Number(e.key) - 1].section);
       const arrow = e.key.startsWith('Arrow') ? e.key : vim;
-      if (arrow) {
+      if (arrow && !world) {
         e.preventDefault();
         const focused = document.activeElement as HTMLElement;
         const i = focused?.classList.contains('spec') ? Number(focused.dataset.i) : -1;
@@ -1110,7 +1208,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       }),
     );
     const nudgeTimer = window.setTimeout(() => {
-      if ((!forceNudge && (engaged || seen.has('df-nudged'))) || !desktop.matches || document.body.classList.contains('modal') || !indexEl.hidden) return;
+      if (world || (!forceNudge && (engaged || seen.has('df-nudged'))) || !desktop.matches || document.body.classList.contains('modal') || !indexEl.hidden) return;
       const el = cards.find((c) => Number(c.dataset.i) === L.rows[1].first)!; // the first project
       seen.mark('df-nudged');
       choose(el, true);
@@ -1136,10 +1234,31 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     requestAnimationFrame(frame);
     let lastW = vw();
     new ResizeObserver(() => {
-      if (Math.abs(vw() - lastW) < 2 && !desktop.matches) return;
+      if (world || (Math.abs(vw() - lastW) < 2 && !desktop.matches)) return;
       lastW = vw();
       applyFilter(document.body.dataset.filter ?? 'all');
     }).observe(stage);
+
+    // The world loads on its own, only where it will run. If anything goes
+    // wrong the cabinet underneath simply stays.
+    if (document.body.classList.contains('world-on')) {
+      import('../scripts/world')
+        .then(({ mountWorld }) => {
+          const extra = JSON.parse(document.getElementById('world-data')!.textContent!);
+          world = mountWorld({
+            root: $('[data-world]'),
+            // the cabinet first, so an index here is an index there; then what only the worlds have
+            items: [...S, ...extra.things.map((t: { place: string }) => ({ ...t, section: t.place }))],
+            guide: extra.guide,
+            open: (i) => open(i, null),
+            select: (name) => applyFilter(name),
+            reduced: () => reducedQ.matches,
+            active: () => desktop.matches && !document.body.classList.contains('modal') && indexEl.hidden,
+            night: isNight(),
+          });
+        })
+        .catch(() => document.body.classList.remove('world-on'));
+    }
 
     // Deep links: /#moth opens that specimen.
     const fromHash = S.findIndex((s) => `#${s.slug}` === location.hash);
@@ -1304,6 +1423,57 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   .b-clock {
     white-space: nowrap;
   }
+  .b-right .b-theme {
+    align-self: center;
+    position: relative;
+    display: block;
+    width: 16px;
+    height: 16px;
+    margin-left: -0.5rem;
+    color: var(--ink);
+  }
+  /* a comfortable target around a small mark */
+  .b-theme::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+  .b-theme svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition:
+      opacity 0.25s,
+      transform 0.45s var(--ease);
+  }
+  /* the mark shows where a press takes you */
+  .b-theme .i-sun,
+  .b-theme[aria-pressed='true'] .i-moon {
+    opacity: 0;
+    transform: rotate(-40deg) scale(0.7);
+  }
+  .b-theme[aria-pressed='true'] .i-sun {
+    opacity: 1;
+    transform: none;
+  }
+  /* sound: the speaker shows what is on now, struck through when muted */
+  .b-sound .i-loud {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  .b-sound[aria-pressed='true'] .i-loud {
+    opacity: 1;
+    transform: none;
+  }
+  .b-sound[aria-pressed='true'] .i-mute {
+    opacity: 0;
+    transform: scale(0.7);
+  }
   .b-clock time {
     font-variant-numeric: tabular-nums;
   }
@@ -1315,6 +1485,278 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     .b-contact:hover {
       color: var(--dot);
       border-color: var(--dot);
+    }
+  }
+
+  /* ── World ── */
+  .world {
+    display: none;
+  }
+  :global(body.world-on) .world {
+    position: fixed;
+    inset: 3.6rem 0 3.9rem;
+    display: block;
+    overflow: hidden;
+  }
+  :global(body.world-on) .stage,
+  :global(body.world-on) .zoom > :not(.z-fit),
+  :global(body.world-on) .f-hint:not(.w-hint),
+  :global(body:not(.world-on)) .w-hint {
+    display: none;
+  }
+  :global(body.world-on.v-index) .world {
+    display: none;
+  }
+  :global(body.world-on) .bar,
+  :global(body.world-on) .foot {
+    background: var(--bg);
+  }
+  :global(body.world-on) .bar {
+    padding-bottom: 1.25rem;
+  }
+  .world canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+    touch-action: none;
+  }
+  .w-id {
+    position: absolute;
+    top: clamp(1.75rem, 6vh, 4rem);
+    left: var(--margin);
+    width: min(30rem, 36vw);
+    /* white on the sky, with a slate shadow close in and a soft one around,
+       so it reads over sea, cloud or planet, by day and by night */
+    color: #fff;
+    text-shadow:
+      0 1px 0 rgb(38 46 58 / 0.55),
+      0 1px 2px rgb(38 46 58 / 0.6),
+      0 2px 14px rgb(38 46 58 / 0.45);
+    transition: opacity 0.45s, transform 0.6s var(--ease);
+  }
+  .w-id.away {
+    opacity: 0;
+    transform: translateY(-14px);
+    pointer-events: none;
+  }
+  .w-name {
+    margin: 0 0 1.1rem;
+    font-size: clamp(2.75rem, 5.2vw, 5.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .w-name .pixel {
+    display: block;
+    margin-top: 0.7rem;
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+  }
+  .w-line {
+    margin: 0 0 1.4rem;
+    font-size: clamp(1.0625rem, 1.35vw, 1.3125rem);
+    line-height: 1.34;
+    letter-spacing: -0.012em;
+    font-weight: 500;
+    text-wrap: pretty;
+  }
+  .w-act {
+    display: flex;
+    gap: 1.5rem;
+    margin: 0;
+  }
+  .w-act a {
+    color: #fff;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1.5px;
+  }
+  .w-labels {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  :global(.w-zone),
+  :global(.w-tomb) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    border: 0;
+    color: var(--ink);
+    background: var(--bg);
+    font: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    cursor: pointer;
+  }
+  :global(.w-zone.on),
+  :global(.w-tomb.on),
+  :global(.w-tomb:focus-visible) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  :global(.w-zone) {
+    padding: 0.42rem 0.7rem 0.38rem;
+    white-space: nowrap;
+  }
+  :global(.w-tomb) {
+    display: block;
+    padding: 0.4rem 0.55rem 0.45rem;
+    font-size: 0.8125rem;
+    line-height: 1.22;
+    text-align: left;
+  }
+  :global(.w-tomb .t) {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    text-wrap: balance;
+  }
+  :global(.w-tomb .m) {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.12rem;
+    color: var(--ink-2);
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  :global(.w-tomb .k) {
+    display: none;
+  }
+  /* the plate Enter will open */
+  :global(.w-tomb.chosen) {
+    color: var(--bg);
+    background: var(--ink);
+  }
+  :global(.w-tomb.chosen .m) {
+    color: color-mix(in srgb, var(--bg) 72%, var(--ink));
+  }
+  :global(.w-tomb.chosen .k) {
+    display: inline;
+    color: var(--bg);
+  }
+  /* The juice box talking: a rounded bubble over its head, its name on a tab. */
+  :global(.w-say) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: min(21rem, 42vw);
+    padding: 1.05rem 1.1rem 0.7rem;
+    border-radius: 1.1rem;
+    color: var(--ink);
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--rule);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+  :global(.w-say.on) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  :global(.w-say)::after {
+    content: '';
+    position: absolute;
+    bottom: -9px;
+    left: var(--tail, 40px);
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    background: var(--bg);
+    box-shadow: 1px 1px 0 0 var(--rule);
+    transform: rotate(45deg);
+  }
+  :global(.w-say.side)::after {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    margin: -9px 0 0 -9px;
+    box-shadow: -1px 1px 0 0 var(--rule);
+  }
+  :global(.w-say-who) {
+    position: absolute;
+    top: -0.7rem;
+    left: 0.9rem;
+    margin: 0;
+    padding: 0.22rem 0.6rem 0.18rem;
+    border-radius: 99px;
+    color: var(--bg);
+    background: var(--dot);
+    font-size: 0.6875rem;
+  }
+  :global(.w-say-txt) {
+    min-height: 2.6em;
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.32;
+    text-wrap: pretty;
+  }
+  :global(.w-say-foot) {
+    display: none;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 0.6rem 0 0;
+    font-size: 0.75rem;
+  }
+  :global(.w-say.tour .w-say-foot) {
+    display: flex;
+  }
+  :global(.w-say-n) {
+    margin-right: auto;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  :global(.w-say-foot button) {
+    padding: 0;
+    border: 0;
+    color: var(--ink-2);
+    background: none;
+    font: inherit;
+    cursor: pointer;
+  }
+  :global(.w-say-foot .w-say-next) {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+  }
+  :global(.w-leave) {
+    position: absolute;
+    top: clamp(1.25rem, 4vh, 2.5rem);
+    left: var(--margin);
+    padding: 0.5rem 0.8rem 0.46rem;
+    border: 0;
+    color: var(--ink);
+    background: var(--bg);
+    font: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    cursor: pointer;
+  }
+  :global(.w-leave.on) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    :global(.w-leave:hover),
+    :global(.w-say-foot button:hover),
+    :global(.w-zone:hover),
+    :global(.w-tomb:hover .t) {
+      color: var(--dot);
+    }
+    .w-act a:hover {
+      text-decoration-thickness: 3px;
     }
   }
 
@@ -1708,10 +2150,17 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     scale: 0.94;
   }
   .z-fit {
-    padding: 0.3rem 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.65rem 0.3rem 0.35rem;
     border: 1px solid var(--rule);
     border-radius: 999px;
     transition: border-color 0.2s;
+  }
+  .z-fit kbd {
+    font-size: 0.625rem;
+    line-height: 1.3;
   }
   @media (hover: hover) and (pointer: fine) {
     .z-btn:hover,
