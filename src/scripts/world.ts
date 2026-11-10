@@ -619,7 +619,41 @@ type Spot = {
   label: HTMLButtonElement;
   size: number;
   scale: number; // things are built small and shown a little larger
+  reach: number; // how far in front of it the hero stands to open it
 };
+// Something the hero cannot walk through: a circle on the ground.
+type Solid = { dir: Vector3; r: number };
+const HERO_R = 0.45;
+// A thing's footprint as a row of circles along its longer side, in its
+// planet's own space. Call once it stands where it will stay.
+function footprint(obj: Object3D, pad = 0): Solid[] {
+  const parent = obj.parent;
+  const keep = { p: obj.position.clone(), q: obj.quaternion.clone() };
+  obj.removeFromParent();
+  obj.position.set(0, 0, 0);
+  obj.quaternion.identity();
+  const scale = obj.scale.x;
+  obj.scale.setScalar(1);
+  obj.updateMatrixWorld(true);
+  const b = new Box3().setFromObject(obj);
+  obj.position.copy(keep.p);
+  obj.quaternion.copy(keep.q);
+  obj.scale.setScalar(scale);
+  obj.updateMatrix();
+  parent?.add(obj);
+  const w = b.max.x - b.min.x;
+  const d = b.max.z - b.min.z;
+  const cx = (b.max.x + b.min.x) / 2;
+  const cz = (b.max.z + b.min.z) / 2;
+  const long = Math.max(w, d);
+  const r = Math.min(w, d) / 2;
+  const n = Math.max(1, Math.ceil(long / Math.max(r * 2, 0.01)));
+  return Array.from({ length: n }, (_, k) => {
+    const t = n === 1 ? 0 : -long / 2 + r + (k * (long - 2 * r)) / (n - 1);
+    const at = w >= d ? new Vector3(cx + t, 0, cz) : new Vector3(cx, 0, cz + t);
+    return { dir: at.applyMatrix4(obj.matrix).normalize(), r: (r + pad) * scale };
+  });
+}
 type Planet = {
   name: string;
   look: Look;
@@ -632,6 +666,7 @@ type Planet = {
   spots: Spot[];
   slot: number; // which place in the sky; -1 underfoot; -2 never in the sky
   chip: HTMLButtonElement;
+  solids: Solid[];
 };
 
 // Where the other world hangs, in screen space (overview, then seen from the ground).
@@ -712,6 +747,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     sea.visible = look !== 'hull';
     group.add(sea);
 
+    const solids: Solid[] = [];
     const basis = new Matrix4();
     const at = (obj: Object3D, dir: Vector3, u: Vector3, v: Vector3, x: number, z: number, yaw = 0, lift = 0) => {
       const d = dir.clone().multiplyScalar(R).addScaledVector(u, x).addScaledVector(v, z).normalize();
@@ -764,6 +800,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (look === 'earth') {
       // Fruit trees heavy with lemons and oranges, umbrella pines, palms by the sea, boats on it.
       const round = spots(trees);
+      round.forEach(({ d }) => solids.push({ dir: d, r: 0.55 }));
       forest(new IcosahedronGeometry(0.82, 2), soft('olive'), round, 1.45, 1);
       forest(new CylinderGeometry(0.11, 0.16, 1, 7), soft('ink'), round, 0.5, 1);
       const fruit: { d: Vector3; h: number }[] = [];
@@ -774,9 +811,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       });
       forest(new IcosahedronGeometry(0.15, 1), soft('ochre'), fruit, 0, 1);
       const pines = spots(Math.round(trees * 0.3));
+      pines.forEach(({ d }) => solids.push({ dir: d, r: 0.3 }));
       forest(new CylinderGeometry(0.1, 0.16, 1, 7), soft('ink'), pines, 1.2, 2.4, 1);
       forest(new IcosahedronGeometry(1, 2), soft('olive'), pines, 2.75, 1.25, 0.42);
-      spots(Math.round(trees * 0.12), clear, SEA + 0.5, SEA + 1.6).forEach(({ d }) => stand(palm(), d));
+      spots(Math.round(trees * 0.12), clear, SEA + 0.5, SEA + 1.6).forEach(({ d }) => {
+        stand(palm(), d);
+        solids.push({ dir: d, r: 0.3 });
+      });
       for (let tries = 0, n = 0; n < 4 && tries < 400; tries++) {
         const d = new Vector3(rand() - 0.5, rand() * 0.9 - 0.2, rand() - 0.5).normalize();
         if (height(d) > SEA - 0.6) continue;
@@ -790,9 +831,11 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     } else if (look === 'chip') {
       // Chips and capacitors instead of trees.
       const chips = spots(trees);
+      chips.forEach(({ d }) => solids.push({ dir: d, r: 0.8 }));
       forest(new BoxGeometry(1.5, 0.4, 1.1), mat('ink'), chips, 0.2, 1);
       forest(new BoxGeometry(0.9, 0.06, 0.5), mat('cream'), chips, 0.44, 1);
       const caps = spots(Math.round(trees * 0.6));
+      caps.forEach(({ d }) => solids.push({ dir: d, r: 0.35 }));
       forest(new CylinderGeometry(0.3, 0.3, 1, 12), soft('blue'), caps, 0.5, 1);
       forest(new CylinderGeometry(0.31, 0.31, 0.08, 12), soft('cream'), caps, 1.02, 1);
       forest(new IcosahedronGeometry(0.1, 1), soft('red'), spots(Math.round(trees * 0.5), verge), 0.12, 1);
@@ -819,7 +862,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         g.add(box(2.3, 2.82, 0.14, 'ink', 0, 0.45, -0.09), box(0.9, 0.46, 0.5, 'cream'), face);
         box3 = new Box3(new Vector3(-FACE_W, 1.86 - FACE_H, 0), new Vector3(FACE_W, 1.86 + FACE_H, 0));
       }
-      const place = z ?? { dir: NORTH, ...frameAt(NORTH), ring: 2.6 };
+      const place = z ?? { dir: NORTH, ...frameAt(NORTH), ring: 3.4 };
       const { d, inward, right } = at(g, place.dir, place.u, place.v, Math.sin(a) * place.ring, Math.cos(a) * place.ring);
       const hits: Object3D[] = [];
       g.traverse((o) => (o as Mesh).isMesh && hits.push(o));
@@ -829,8 +872,11 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       b.innerHTML = `<span class="t"></span><span class="m"><span class="mt"></span><span class="k">Enter</span></span>`;
       b.querySelector('.t')!.textContent = it.title;
       b.querySelector('.mt')!.textContent = `${it.kind} · ${it.year}`;
-      const spot: Spot = { i, dir: d, inward, right, g, hits, box: box3, card: !build, zone: zi, label: b, size: 0, scale: build ? 1.25 : 1 };
-      g.scale.setScalar(spot.scale);
+      const scale = build ? 1.25 : 1;
+      const spot: Spot = { i, dir: d, inward, right, g, hits, box: box3, card: !build, zone: zi, label: b, size: 0, scale, reach: build ? box3.max.z * scale + HERO_R + 0.5 : 2.2 };
+      g.scale.setScalar(scale);
+      if (build) solids.push(...footprint(g));
+      else solids.push({ dir: d, r: 0.75 });
       b.addEventListener('click', () => {
         if (!tabbing) b.blur();
         visit(spot);
@@ -880,7 +926,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     chip.type = 'button';
     chip.className = 'w-zone caps';
     labels.append(chip);
-    return { name, look, R, group, sea, q: new Quaternion(), ds, height, spots: all, slot: -1, chip };
+    return { name, look, R, group, sea, q: new Quaternion(), ds, height, spots: all, slot: -1, chip, solids };
   }
   const fliesMat = new PointsMaterial({ color: hex('ochre'), size: 0.07, transparent: true, opacity: 0, depthWrite: false });
 
@@ -914,6 +960,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     obj.quaternion.setFromRotationMatrix(new Matrix4().makeBasis(new Vector3().crossVectors(d, inward).normalize(), d, inward));
     obj.rotateY(yaw);
     p.group.add(obj);
+    if (lift === 0) p.solids.push(...footprint(obj));
   };
   const poleFrame = frameAt(NORTH);
   placeOn(home, casita(), NORTH, poleFrame.u, poleFrame.v, 0, -3.4, Math.PI);
@@ -1149,7 +1196,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   // Standing just in front of a thing, which faces the camera over the hero's head.
   function facing(s: Spot) {
     const R = planets.find((p) => p.spots.includes(s))!.R;
-    const a = s.dir.clone().multiplyScalar(R).addScaledVector(s.inward, s.card ? 2.2 : 2.6).normalize();
+    const a = s.dir.clone().multiplyScalar(R).addScaledVector(s.inward, s.reach).normalize();
     const inward = s.inward.clone().addScaledVector(a, -s.inward.dot(a)).normalize();
     const right = new Vector3().crossVectors(a, inward).normalize();
     return new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right, a, inward)).invert();
@@ -1510,6 +1557,22 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     } else if (zoom < 0.12 && !hovered && !down && !reduced() && now - lastInput > 3000) {
       dq.setFromAxisAngle(axisY, dt * 0.05);
       cur.q.premultiply(dq).normalize();
+    }
+    // Things are solid: the hero slides round them instead of through them.
+    if (!busy() && !trip) {
+      for (let pass = 0; pass < 2; pass++) {
+        under.copy(NORTH).applyQuaternion(inv.copy(cur.q).invert());
+        for (const c of cur.solids) {
+          const min = (c.r + HERO_R) / cur.R;
+          const ang = under.angleTo(c.dir);
+          if (ang >= min) continue;
+          const axis = v.crossVectors(c.dir, under);
+          if (axis.lengthSq() < 1e-10) axis.set(1, 0, 0);
+          const out = w.copy(c.dir).applyAxisAngle(axis.normalize(), min);
+          cur.q.multiply(sq.setFromUnitVectors(out, under)).normalize();
+          under.copy(out);
+        }
+      }
     }
     if (!busy() && !trip && pending) {
       const next = pending;
