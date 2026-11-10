@@ -1,15 +1,16 @@
 // Renders every specimen plate in the cabinet: photos and SVG compositions,
-// ordered-dithered (Bayer 8×8) into six pigments from Pompeii.
+// ordered-dithered (Bayer 8×8) into six pigments from the Mediterranean coast.
 // Usage: node scripts/dither.mjs   (reads art/, writes public/img/)
 import sharp from 'sharp';
 
+// Same values as src/data/pigments.ts: slate, pine, terracotta, lemon, whitewash, sea.
 const PIGMENTS = {
-  charcoal: [43, 41, 38],
-  olive: [98, 96, 68],
-  red: [158, 63, 50],
-  ochre: [197, 138, 61],
-  cream: [226, 214, 192],
-  aegean: [107, 141, 160],
+  charcoal: [38, 46, 58],
+  olive: [96, 138, 82],
+  red: [210, 96, 70],
+  ochre: [236, 182, 86],
+  cream: [248, 240, 222],
+  aegean: [62, 154, 178],
 };
 const ALL = Object.keys(PIGMENTS);
 
@@ -175,26 +176,7 @@ const compositions = {
     <circle cx="124" cy="160" r="18" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
     <path d="M124 160 V148 M124 160 H116" stroke="${c('red')}" stroke-width="2"/>`,
 
-  // Self-portrait, as a juice box on a plinth.
-  daniel: `
-    <defs>${grad('g', 'aegean', 'cream')}</defs>
-    <rect width="160" height="200" fill="url(#g)"/>
-    <rect x="46" y="150" width="68" height="34" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
-    <rect x="52" y="62" width="56" height="88" fill="${c('ochre')}" stroke="${c('charcoal')}" stroke-width="3"/>
-    <rect x="52" y="62" width="56" height="14" fill="${c('charcoal')}"/>
-    <rect x="53" y="112" width="54" height="22" fill="${c('cream')}"/>
-    <rect x="68" y="90" width="7" height="7" fill="${c('charcoal')}"/><rect x="86" y="90" width="7" height="7" fill="${c('charcoal')}"/>
-    <rect x="72" y="103" width="17" height="3" fill="${c('red')}"/>
-    <path d="M94 62 L100 26 L114 20" stroke="${c('red')}" stroke-width="5" fill="none"/>`,
 
-  // A door to the next planet: a small world hung in a frame.
-  gallery: `
-    <rect width="160" height="200" fill="${c('cream')}"/>
-    <rect x="22" y="34" width="116" height="132" fill="${c('charcoal')}" stroke="${c('ochre')}" stroke-width="6"/>
-    <circle cx="80" cy="100" r="40" fill="${c('aegean')}"/>
-    <path d="M46 84 C56 60 96 54 112 78 C118 96 100 104 84 100 C70 96 54 108 46 84 Z" fill="${c('olive')}"/>
-    <path d="M62 122 C72 114 92 116 100 126 C92 136 72 136 62 122 Z" fill="${c('ochre')}"/>
-    <circle cx="120" cy="56" r="8" fill="${c('cream')}"/>`,
 
   // Teaching: a blackboard with code on it, chalk on the ledge.
   immune: `
@@ -274,12 +256,6 @@ const compositions = {
     <path d="M80 44 V166" stroke="${c('red')}" stroke-width="1.5" stroke-dasharray="3 3"/>
     <path d="M12 160 H148" stroke="${c('charcoal')}" stroke-width="1.5"/>`,
 
-  // The Pompeii palette, as six pigment swatches.
-  pigments: `
-    <rect width="160" height="200" fill="${c('cream')}"/>
-    ${['red', 'ochre', 'olive', 'charcoal', 'aegean', 'cream']
-      .map((k, i) => `<rect x="${16 + (i % 2) * 68}" y="${18 + Math.floor(i / 2) * 58}" width="60" height="50" fill="${c(k)}" stroke="${c('charcoal')}" stroke-width="${k === 'cream' ? 1.5 : 0}"/>`)
-      .join('')}`,
 
   // A network of student groups.
   sfl: `
@@ -302,15 +278,121 @@ const compositions = {
     <path d="M28 150 C28 118 132 118 132 150 C132 162 28 162 28 150 Z" fill="${c('ochre')}"/>
     <path d="M52 132 l10 12 M76 128 l10 14 M100 130 l10 12" stroke="${c('red')}" stroke-width="3"/>`,
 
-  // An envelope under a wax seal.
-  correspondence: `
+
+
+  // ── The huerta ──
+  eggplant: `
+    <defs>${grad('g', 'cream', 'olive')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <path d="M76 58 C110 64 128 110 118 146 C108 182 62 186 46 160 C32 136 50 116 58 96 C64 80 62 62 76 58 Z" fill="${c('charcoal')}"/>
+    <path d="M64 120 C62 140 70 158 86 166" stroke="${c('aegean')}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M70 62 C66 48 74 40 86 44 C96 46 100 56 92 64 C86 70 76 70 70 62 Z" fill="${c('olive')}"/>
+    <path d="M82 46 L88 24" stroke="${c('olive')}" stroke-width="5" stroke-linecap="round"/>`,
+  zucchini: `
+    <defs>${grad('g', 'cream', 'ochre')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <g transform="rotate(-28 80 110)">
+      <rect x="22" y="92" width="116" height="30" rx="15" fill="${c('olive')}"/>
+      ${[40, 62, 84, 106].map((x) => `<path d="M${x} 96 V118" stroke="${c('charcoal')}" stroke-width="2" opacity=".55"/>`).join('')}
+      <rect x="132" y="102" width="14" height="10" fill="${c('charcoal')}"/>
+      <rect x="30" y="134" width="96" height="24" rx="12" fill="${c('charcoal')}"/>
+    </g>
+    <g transform="translate(118 46)">${[0, 72, 144, 216, 288].map((a) => `<ellipse rx="9" ry="17" cy="-12" fill="${c('ochre')}" stroke="${c('red')}" stroke-width="1.5" transform="rotate(${a})"/>`).join('')}<circle r="6" fill="${c('red')}"/></g>`,
+  pepper: `
     <defs>${grad('g', 'aegean', 'cream')}</defs>
     <rect width="160" height="200" fill="url(#g)"/>
-    <rect x="20" y="62" width="120" height="80" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
-    <path d="M20 62 L80 108 L140 62" stroke="${c('charcoal')}" stroke-width="2" fill="none"/>
-    <circle cx="80" cy="110" r="14" fill="${c('red')}"/>
-    <circle cx="80" cy="110" r="8" fill="none" stroke="${c('cream')}" stroke-width="1.5"/>
-    <text x="80" y="114" text-anchor="middle" font-family="Noto Serif, serif" font-size="10" font-weight="700" fill="${c('cream')}">D</text>`,
+    <path d="M44 74 C30 82 28 130 44 158 C54 176 70 170 76 160 C84 172 102 176 112 160 C128 132 126 82 112 74 C100 66 88 72 78 72 C66 72 56 66 44 74 Z" fill="${c('red')}"/>
+    <path d="M58 92 C52 110 54 136 62 150" stroke="${c('cream')}" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M66 72 C70 60 86 60 90 72 Z" fill="${c('olive')}"/>
+    <path d="M78 64 C78 52 84 42 96 38" stroke="${c('olive')}" stroke-width="5" fill="none" stroke-linecap="round"/>`,
+  leek: `
+    <defs>${grad('g', 'cream', 'aegean')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    ${[44, 80, 116].map((x, i) => `
+      <path d="M${x} 112 L${x - 22} 30 M${x} 112 L${x - 4} 24 M${x} 112 L${x + 18} 34" stroke="${c('olive')}" stroke-width="10" stroke-linecap="round"/>
+      <rect x="${x - 7}" y="104" width="14" height="${68 - i * 6}" rx="6" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+      <path d="M${x - 5} ${172 - i * 6} l-3 8 M${x} ${172 - i * 6} v9 M${x + 5} ${172 - i * 6} l3 8" stroke="${c('charcoal')}" stroke-width="1.5"/>`).join('')}`,
+  lemon: `
+    <defs>${grad('g', 'aegean', 'cream')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <path d="M0 52 C40 60 80 64 160 44" stroke="${c('charcoal')}" stroke-width="5" fill="none"/>
+    ${[[30, 64, 30], [62, 70, -20], [100, 60, 40], [132, 52, -30], [84, 40, 160], [116, 34, 200]].map(([x, y, r]) => `<ellipse cx="${x}" cy="${y + 10}" rx="9" ry="20" fill="${c('olive')}" transform="rotate(${r} ${x} ${y})"/>`).join('')}
+    ${[[52, 112], [104, 120], [76, 150]].map(([x, y]) => `<path d="M${x} 66 V${y - 24}" stroke="${c('charcoal')}" stroke-width="2"/><ellipse cx="${x}" cy="${y}" rx="22" ry="27" fill="${c('ochre')}" stroke="${c('red')}" stroke-width="1"/><path d="M${x - 8} ${y - 10} q4 -8 12 -8" stroke="${c('cream')}" stroke-width="3" fill="none"/>`).join('')}`,
+
+  // ── The workshop ──
+  workbench: `
+    <defs>${grad('g', 'cream', 'ochre')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="10" y="40" width="70" height="52" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2.5"/>
+    <rect x="16" y="46" width="44" height="34" fill="${c('aegean')}"/>
+    <path d="M18 64 C24 50 28 50 34 64 S44 78 50 64 S56 52 58 60" stroke="${c('cream')}" stroke-width="2" fill="none"/>
+    ${[72, 72, 72].map((x, i) => `<circle cx="${x}" cy="${52 + i * 12}" r="3.5" fill="${c('charcoal')}"/>`).join('')}
+    <rect x="96" y="36" width="44" height="64" rx="5" fill="${c('ochre')}" stroke="${c('charcoal')}" stroke-width="2.5"/>
+    <rect x="102" y="44" width="32" height="16" fill="${c('charcoal')}"/>
+    ${mono(104, 56, '4.98', 'ochre', 11)}
+    <circle cx="118" cy="80" r="9" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
+    <path d="M118 80 L124 74" stroke="${c('red')}" stroke-width="2"/>
+    <rect x="0" y="112" width="160" height="10" fill="${c('charcoal')}"/>
+    <rect x="16" y="132" width="62" height="34" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="1.5"/>
+    ${Array.from({ length: 24 }, (_, i) => `<rect x="${22 + (i % 8) * 7}" y="${140 + Math.floor(i / 8) * 8}" width="2" height="2" fill="${c('charcoal')}"/>`).join('')}
+    <path d="M30 146 C40 140 50 160 64 152" stroke="${c('red')}" stroke-width="2" fill="none"/>
+    <path d="M94 176 L140 130" stroke="${c('charcoal')}" stroke-width="7" stroke-linecap="round"/>
+    <path d="M140 130 L150 120" stroke="${c('red')}" stroke-width="3"/>
+    <path d="M150 112 c-4 -6 4 -10 0 -16" stroke="${c('cream')}" stroke-width="1.5" fill="none"/>`,
+  drawings: `
+    <rect width="160" height="200" fill="${c('ochre')}"/>
+    <path d="M40 190 L76 20 M120 190 L84 20 M80 60 V196" stroke="${c('charcoal')}" stroke-width="5"/>
+    <rect x="34" y="40" width="92" height="110" fill="${c('cream')}" stroke="${c('charcoal')}" stroke-width="2"/>
+    <rect x="30" y="150" width="100" height="8" fill="${c('charcoal')}"/>
+    <path d="M52 112 C62 84 80 74 104 80" stroke="${c('aegean')}" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>
+    ${mono(62, 132, 'soon', 'charcoal', 12)}
+    <path d="M100 146 L124 122" stroke="${c('red')}" stroke-width="5" stroke-linecap="round"/>`,
+  // Placeholders for the gallery until the real drawings arrive.
+  'sketch-montgo': `
+    <rect width="160" height="200" fill="${c('cream')}"/>
+    <path d="M8 120 C30 112 40 70 62 62 C78 56 86 76 104 72 C120 68 130 96 152 112" stroke="${c('charcoal')}" stroke-width="2" fill="none"/>
+    ${[70, 82, 94].map((y, i) => `<path d="M${40 + i * 10} ${y + 8} l14 -10" stroke="${c('charcoal')}" stroke-width="1" opacity=".5"/>`).join('')}
+    <path d="M8 132 H152" stroke="${c('aegean')}" stroke-width="2"/>
+    ${[142, 152, 164].map((y, i) => `<path d="M${20 + i * 14} ${y} h${50 - i * 8}" stroke="${c('aegean')}" stroke-width="1.5"/>`).join('')}
+    <circle cx="122" cy="40" r="12" fill="none" stroke="${c('red')}" stroke-width="2"/>
+    <path d="M60 150 l10 -2 l-6 -6 z" fill="${c('charcoal')}"/>`,
+  'sketch-lemon': `
+    <rect width="160" height="200" fill="${c('cream')}"/>
+    <ellipse cx="80" cy="112" rx="40" ry="50" fill="none" stroke="${c('charcoal')}" stroke-width="2" transform="rotate(-20 80 112)"/>
+    ${[0, 1, 2, 3, 4, 5].map((i) => `<path d="M${74 + i * 7} ${132 - i * 4} l14 -14" stroke="${c('ochre')}" stroke-width="2"/>`).join('')}
+    <path d="M96 64 C110 40 136 38 142 46 C130 62 112 68 96 64 Z" fill="none" stroke="${c('olive')}" stroke-width="2"/>
+    <path d="M100 62 L134 46" stroke="${c('olive')}" stroke-width="1"/>`,
+
+  // ── Elsewhere, on the station ──
+  x: `
+    <rect width="160" height="200" fill="${c('charcoal')}"/>
+    <path d="M44 56 L116 144 M116 56 L44 144" stroke="${c('cream')}" stroke-width="12"/>
+    ${mono(28, 182, '@zumodeia', 'ochre', 13)}`,
+  tiktok: `
+    <defs>${grad('g', 'charcoal', 'aegean')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <path d="M86 40 V122" stroke="${c('cream')}" stroke-width="12"/>
+    <circle cx="68" cy="124" r="20" fill="${c('cream')}"/>
+    <path d="M86 46 C92 64 106 70 120 70" stroke="${c('red')}" stroke-width="10" fill="none"/>
+    ${mono(28, 182, '@zumodeia', 'ochre', 13)}`,
+  youtube: `
+    <defs>${grad('g', 'cream', 'ochre')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <rect x="30" y="58" width="100" height="70" rx="18" fill="${c('red')}"/>
+    <path d="M70 76 L98 93 L70 110 Z" fill="${c('cream')}"/>
+    ${mono(28, 182, '@zumodeia', 'charcoal', 13)}`,
+  linkedin: `
+    <rect width="160" height="200" fill="${c('aegean')}"/>
+    <rect x="40" y="48" width="80" height="80" rx="8" fill="${c('cream')}"/>
+    <rect x="54" y="80" width="12" height="36" fill="${c('aegean')}"/><circle cx="60" cy="66" r="7" fill="${c('aegean')}"/>
+    <path d="M78 116 V80 H90 V88 C94 80 112 78 112 96 V116 H100 V98 C100 88 90 88 90 98 V116 Z" fill="${c('aegean')}"/>
+    ${mono(22, 182, 'daniel-fenoll', 'cream', 13)}`,
+  github: `
+    <defs>${grad('g', 'charcoal', 'olive')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <path d="M50 40 V160 M50 120 C50 96 110 104 110 78 V60" stroke="${c('cream')}" stroke-width="5" fill="none"/>
+    <circle cx="50" cy="44" r="10" fill="${c('ochre')}"/><circle cx="50" cy="156" r="10" fill="${c('cream')}"/><circle cx="110" cy="58" r="10" fill="${c('red')}"/>
+    ${mono(44, 186, 'F-N-LL', 'cream', 13)}`,
 };
 
 // ── Photographs (crop boxes chosen by eye, all 4:5) ──
@@ -318,7 +400,6 @@ const photos = {
   pyrenees: { src: 'art/pyrenees.jpg', crop: { left: 520, top: 0, width: 400, height: 500 } },
   tomatoes: { src: 'art/tomatoes.jpg', crop: { left: 0, top: 0, width: 400, height: 500 }, brightness: 1.2 },
   moth: { src: 'art/moth.jpg', crop: { left: 220, top: 275, width: 480, height: 600 }, contrast: 1.5, colors: ['charcoal', 'olive', 'ochre', 'cream'] },
-  spider: { src: 'art/spider.jpg', crop: { left: 185, top: 320, width: 480, height: 600 }, contrast: 1.6, brightness: 1.3, colors: ['charcoal', 'olive', 'ochre', 'cream'] },
 };
 
 async function dither(input, { flat = false, brightness = 1, contrast = 1.15, spread = 52, width = W, colors = ALL, out }) {

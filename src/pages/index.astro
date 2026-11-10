@@ -3,7 +3,7 @@ import sharp from 'sharp';
 import Base from '../layouts/Base.astro';
 import Flow from '../components/Flow.astro';
 import { profile } from '../data/site';
-import { specimens, flow, elsewhere } from '../data/cabinet';
+import { specimens, flow, elsewhere, worldOnly, cicerone } from '../data/cabinet';
 import { PIGMENTS as TONES } from '../data/pigments';
 
 // Desktop: a Roman floor you can move around. A framed emblema holds an intro
@@ -332,9 +332,10 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     </dl>
     <h3 class="caps muted">Colophon</h3>
     <p class="muted">
-      Every plate is ordered-dithered (Bayer 8×8) into six pigments from Pompeii. The floor is laid like a Roman mosaic:
-      a framed emblema of specimens in a field of tesserae, each coloured from the Pyrenees. Set in Geist. Built with
-      Astro. © {year} {profile.name}.
+      Every plate, and the three small worlds on a large screen, are ordered-dithered (Bayer 8×8) into six pigments
+      from the Mediterranean coast: slate, pine, terracotta, lemon, whitewash and sea. Where the worlds can't run, the
+      floor is laid like a Roman mosaic in tesserae coloured from the Pyrenees. Set in Geist. Built with Astro and
+      three.js. © {year} {profile.name}.
     </p>
   </aside>
 
@@ -362,6 +363,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   <Flow />
 
   <script type="application/json" id="items" set:html={JSON.stringify(items)} />
+  <script type="application/json" id="world-data" set:html={JSON.stringify({ things: worldOnly, guide: cicerone })} />
   <script type="application/json" id="layout" set:html={JSON.stringify(layout)} />
 
   <script>
@@ -1214,10 +1216,12 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     if (document.body.classList.contains('world-on')) {
       import('../scripts/world')
         .then(({ mountWorld }) => {
+          const extra = JSON.parse(document.getElementById('world-data')!.textContent!);
           world = mountWorld({
             root: $('[data-world]'),
-            items: S,
-            sections: L.rows.map((r) => r.section),
+            // the cabinet first, so an index here is an index there; then what only the worlds have
+            items: [...S, ...extra.things.map((t: { place: string }) => ({ ...t, section: t.place }))],
+            guide: extra.guide,
             open: (i) => open(i, null),
             select: (name) => applyFilter(name),
             reduced: () => reducedQ.matches,
@@ -1592,7 +1596,112 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     display: inline;
     color: var(--bg);
   }
+  /* The juice box talking: a rounded bubble over its head, its name on a tab. */
+  :global(.w-say) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: min(21rem, 42vw);
+    padding: 1.05rem 1.1rem 0.7rem;
+    border-radius: 1.1rem;
+    color: var(--ink);
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--rule);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+  :global(.w-say.on) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  :global(.w-say)::after {
+    content: '';
+    position: absolute;
+    bottom: -9px;
+    left: var(--tail, 40px);
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    background: var(--bg);
+    box-shadow: 1px 1px 0 0 var(--rule);
+    transform: rotate(45deg);
+  }
+  :global(.w-say.side)::after {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    margin: -9px 0 0 -9px;
+    box-shadow: -1px 1px 0 0 var(--rule);
+  }
+  :global(.w-say-who) {
+    position: absolute;
+    top: -0.7rem;
+    left: 0.9rem;
+    margin: 0;
+    padding: 0.22rem 0.6rem 0.18rem;
+    border-radius: 99px;
+    color: var(--bg);
+    background: var(--dot);
+    font-size: 0.6875rem;
+  }
+  :global(.w-say-txt) {
+    min-height: 2.6em;
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.32;
+    text-wrap: pretty;
+  }
+  :global(.w-say-foot) {
+    display: none;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 0.6rem 0 0;
+    font-size: 0.75rem;
+  }
+  :global(.w-say.tour .w-say-foot) {
+    display: flex;
+  }
+  :global(.w-say-n) {
+    margin-right: auto;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  :global(.w-say-foot button) {
+    padding: 0;
+    border: 0;
+    color: var(--ink-2);
+    background: none;
+    font: inherit;
+    cursor: pointer;
+  }
+  :global(.w-say-foot .w-say-next) {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+  }
+  :global(.w-leave) {
+    position: absolute;
+    top: clamp(1.25rem, 4vh, 2.5rem);
+    left: var(--margin);
+    padding: 0.5rem 0.8rem 0.46rem;
+    border: 0;
+    color: var(--ink);
+    background: var(--bg);
+    font: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    cursor: pointer;
+  }
+  :global(.w-leave.on) {
+    opacity: 1;
+    pointer-events: auto;
+  }
   @media (hover: hover) and (pointer: fine) {
+    :global(.w-leave:hover),
+    :global(.w-say-foot button:hover),
     :global(.w-zone:hover),
     :global(.w-tomb:hover .t) {
       color: var(--dot);

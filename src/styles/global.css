@@ -5,7 +5,7 @@
   --ink: #141413;
   --ink-2: #6f6c66; /* 4.7:1 on --bg */
   --rule: #d9d5cc;
-  --dot: #9e3f32; /* pompeian red, used only for the "current" dot */
+  --dot: #c95a40; /* terracotta, used only for the "current" dot */
 
   --f-sans: 'Geist Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --f-pixel: 'DotGothic16', ui-monospace, monospace;
@@ -22,7 +22,7 @@
     --ink: #ecebe6;
     --ink-2: #8b8881;
     --rule: #2c2b29;
-    --dot: #d0614f;
+    --dot: #e07a5f;
   }
 }
 :root[data-theme='dark'] {
@@ -31,7 +31,7 @@
   --ink: #ecebe6;
   --ink-2: #8b8881;
   --rule: #2c2b29;
-  --dot: #d0614f;
+  --dot: #e07a5f;
 }
 
 *,

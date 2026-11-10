@@ -20,7 +20,7 @@ An engineer who also designs and makes things by hand: production platforms at T
 
 ## Operating Context
 
-Visitors arrive from a job application, a CV link, X, GitHub or LinkedIn. Desktop is a pannable, zoomable field; the phone has its own card flow and is out of scope for desktop layout work.
+Visitors arrive from a job application, a CV link, X, GitHub or LinkedIn. On a large screen with WebGL the site is three small worlds the juice box guides you through: home (the huerta, the workbench, the computer), the planet inside the computer's screen (projects, experience, education) and a station in orbit reached by rocket (posts, links, gallery). Elsewhere the desktop falls back to the mosaic floor; the phone has its own card flow.
 
 ## Capabilities and Constraints
 
@@ -31,7 +31,7 @@ Visitors arrive from a job application, a CV link, X, GitHub or LinkedIn. Deskto
 
 ## Brand Commitments
 
-- Pompeii palette: Pompeian red, Roman ochre, olive bronze, volcanic charcoal, Aegean blue, fresco cream. Colour lives in the plates; the interface stays monochrome and recedes.
+- Mediterranean palette (Jávea, Alicante, with an Animal Crossing warmth): slate, pine, terracotta, lemon, whitewash, sea. Colour lives in the plates and the worlds; the interface stays monochrome and recedes.
 - Dithered plates, tombstone captions, gallery wording (Index, Information). The theme belongs in the artwork, never in interface ornament.
 - Motto: "The pursuit of excellence does not need justification."
 - Mark: the pixel juice box ("Zumo de IA").
@@ -41,6 +41,7 @@ Visitors arrive from a job application, a CV link, X, GitHub or LinkedIn. Deskto
 - TUI Archive: 50,000+ users, 300M+ documents, searches under 200 ms, thousands of events a day handled by Lambda services in Rust; agentic infrastructure used by the whole development team.
 - Instructor to dozens of students at IMMUNE.
 - Projects: Ligero and Campanile (private source), new_dumb_iPhone, trackpad-curve, haskarm, dino_ML, HTTPServer_C (public on GitHub).
+- The huerta: 4 tomatoes, 2 aubergines, 2 courgettes, 2 peppers, 6 leeks, 1 lemon tree; per-plant progress is to come. The gallery's two drawings are placeholders until real ones arrive.
 - One-page CV at `public/Daniel-Fenoll-CV.pdf`. No testimonials or product screenshots of TUI exist; do not fabricate them.
 
 ## Product Principles

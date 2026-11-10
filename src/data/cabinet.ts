@@ -4,7 +4,7 @@
 export type Specimen = {
   slug: string;
   title: string;
-  kind: 'Work' | 'Essay' | 'Post' | 'Study' | 'Service' | 'Specimen' | 'Landscape' | 'Pigments' | 'Correspondence' | 'Portrait' | 'Room';
+  kind: 'Work' | 'Essay' | 'Post' | 'Study' | 'Service' | 'Specimen' | 'Landscape' | 'Crop' | 'Workbench' | 'Drawing';
   year: string;
   medium: string;
   text: string;
@@ -12,38 +12,42 @@ export type Specimen = {
   link?: string;
   lang?: string;
   room?: string; // this card is a door: it leads to that section instead of opening
+  place?: string; // on the desktop, the district it stands in when that is not its section
+  plants?: { name: string; stage: string }[]; // the huerta, one entry per plant, for progress notes
 };
 
+// One entry per plant, all starting out the same; progress gets written here.
+const sown = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => ({ name: `${prefix} ${i + 1}`, stage: 'Growing' }));
+
 // The phone reads the cabinet as a story: what gets made, where the work
-// happened, who's behind it, what got written. Slugs in reading order, grouped
-// by section. The phone opens on the introduction before all of them.
+// happened, what grows at home, what got seen and written. Slugs in reading
+// order, grouped by section. The phone opens on the introduction before all of them.
+// On the desktop the same sections are spread over three worlds: the home
+// planet (Garden, Workshop), the one inside the computer (Projects,
+// Experience, Education) and the station in orbit (Posts, Links, Gallery).
 export const flow: { section: string; slugs: string[] }[] = [
   { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile', 'trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
   { section: 'Experience', slugs: ['tui', 'immune', 'afconsulting', 'fibsen', 'nuclio', 'mitx', 'uv', 'uned', 'sfl', 'caritas'] },
-  { section: 'About', slugs: ['daniel', 'correspondence', 'gallery'] },
-  { section: 'Gallery', slugs: ['pyrenees', 'tomatoes', 'moth', 'spider', 'pigments'] },
+  { section: 'Garden', slugs: ['tomatoes', 'eggplant', 'zucchini', 'pepper', 'leek', 'lemon', 'workbench', 'drawings'] },
+  { section: 'Gallery', slugs: ['pyrenees', 'moth', 'sketch-montgo', 'sketch-lemon'] },
   { section: 'Posts', slugs: ['ui-ai', 'eficiencia', 'siglo-xx'] },
 ];
 
+// Things that only exist in the desktop's worlds: doors between them, and
+// the networks, which stand on the station as plates.
+export type Thing = { slug: string; title: string; kind: string; year: string; place: string; href?: string; room?: string };
+export const worldOnly: Thing[] = [
+  { slug: 'computer', title: 'The computer', kind: 'Door', year: 'Projects and work inside', place: 'Workshop', room: 'Computer' },
+  { slug: 'rocket', title: 'The rocket', kind: 'Door', year: 'To the station', place: 'Launch', room: 'Station' },
+  { slug: 'rocket-home', title: 'The rocket', kind: 'Door', year: 'Back home', place: 'Dock', room: 'Home' },
+  { slug: 'x', title: 'X', kind: 'Link', year: '@zumodeia', place: 'Links', href: 'https://x.com/zumodeia' },
+  { slug: 'tiktok', title: 'TikTok', kind: 'Link', year: '@zumodeia', place: 'Links', href: 'https://www.tiktok.com/@zumodeia' },
+  { slug: 'youtube', title: 'YouTube', kind: 'Link', year: '@zumodeia', place: 'Links', href: 'https://www.youtube.com/@zumodeia' },
+  { slug: 'linkedin', title: 'LinkedIn', kind: 'Link', year: 'daniel-fenoll', place: 'Links', href: 'https://www.linkedin.com/in/daniel-fenoll' },
+  { slug: 'github', title: 'GitHub', kind: 'Link', year: 'F-N-LL', place: 'Links', href: 'https://github.com/F-N-LL' },
+];
+
 export const specimens: Specimen[] = [
-  {
-    slug: 'daniel',
-    title: 'Daniel Fenoll',
-    kind: 'Portrait',
-    year: 'Alicante',
-    medium: 'Senior software engineer and designer',
-    text: 'I build TUI Archive and the agentic infrastructure my team works with, in Rust, Python and AWS, and I design the interfaces I would want to use myself. Off the clock: small finished tools, good type, and tomatoes.',
-  },
-  {
-    slug: 'gallery',
-    title: 'The Gallery',
-    kind: 'Room',
-    year: 'Open',
-    medium: 'Photographs, specimens, pigments',
-    text: 'Landscapes, the huerta and its visitors, and the palette this whole site is printed in. It has a small planet of its own.',
-    room: 'Gallery',
-    link: 'Go there',
-  },
   {
     slug: 'ligero',
     title: 'Ligero',
@@ -183,6 +187,7 @@ export const specimens: Specimen[] = [
     year: '2023',
     medium: 'Nuclio Digital School',
     text: 'Research, interface design and a full stack to build it on. The final project, Homezzy, matched young professionals with a place to live by profile instead of by filters.',
+    place: 'Education',
   },
   {
     slug: 'uv',
@@ -191,6 +196,7 @@ export const specimens: Specimen[] = [
     year: '2014–19',
     medium: 'Universitat de València',
     text: 'Political theory, economics, statistics with SPSS, and a lot of debating. Where the habit of asking who a system is for comes from.',
+    place: 'Education',
   },
   {
     slug: 'uned',
@@ -199,6 +205,7 @@ export const specimens: Specimen[] = [
     year: 'Coursework',
     medium: 'Distance learning, alongside work, not completed',
     text: 'Algorithms, operating systems, C++ written on paper at eight in the morning. Studied to learn, not for the title.',
+    place: 'Education',
   },
   {
     slug: 'mitx',
@@ -207,6 +214,7 @@ export const specimens: Specimen[] = [
     year: '2020',
     medium: 'MITx',
     text: 'Probability, statistics and machine learning, from the Massachusetts Institute of Technology.',
+    place: 'Education',
   },
   {
     slug: 'pyrenees',
@@ -219,10 +227,90 @@ export const specimens: Specimen[] = [
   {
     slug: 'tomatoes',
     title: 'Tomatoes',
-    kind: 'Specimen',
-    year: '2026',
+    kind: 'Crop',
+    year: '4 plants',
     medium: 'Solanum lycopersicum, bamboo canes, terrace',
-    text: 'The huerta, early autumn. Two plants on bamboo canes, still green.',
+    text: 'Four plants on bamboo canes on the terrace, photographed in early autumn while still green. Each one will get its own progress notes here.',
+    plants: sown('Tomato', 4),
+  },
+  {
+    slug: 'eggplant',
+    title: 'Aubergines',
+    kind: 'Crop',
+    year: '2 plants',
+    medium: 'Solanum melongena',
+    text: 'Two plants. Progress notes for each one will appear here.',
+    plants: sown('Aubergine', 2),
+  },
+  {
+    slug: 'zucchini',
+    title: 'Courgettes',
+    kind: 'Crop',
+    year: '2 plants',
+    medium: 'Cucurbita pepo',
+    text: 'Two plants, and the flowers before the fruit. Progress notes for each one will appear here.',
+    plants: sown('Courgette', 2),
+  },
+  {
+    slug: 'pepper',
+    title: 'Peppers',
+    kind: 'Crop',
+    year: '2 plants',
+    medium: 'Capsicum annuum',
+    text: 'Two plants, green first and red if left alone. Progress notes for each one will appear here.',
+    plants: sown('Pepper', 2),
+  },
+  {
+    slug: 'leek',
+    title: 'Leeks',
+    kind: 'Crop',
+    year: '6 plants',
+    medium: 'Allium porrum',
+    text: 'Six in a row, slow and upright. Progress notes for each one will appear here.',
+    plants: sown('Leek', 6),
+  },
+  {
+    slug: 'lemon',
+    title: 'Lemon tree',
+    kind: 'Crop',
+    year: '1 tree',
+    medium: 'Citrus limon, in a pot',
+    text: 'The one tree in the huerta. Its progress will be noted here.',
+    plants: sown('Lemon tree', 1),
+  },
+  {
+    slug: 'workbench',
+    title: 'The workbench',
+    kind: 'Workbench',
+    year: 'Open',
+    medium: 'Soldering station, multimeter, oscilloscope, breadboards',
+    text: 'Where the hardware side of the projects gets built: a soldering iron, a multimeter, an oscilloscope and a box of parts that is never quite enough.',
+    place: 'Workshop',
+  },
+  {
+    slug: 'drawings',
+    title: 'Drawing board',
+    kind: 'Drawing',
+    year: 'Soon',
+    medium: 'Pencil, ink, paper',
+    text: 'Drawings will be pinned here.',
+    place: 'Workshop',
+  },
+  {
+    slug: 'sketch-montgo',
+    title: 'Montgó from the sea',
+    kind: 'Drawing',
+    year: 'Placeholder',
+    medium: 'Stand-in until the real drawings arrive',
+    text: 'A placeholder. The gallery will hold Daniel’s own photographs and drawings.',
+  },
+  {
+    slug: 'sketch-lemon',
+    title: 'Lemon',
+    kind: 'Drawing',
+    year: 'Placeholder',
+    medium: 'Stand-in until the real drawings arrive',
+    text: 'A placeholder. The gallery will hold Daniel’s own photographs and drawings.',
   },
   {
     slug: 'moth',
@@ -233,28 +321,13 @@ export const specimens: Specimen[] = [
     text: 'One of the day’s visitors to the huerta.',
   },
   {
-    slug: 'spider',
-    title: 'Spider',
-    kind: 'Specimen',
-    year: '2026',
-    medium: 'Found on a wall, Alicante',
-    text: 'Another visitor to the huerta, the same day.',
-  },
-  {
-    slug: 'pigments',
-    title: 'Pompeii',
-    kind: 'Pigments',
-    year: '2026',
-    medium: 'Pompeian red, Roman ochre, olive bronze, volcanic charcoal, Aegean blue, fresco cream',
-    text: 'A palette taken from the frescoes of Pompeii, made for the house. Every plate in this cabinet is printed in these six colours and nothing else.',
-  },
-  {
     slug: 'sfl',
     title: 'National Coordinator, Students For Liberty',
     kind: 'Service',
     year: '2016–18',
     medium: 'Volunteer',
     text: 'Coordinated a student network across Spain: a dozen groups, several hundred people, many events.',
+    place: 'Education',
   },
   {
     slug: 'caritas',
@@ -263,16 +336,7 @@ export const specimens: Specimen[] = [
     year: '2021–22',
     medium: 'Volunteer',
     text: 'Delivering food at night to people living on the street.',
-  },
-  {
-    slug: 'correspondence',
-    title: 'Correspondence',
-    kind: 'Correspondence',
-    year: 'Open',
-    medium: 'dfenollapps@gmail.com',
-    text: 'For work, questions, or tomatoes.',
-    href: 'mailto:dfenollapps@gmail.com',
-    link: 'Write',
+    place: 'Education',
   },
 ];
 
@@ -280,6 +344,24 @@ export const elsewhere = [
   { label: 'GitHub', handle: 'F-N-LL', href: 'https://github.com/F-N-LL' },
   { label: 'X', handle: '@zumodeia', href: 'https://x.com/zumodeia' },
   { label: 'LinkedIn', handle: 'daniel-fenoll', href: 'https://www.linkedin.com/in/daniel-fenoll' },
+  { label: 'TikTok', handle: '@zumodeia', href: 'https://www.tiktok.com/@zumodeia' },
+  { label: 'YouTube', handle: '@zumodeia', href: 'https://www.youtube.com/@zumodeia' },
   { label: 'Email', handle: 'dfenollapps@gmail.com', href: 'mailto:dfenollapps@gmail.com' },
   { label: 'CV', handle: 'PDF, one page', href: '/Daniel-Fenoll-CV.pdf' },
 ];
+
+// What the juice box says. The tour plays once; after that, a hello.
+export const cicerone = {
+  intro: [
+    'Hi! I’m Zumo, the juice box of zumodeia, and the cicerone of this site.',
+    'I’ll show you Daniel’s universe. Here at home: the huerta, the workbench and the computer.',
+    'Projects and work live inside the computer. Posts, links and pictures are up on the station: take the rocket.',
+    'Drag or use the arrow keys to walk. Click a thing, or press Enter by it, to open it. Keys 1 to 5 jump around.',
+  ],
+  back: 'Welcome back! Click me for the tour again.',
+  places: {
+    Computer: 'Inside the computer: projects, work, and the studies in a corner.',
+    Station: 'The station: posts, links and the gallery. The rocket takes you home.',
+    Home: 'Home again.',
+  } as Record<string, string>,
+};
