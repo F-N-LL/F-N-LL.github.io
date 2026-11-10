@@ -63,6 +63,80 @@ function boot() {
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
 }
 
+// ── Held sounds ──
+// Two that last as long as their cause: the rocket's engine, for the whole
+// trip, and the sea lapping round the juice box while it wades.
+let engine: { gain: GainNode; filter: BiquadFilterNode; hum: OscillatorNode } | null = null;
+let sea: GainNode | null = null;
+function loop() {
+  const s = ctx!.createBufferSource();
+  s.buffer = noiseBuf;
+  s.loop = true;
+  s.start();
+  return s;
+}
+function holdEngine() {
+  if (engine || !ctx) return engine;
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 300;
+  filter.Q.value = 0.9;
+  loop().connect(filter).connect(gain);
+  // a crackle on top of the roar
+  const crackle = ctx.createBiquadFilter();
+  crackle.type = 'bandpass';
+  crackle.frequency.value = 1800;
+  crackle.Q.value = 0.7;
+  const cg = ctx.createGain();
+  cg.gain.value = 0.25;
+  loop().connect(crackle).connect(cg).connect(gain);
+  const hum = ctx.createOscillator();
+  hum.frequency.value = 46;
+  const hg = ctx.createGain();
+  hg.gain.value = 0.7;
+  hum.connect(hg).connect(gain);
+  hum.start();
+  gain.connect(sfx);
+  return (engine = { gain, filter, hum });
+}
+function holdSea() {
+  if (sea || !ctx) return sea;
+  sea = ctx.createGain();
+  sea.gain.value = 0;
+  const f = ctx.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.value = 650;
+  f.Q.value = 0.5;
+  // the swell: the level rises and falls every few seconds
+  const swell = ctx.createGain();
+  swell.gain.value = 0.55;
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.22;
+  const depth = ctx.createGain();
+  depth.gain.value = 0.45;
+  lfo.connect(depth).connect(swell.gain);
+  lfo.start();
+  loop().connect(f).connect(swell).connect(sea).connect(sfx);
+  return sea;
+}
+
+// The engine at a level from 0 to 1; brighter the harder it burns.
+export function setEngine(level: number) {
+  if (!ctx || ctx.state !== 'running' || (!engine && level <= 0)) return;
+  const e = holdEngine()!;
+  const t = ctx.currentTime;
+  e.gain.gain.setTargetAtTime(level * 1.6, t, level > 0 ? 0.08 : 0.5);
+  e.filter.frequency.setTargetAtTime(260 + level * 1500, t, 0.15);
+  e.hum.frequency.setTargetAtTime(40 + level * 40, t, 0.2);
+}
+// How much of the juice box is in the water, from 0 to 1.
+export function setSea(level: number) {
+  if (!ctx || ctx.state !== 'running' || (!sea && level <= 0)) return;
+  holdSea()!.gain.setTargetAtTime(level * 0.5, ctx.currentTime, 0.35);
+}
+
 // ── Voices ──
 type Tone = { type?: OscillatorType; gain?: number; at?: number; attack?: number; to?: number; out?: AudioNode };
 function tone(freq: number, dur: number, { type = 'sine', gain = 0.2, at = 0, attack = 0.005, to, out }: Tone = {}) {
@@ -231,6 +305,16 @@ const EFFECTS = {
       : where === 'hull'
         ? bar(900 + Math.random() * 80, 0.12, 0.025)
         : hiss(0.07, { freq: 700 + Math.random() * 400, q: 1.6, gain: 0.12 }),
+  // a step in the shallows: a slosh and a little plop
+  splash: () => {
+    hiss(0.22, { freq: 1600 + Math.random() * 600, to: 500, q: 1.2, gain: 0.22 });
+    tone(380 + Math.random() * 120, 0.09, { to: 900, gain: 0.06, at: 0.03 });
+  },
+  // into the water, or landing in it from a jump
+  plunge: () => {
+    hiss(0.6, { freq: 2200, to: 300, q: 0.8, gain: 0.45 });
+    [0, 0.07, 0.15, 0.26].forEach((at, i) => tone(300 + i * 140 + Math.random() * 80, 0.1, { to: 1000, gain: 0.07, at: at + 0.05 }));
+  },
   jump: () => tone(330, 0.2, { type: 'triangle', to: 780, gain: 0.12 }),
   open: () => {
     bar(midi(77), 0.5, 0.12);
@@ -248,20 +332,18 @@ const EFFECTS = {
     tone(900, 1.1, { to: 140, gain: 0.05, at: 0.1 });
   },
   surface: () => [69, 72, 74, 77, 79, 81, 84].forEach((n, i) => bar(midi(n), 0.4, 0.07, i * 0.06)),
-  // ignition, then a roar that swells as it climbs and thins out as it goes
+  // ignition: a bang and a burst; the roar itself is the held engine
   launch: () => {
-    hiss(0.25, { kind: 'lowpass', freq: 900, to: 200, gain: 0.5 });
+    hiss(0.35, { kind: 'lowpass', freq: 1400, to: 160, gain: 0.9 });
+    tone(70, 0.5, { to: 30, gain: 0.7 });
     hiss(2.4, { kind: 'lowpass', freq: 160, to: 1800, gain: 0.7, attack: 0.35 });
-    hiss(2.2, { freq: 380, to: 900, q: 0.8, gain: 0.35, attack: 0.5, at: 0.1 });
-    tone(42, 2, { to: 95, gain: 0.35, attack: 0.25 });
-    tone(63, 1.8, { type: 'triangle', to: 140, gain: 0.12, attack: 0.3 });
   },
   // the engine braking all the way down, a thump on the pad, and a chime
   land: () => {
     hiss(1.3, { kind: 'lowpass', freq: 1600, to: 220, gain: 0.6, attack: 0.15 });
     tone(110, 1.2, { to: 48, gain: 0.25, attack: 0.15 });
-    tone(85, 0.45, { to: 38, gain: 0.45, at: 1.2 });
-    hiss(0.4, { kind: 'lowpass', freq: 500, to: 120, gain: 0.5, at: 1.2 });
+    tone(85, 0.5, { to: 32, gain: 0.8, at: 1.2 });
+    hiss(0.5, { kind: 'lowpass', freq: 700, to: 110, gain: 0.8, at: 1.2 });
     bar(midi(77), 0.6, 0.08, 1.45);
     bar(midi(81), 0.7, 0.07, 1.53);
   },

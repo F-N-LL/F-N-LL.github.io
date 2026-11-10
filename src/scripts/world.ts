@@ -38,6 +38,7 @@ import {
   PointsMaterial,
   Quaternion,
   Raycaster,
+  RingGeometry,
   Scene,
   ShaderMaterial,
   SRGBColorSpace,
@@ -49,7 +50,7 @@ import {
   WebGLRenderTarget,
 } from 'three';
 import { PIGMENTS } from '../data/pigments';
-import { play } from './sound';
+import { play, setEngine, setSea } from './sound';
 
 export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
 export type WorldOptions = {
@@ -1041,6 +1042,51 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const heroHits: Object3D[] = [];
   hero.g.traverse((o) => (o as Mesh).isMesh && heroHits.push(o));
 
+  // ═══ Water ═══
+  // Wading in the sea, the juice box leaves rings that spread on the water
+  // where it stepped, and a splash of drops when it goes in or lands in it.
+  const ringGeo = new RingGeometry(0.46, 0.6, 22).rotateX(-Math.PI / 2);
+  const ripples = Array.from({ length: 12 }, () => {
+    const m = new Mesh(ringGeo, new MeshBasicMaterial({ color: hex('cream'), transparent: true, opacity: 0, depthWrite: false }));
+    m.visible = false;
+    return { m, t: 1, big: 1 };
+  });
+  let rippleK = 0;
+  const ripple = (big = 1) => {
+    const r = ripples[rippleK++ % ripples.length];
+    r.m.removeFromParent();
+    cur.group.add(r.m);
+    // where the hero stands, in the planet's own frame, just over the water
+    r.m.position.copy(under).multiplyScalar(cur.R + SEA + 0.04);
+    r.m.quaternion.setFromUnitVectors(axisUp, under);
+    r.t = 0;
+    r.big = big;
+    r.m.visible = true;
+  };
+  const DROPS = 14;
+  const dropPos = new Float32Array(DROPS * 3);
+  const dropVel = new Float32Array(DROPS * 3);
+  const dropGeo = new BufferGeometry();
+  dropGeo.setAttribute('position', new BufferAttribute(dropPos, 3));
+  const dropMat = new PointsMaterial({ color: hex('cream'), size: 0.16, transparent: true, opacity: 0, depthWrite: false });
+  const drops = new Points(dropGeo, dropMat);
+  drops.frustumCulled = false;
+  scene.add(drops);
+  let dropT = 1;
+  const splash = (y: number) => {
+    for (let i = 0; i < DROPS; i++) {
+      const a = (i / DROPS) * Math.PI * 2 + Math.random() * 0.4;
+      const sp = 1.2 + Math.random() * 1.6;
+      dropPos.set([Math.cos(a) * 0.3, y, Math.sin(a) * 0.3], i * 3);
+      dropVel.set([Math.cos(a) * sp, 4 + Math.random() * 3, Math.sin(a) * sp], i * 3);
+    }
+    dropT = 0;
+    ripple(1.6);
+  };
+  let wet = 0; // 0 on land, 1 up to the knees in the sea
+  let wasWet = false;
+  let lapse = 0; // time since the last ring, while standing in the water
+
   // ═══ Dither pass ═══
   const target = new WebGLRenderTarget(4, 4, { type: HalfFloatType, minFilter: NearestFilter, magFilter: NearestFilter, depthBuffer: true });
   const uniforms = {
@@ -1132,6 +1178,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   // The hero stays at the top of the scene. Walking turns the planet under it.
   const qHome = new Quaternion();
   const axisY = new Vector3(0, 1, 0);
+  const axisUp = axisY;
   const dq = new Quaternion();
   let zoom = 0;
   let zoomGoal = 0;
@@ -1609,6 +1656,14 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       pad.flame.visible = burning;
       if (burning) pad.flame.scale.set(1, 0.85 + Math.sin(now * 0.05) * 0.2, 1);
     });
+    // The engine burns for the whole trip: hardest going up, steady across the sky, easing off down onto the pad.
+    let burn = 0;
+    if (aboard) {
+      if (launch) burn = 0.55 + 0.45 * Math.min(1, (now - launch.t0) / launch.dur);
+      else if (land) burn = 0.9 * (1 - smooth(0.7, 1, (now - land.t0) / land.dur)) + 0.1;
+      else burn = 0.8;
+    }
+    setEngine(burn);
     if (launch && now - launch.t0 >= launch.dur) {
       const then = launch.then;
       launch = null;
@@ -1670,7 +1725,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const speed = (2 * Math.acos(Math.min(1, Math.abs(dq.w)))) / Math.max(dt, 0.001);
     inv.copy(cur.q).invert();
     under.copy(NORTH).applyQuaternion(inv);
-    const ground = rEff + (warp ? GROUND : Math.max(cur.height(under), SEA));
+    // In the sea, a step at a time: deep enough, and the hero wades in to the knees.
+    const inSea = !warp && !aboard && cur.look === 'earth' && cur.height(under) < SEA - 0.08;
+    wet += ((inSea ? 1 : 0) - wet) * Math.min(1, dt * 6);
+    const ground = rEff + (warp ? GROUND : Math.max(cur.height(under), SEA) - wet * 0.32);
     heroY += (ground - heroY) * (1 - Math.pow(0.0001, Math.min(0.3, ease)));
     const walking = speed > 0.06 && (zoom > 0.15 || keys.size > 0 || !!trip) && !aboard;
     if (walking) {
@@ -1682,7 +1740,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       heading.set(dq.z * s, -dq.x * s).normalize();
       const foot = Math.floor(stride / Math.PI);
       stride += (speed * cur.R * dt * 62) / 20;
-      if (Math.floor(stride / Math.PI) !== foot && !jumpY) play('step', cur.look);
+      if (Math.floor(stride / Math.PI) !== foot && !jumpY) {
+        if (inSea) {
+          play('splash');
+          ripple();
+          lapse = 0;
+        } else play('step', cur.look);
+      }
       hop = Math.abs(Math.sin(stride)) * 0.3;
       // The view comes round behind the hero, slowly, so what it walks towards
       // ends up in front of the camera. Not while dragging: the ground would
@@ -1707,8 +1771,45 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (jumpV || jumpY) {
       jumpY += jumpV * dt;
       jumpV -= 22 * dt;
-      if (jumpY <= 0) jumpY = jumpV = 0;
+      if (jumpY <= 0) {
+        jumpY = jumpV = 0;
+        if (inSea) {
+          play('plunge');
+          splash(heroY);
+        }
+      }
     }
+    if (inSea && !wasWet && !jumpY) {
+      play('plunge');
+      splash(heroY + 0.3);
+    }
+    wasWet = inSea;
+    // standing in the sea, the water still rings round the hero now and then
+    lapse += dt;
+    if (inSea && !walking && lapse > 1.4) {
+      ripple(0.8);
+      lapse = 0;
+    }
+    setSea(wet * (zoom > 0.3 ? 1 : 0.4));
+    ripples.forEach((r) => {
+      if (r.t >= 1) return;
+      r.t = Math.min(1, r.t + dt / (1.3 * r.big));
+      r.m.scale.setScalar((0.7 + r.t * 1.9) * r.big);
+      (r.m.material as MeshBasicMaterial).opacity = 0.6 * (1 - r.t) ** 1.5;
+      r.m.visible = r.t < 1 && r.m.parent === cur.group;
+    });
+    if (dropT < 1) {
+      dropT = Math.min(1, dropT + dt / 0.75);
+      for (let i = 0; i < DROPS; i++) {
+        dropVel[i * 3 + 1] -= 18 * dt;
+        dropPos[i * 3] += dropVel[i * 3] * dt;
+        dropPos[i * 3 + 1] += dropVel[i * 3 + 1] * dt;
+        dropPos[i * 3 + 2] += dropVel[i * 3 + 2] * dt;
+      }
+      dropGeo.attributes.position.needsUpdate = true;
+      dropMat.opacity = 1 - dropT ** 2;
+    }
+    drops.visible = dropT < 1;
     // Between worlds the hero is gone: it shrinks away, and arrives the same way.
     let present = warp ? Math.abs(f * 2 - 1) ** 2 : 1;
     if (aboard) {
