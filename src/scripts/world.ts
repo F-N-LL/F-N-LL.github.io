@@ -460,8 +460,10 @@ const SCREEN_H = 1.26;
 function computer(screen: Mesh) {
   const g = new Group();
   desk(g);
-  g.add(box(0.6, 0.04, 0.36, 'ink', 0, 1.02, -0.28), box(0.12, 0.55, 0.1, 'ink', 0, 1.02, -0.32), box(2.32, 1.46, 0.1, 'ink', 0, 1.5, -0.3));
-  screen.position.set(0, 1.5 + 0.73, -0.244);
+  // a white monitor, like the old all-in-ones: a broad frame, a deeper chin with a light, a thin dark lip round the glass
+  g.add(box(0.6, 0.04, 0.36, 'cream', 0, 1.02, -0.28), box(0.12, 0.4, 0.1, 'cream', 0, 1.02, -0.32));
+  g.add(box(2.46, 1.68, 0.1, 'cream', 0, 1.34, -0.3), box(2.16, 1.32, 0.12, 'ink', 0, 1.57, -0.3), box(0.07, 0.05, 0.02, 'ochre', 0.98, 1.44, -0.25));
+  screen.position.set(0, 1.5 + 0.73, -0.225);
   g.add(screen, box(1.05, 0.05, 0.32, 'cream', -0.05, 1.02, 0.22), blob(0.07, 'cream', 0.7, 1.06, 0.24, 0.6));
   g.add(box(0.5, 1.05, 0.9, 'ink', 1.65, 0, -0.05), pane(0.08, 0.08, 1.75, 0.82, 0.41));
   g.add(cyl(0.38, 0.1, 'red', 0, 0.55, 1.05), cyl(0.05, 0.55, 'ink', 0, 0, 1.05), box(0.7, 0.62, 0.08, 'red', 0, 0.65, 1.42));
