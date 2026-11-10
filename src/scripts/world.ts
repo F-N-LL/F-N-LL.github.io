@@ -554,9 +554,25 @@ function juiceBox() {
   const left = box(0.14, 0.26, 0.16, 'ink', -0.2, -0.26);
   const right = box(0.14, 0.26, 0.16, 'ink', 0.2, -0.26);
   body.add(straw, left, right);
+  // after dark, a little paper lantern held out on a short arm, swinging as it walks
+  const lamp = new Group();
+  lamp.add(box(0.36, 0.09, 0.09, 'ink', -0.14, 0.02));
+  const shade = new Group();
+  // the paper burns brighter than anything else on the planet
+  const paper = new Mesh(new BoxGeometry(0.3, 0.36, 0.3), flameMat);
+  paper.position.y = -0.4;
+  // the flame, showing through the paper as a bright stripe
+  const wick = new Mesh(new BoxGeometry(0.12, 0.2, 0.31), flameCore);
+  wick.position.y = -0.42;
+  shade.add(cyl(0.015, 0.2, 'ink', 0, -0.2, 0, 4), box(0.36, 0.06, 0.36, 'red', 0, -0.25), paper, box(0.36, 0.06, 0.36, 'red', 0, -0.64), wick);
+  shade.position.x = 0.06;
+  lamp.add(shade);
+  lamp.position.set(0.62, 0.78, 0.3);
+  lamp.visible = false;
+  body.add(lamp);
   body.position.y = 0.26;
   g.add(body);
-  return { g, body, left, right };
+  return { g, body, left, right, lamp, shade };
 }
 
 // ═══ Bayer, as in scripts/dither.mjs, drawn live ═══
@@ -1058,9 +1074,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const hero = juiceBox();
   scene.add(hero.g);
   // a soft glow that keeps the hero readable at night, wherever it wanders
-  const heroGlow = new PointLight(hex('cream'), 0, 5, 1.6);
-  heroGlow.position.set(0.6, 1.9, 1.2);
-  hero.g.add(heroGlow);
+  // its glow comes from the lantern in its hand
+  const heroGlow = new PointLight(hex('ochre'), 0, 6, 1.5);
+  heroGlow.position.set(0, -0.4, 0.3);
+  hero.shade.add(heroGlow);
   const heroHits: Object3D[] = [];
   hero.g.traverse((o) => (o as Mesh).isMesh && heroHits.push(o));
 
@@ -1954,7 +1971,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const lampNight = dusk * (cur === home ? 1 : 0.35);
     ambient.intensity = lerp(1.75, lerp(1.3, 0.75, lampNight), dusk);
     lamps.forEach((l) => (l.intensity = lampNight * 14 * (0.94 + Math.sin(now * 0.011 + l.id) * 0.06)));
-    heroGlow.intensity = lampNight * 5;
+    heroGlow.intensity = lampNight * 4.5 * (0.92 + Math.sin(now * 0.017) * 0.08);
+    // the lantern comes out at dusk and goes away by day
+    hero.lamp.visible = dusk > 0.05;
+    hero.lamp.scale.setScalar(Math.max(0.001, smooth(0.05, 0.5, dusk)));
     ambient.color.copy(white).lerp(moonlight, dusk * 0.55);
     sun.intensity = lerp(2.8, lerp(2.3, 1.1, lampNight), dusk);
     sun.color.copy(white).lerp(moonlight, dusk * 0.55);
@@ -2074,6 +2094,9 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const swing = walking ? Math.sin(stride) * 0.6 : 0;
     hero.left.rotation.x = swing;
     hero.right.rotation.x = -swing;
+    // the lantern swings from its hook, more as the hero walks or jumps
+    hero.shade.rotation.x = -swing * 0.5 + jumpV * 0.03;
+    hero.shade.rotation.z = Math.sin(now * 0.002) * 0.06;
     hero.body.scale.y = 1 - hop * 0.14;
     hero.body.scale.x = 1 + hop * 0.09;
 
