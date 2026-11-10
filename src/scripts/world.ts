@@ -619,9 +619,38 @@ function juiceBox() {
   lamp.position.set(0.62, 0.78, 0.3);
   lamp.visible = false;
   body.add(lamp);
+  // on the station, a spacesuit: a glass helmet over its head and straw, a
+  // collar, a life-support pack on its back and white boots
+  const suit = new Group();
+  const helmet = new Mesh(new IcosahedronGeometry(0.8, 2), new MeshLambertMaterial({ color: hex('cream'), transparent: true, opacity: 0.12, depthWrite: false }));
+  helmet.position.y = 1.32;
+  helmet.scale.y = 0.95;
+  const rim = new Mesh(new TorusGeometry(0.66, 0.09, 6, 20), soft('cream'));
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.9;
+  const shine = box(0.08, 0.26, 0.02, 'cream', -0.36, 1.4, 0.62);
+  shine.rotation.z = 0.5;
+  const pack = new Group();
+  pack.add(box(0.7, 0.85, 0.3, 'cream'), box(0.5, 0.08, 0.04, 'ink', 0, 0.62, 0.15), box(0.08, 0.08, 0.04, 'red', -0.15, 0.4, 0.16), box(0.08, 0.08, 0.04, 'ochre', 0.05, 0.4, 0.16));
+  pack.position.set(0, 0.12, -0.48);
+  // glass shows best as its highlights: two white glints on the near side
+  const glint = box(0.06, 0.12, 0.02, 'cream', -0.22, 1.72, 0.66);
+  glint.rotation.z = 0.7;
+  const glint2 = box(0.06, 0.12, 0.02, 'cream', 0.4, 0.96, 0.66);
+  glint2.rotation.z = 0.5;
+  suit.add(helmet, rim, shine, glint, glint2, pack, box(0.94, 0.12, 0.66, 'cream', 0, 0.06), box(0.5, 0.06, 0.02, 'blue', 0, 0.2, 0.34));
+  // the boots ride on the legs, so they swing with them
+  const boots = [left, right].map((leg) => {
+    const b = box(0.2, 0.18, 0.24, 'cream', 0, -0.15, 0.02);
+    b.visible = false;
+    leg.add(b);
+    return b;
+  });
+  suit.visible = false;
+  body.add(suit);
   body.position.y = 0.26;
   g.add(body);
-  return { g, body, left, right, lamp, shade };
+  return { g, body, left, right, lamp, shade, suit, boots };
 }
 
 // ═══ Bayer, as in scripts/dither.mjs, drawn live ═══
@@ -2046,6 +2075,9 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     ambient.intensity = lerp(1.75, lerp(1.3, 0.75, lampNight), dusk);
     lamps.forEach((l) => (l.intensity = lampNight * 14 * (0.94 + Math.sin(now * 0.011 + l.id) * 0.06)));
     heroGlow.intensity = lampNight * 4.5 * (0.92 + Math.sin(now * 0.017) * 0.08);
+    // dressed for space on the station: on halfway through the jump there, off halfway back
+    hero.suit.visible = warp ? (f > 0.5 ? warp.to : warp.from) === station : cur === station;
+    hero.boots.forEach((b) => (b.visible = hero.suit.visible));
     // the lantern comes out at dusk and goes away by day
     hero.lamp.visible = dusk > 0.05;
     hero.lamp.scale.setScalar(Math.max(0.001, smooth(0.05, 0.5, dusk)));
