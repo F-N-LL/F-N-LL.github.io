@@ -1693,24 +1693,34 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   }
   :global(.w-heart) {
     position: absolute;
-    color: var(--dot);
-    font-size: 1.1rem;
+    display: block;
     pointer-events: none;
-    text-shadow: 0 1px 0 rgb(38 46 58 / 0.4);
-    animation: w-heart 1.5s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+    filter: drop-shadow(0 2px 0 rgb(38 46 58 / 0.45));
+    animation: w-heart 1.9s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  }
+  :global(.w-heart svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
   @keyframes w-heart {
     0% {
       opacity: 0;
-      transform: translate(-50%, 0) scale(0.6);
+      transform: translate(-50%, 0) scale(0.4);
     }
-    20% {
+    18% {
       opacity: 1;
-      transform: translate(-50%, -14px) scale(1.1);
+      transform: translate(-50%, -18px) scale(1.25);
+    }
+    30% {
+      transform: translate(-50%, -26px) scale(1);
+    }
+    75% {
+      opacity: 1;
     }
     100% {
       opacity: 0;
-      transform: translate(-50%, -64px) scale(0.9);
+      transform: translate(-50%, -90px) scale(0.9);
     }
   }
   @media (prefers-reduced-motion: reduce) {

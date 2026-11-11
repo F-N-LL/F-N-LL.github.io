@@ -1500,6 +1500,19 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   // Close enough to something on the ground, a "Pet" sign comes up over it
   // (P does the same). It answers in its own voice, hops for joy, hearts rise,
   // and it stays a little longer.
+  // a 9×8 pixel heart with a white rim and a glint, so it reads on grass, sand and sky alike
+  const HEART = `<svg viewBox="0 0 9 8" shape-rendering="crispEdges" aria-hidden="true">${[
+    '.WW...WW.',
+    'WRRW.WRRW',
+    'WRCRRRRRW',
+    'WRRRRRRRW',
+    '.WRRRRRW.',
+    '..WRRRW..',
+    '...WRW...',
+    '....W....',
+  ]
+    .flatMap((row, y) => [...row].map((c, x) => (c === '.' ? '' : `<rect x="${x}" y="${y}" width="1" height="1" fill="${c === 'W' ? '#fff' : c === 'C' ? '#f8f0de' : '#d26046'}"/>`)))
+    .join('')}</svg>`;
   const petBtn = document.createElement('button');
   petBtn.type = 'button';
   petBtn.className = 'w-pet caps';
@@ -1514,15 +1527,18 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     play('pet', L.kind);
     // hearts, rising from it
     const s = toScreen(L.g.getWorldPosition(new Vector3()).addScaledVector(L.p, 0.8));
-    for (let i = 0; i < 3; i++) {
+    // pixel hearts, a big one in the middle and smaller ones either side
+    for (let i = 0; i < 5; i++) {
       const h = document.createElement('span');
       h.className = 'w-heart';
-      h.textContent = '♥';
-      h.style.left = `${Math.round(s.x + (i - 1) * 16)}px`;
-      h.style.top = `${Math.round(s.y)}px`;
-      h.style.animationDelay = `${i * 140}ms`;
+      h.innerHTML = HEART;
+      const size = i === 2 ? 34 : 22;
+      h.style.width = h.style.height = `${size}px`;
+      h.style.left = `${Math.round(s.x + (i - 2) * 26 + (Math.random() - 0.5) * 8)}px`;
+      h.style.top = `${Math.round(s.y - (i === 2 ? 10 : 0))}px`;
+      h.style.animationDelay = `${Math.abs(i - 2) * 120}ms`;
       labels.append(h);
-      window.setTimeout(() => h.remove(), 1600 + i * 140);
+      window.setTimeout(() => h.remove(), 2000 + i * 120);
     }
   }
   petBtn.addEventListener('click', () => {
