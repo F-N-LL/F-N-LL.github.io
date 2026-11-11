@@ -2446,9 +2446,11 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
   /* First open: both arrows draw the eye (inked, a ring breathes out of
      them) and a caption under → says how to browse. */
+  /* hidden but still holding their grid cells, so the plate and text keep their columns */
   .detail.solo .d-arrow,
   .detail.solo [data-d-count] {
-    display: none;
+    visibility: hidden;
+    pointer-events: none;
   }
   .detail.teach .d-arrow {
     border-color: var(--ink);
