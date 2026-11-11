@@ -111,10 +111,11 @@ const shortcuts: [string[], string][] = [
   [['W', 'A', 'S', 'D'], 'Walk, on the home row'],
   [['H', 'J', 'K', 'L'], 'Walk, vim-style; J K walk the index'],
   [['Space'], 'Jump'],
-  [['Enter'], 'Open'],
+  [['Enter'], 'Open the thing ringed in red'],
+  [['P'], 'Pet an animal close by'],
   [['Esc'], 'Close, or see the whole world'],
   [['+', '−'], 'Zoom'],
-  [['←', '→', 'H', 'L'], 'Previous, next card (when open)'],
+  [['←', '→', 'H', 'L'], 'Previous, next card (opened from the cabinet or index)'],
   [['K', 'J'], 'Previous, next card (when open)'],
   [['1', '2', '3', '4', '5'], 'Go to a section'],
   [['I'], 'Index'],
@@ -266,7 +267,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         ))}
       </ul>
       <p class="f-hint caps muted">Drag or scroll to move · Pinch or Ctrl + scroll to zoom · <kbd>?</kbd> Shortcuts</p>
-      <p class="f-hint w-hint caps muted">Arrows or drag to walk · Scroll to zoom · Space to jump · <kbd>?</kbd> Shortcuts</p>
+      <p class="f-hint w-hint caps muted">Arrows or drag to walk · Enter opens what is ringed · Space to jump · <kbd>?</kbd> Shortcuts</p>
       <div class="zoom" data-zoom>
         <button type="button" class="z-btn key-up" data-zoom-out aria-label="Zoom out" data-key="−">−</button>
         <div class="ruler" data-ruler role="slider" tabindex="0" aria-label="Zoom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -889,6 +890,10 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     let current = -1;
     let lastFocus: HTMLElement | null = null;
     let pushed = false;
+    // A card opened from the planet is about that one thing: no paging on to
+    // every other card. From the cabinet or the index, the arrows go on.
+    let solo = false;
+    let soloNext = false;
     let openedAt = 0;
     let teachTimer = 0;
     // Three seconds on a card and its link (Read, View source…) catches the
@@ -944,6 +949,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     }
 
     function open(i: number, from?: HTMLImageElement | null, fromHistory = false) {
+      const fromPlanet = soloNext;
+      soloNext = false;
       // A door, not a card: go where it leads.
       if (S[i].room && detail.hidden) return applyFilter(S[i].room!);
       if (detail.hidden) lastFocus = document.activeElement as HTMLElement;
@@ -956,13 +963,17 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         } else history.replaceState({ slug: S[i].slug }, '', `#${S[i].slug}`);
       }
       const wasHidden = detail.hidden;
-      if (wasHidden) play('open');
+      if (wasHidden) {
+        play('open');
+        solo = fromPlanet;
+        detail.classList.toggle('solo', solo);
+      }
       detail.hidden = false;
       document.body.classList.add('modal');
       if (wasHidden) {
         openedAt = performance.now();
         // The first card ever opened points out the arrows, once the plate has landed.
-        if (forceNudge || !seen.has('df-arrows')) {
+        if (!solo && (forceNudge || !seen.has('df-arrows'))) {
           seen.mark('df-arrows');
           clearTimeout(teachTimer);
           teachTimer = window.setTimeout(() => teach(true), reducedQ.matches ? 0 : 750);
@@ -1064,6 +1075,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       };
     }
     const step = (d: number) => {
+      if (solo) return;
       teach(false); // learnt
       const enter = reducedQ.matches ? null : pass(d);
       fill((current + d + S.length) % S.length);
@@ -1250,7 +1262,10 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
             // the cabinet first, so an index here is an index there; then what only the worlds have
             items: [...S, ...extra.things.map((t: { place: string }) => ({ ...t, section: t.place }))],
             guide: extra.guide,
-            open: (i) => open(i, null),
+            open: (i) => {
+              soloNext = true;
+              open(i, null);
+            },
             select: (name) => applyFilter(name),
             reduced: () => reducedQ.matches,
             active: () => desktop.matches && !document.body.classList.contains('modal') && indexEl.hidden,
@@ -1643,7 +1658,65 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   }
   :global(.w-tomb.chosen .k) {
     display: inline;
+    padding: 0 0.3em;
+    border: 1px solid color-mix(in srgb, var(--bg) 60%, var(--ink));
+    border-radius: 3px;
     color: var(--bg);
+  }
+  /* Petting: a small round sign over the animal, and hearts that rise from it. */
+  :global(.w-pet) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.32rem 0.4rem 0.3rem 0.7rem;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--dot);
+    font: inherit;
+    font-size: 0.75rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+  :global(.w-pet.on) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  :global(.w-pet kbd) {
+    border-color: rgb(255 255 255 / 0.55);
+    color: #fff;
+  }
+  :global(.w-heart) {
+    position: absolute;
+    color: var(--dot);
+    font-size: 1.1rem;
+    pointer-events: none;
+    text-shadow: 0 1px 0 rgb(38 46 58 / 0.4);
+    animation: w-heart 1.5s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  }
+  @keyframes w-heart {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 0) scale(0.6);
+    }
+    20% {
+      opacity: 1;
+      transform: translate(-50%, -14px) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -64px) scale(0.9);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.w-heart) {
+      animation-duration: 0.8s;
+    }
   }
   /* The juice box talking: a rounded bubble over its head, its name on a tab. */
   :global(.w-say) {
@@ -2373,6 +2446,10 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
   /* First open: both arrows draw the eye (inked, a ring breathes out of
      them) and a caption under → says how to browse. */
+  .detail.solo .d-arrow,
+  .detail.solo [data-d-count] {
+    display: none;
+  }
   .detail.teach .d-arrow {
     border-color: var(--ink);
     animation: beckon 1.8s var(--ease) 0.1s 3;
