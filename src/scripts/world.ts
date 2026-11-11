@@ -2562,7 +2562,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       for (const p of cur.spots) {
         w.copy(p.dir).applyQuaternion(cur.q);
         const a = w.angleTo(NORTH) * cur.R;
-        if (a > 9.5) continue;
+        // within a few steps of where one stands to use it: bigger things reach a little further
+        if (a > 4.75 + Math.max(0, p.reach - 2.2)) continue;
         const along = (w.x * heading.x + w.z * heading.y) / (Math.hypot(w.x, w.z) || 1);
         const score = a + (1 - along) * 3.2 - (p === held ? 0.7 : 0);
         if (score < best) {
