@@ -52,6 +52,7 @@ import {
 } from 'three';
 import { PIGMENTS } from '../data/pigments';
 import { play, setEngine, setSea } from './sound';
+import { buildHouse } from './house';
 
 export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
 export type WorldOptions = {
@@ -1092,13 +1093,16 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (lift === 0) p.solids.push(...footprint(obj));
   };
   const poleFrame = frameAt(NORTH);
-  const house = casita();
+  const casa = casita();
   // the windows throw a warm light out onto the terrace
   const window1 = new PointLight(hex('ochre'), 0, 8, 1.4);
   window1.position.set(-0.4, 1.3, 2.6);
-  house.add(window1);
+  casa.add(window1);
   lamps.push(window1);
-  placeOn(home, house, NORTH, poleFrame.u, poleFrame.v, 0, -3.4, Math.PI);
+  placeOn(home, casa, NORTH, poleFrame.u, poleFrame.v, 0, -3.4, Math.PI);
+  // Its front door, and the spot just outside it where the hero stands to go in: in the planet's frame.
+  const doorStand = new Vector3(-0.7, 0, 3.1).applyQuaternion(casa.quaternion).add(casa.position);
+  const doorAt = new Vector3(-0.7, 0, 1.6).applyQuaternion(casa.quaternion).add(casa.position);
   placeOn(home, palm(), NORTH, poleFrame.u, poleFrame.v, 4.2, -2.6);
   placeOn(pc, cpu(), NORTH, poleFrame.u, poleFrame.v, 0, -3.4);
   const backs: Record<string, () => Group> = { Projects: rack, Experience: milestones, Education: shelf };
@@ -1650,7 +1654,12 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         }
       }
     }
-    const show = !!petNear && !busy() && zoom > 0.5 && !aboard;
+    const door = nearDoor() && zoom > 0.5;
+    if (door) {
+      const sd = toScreen(doorAt.clone().applyQuaternion(home.q).addScaledVector(NORTH, 2.2));
+      place(inBtn, sd.front, sd.x, sd.y, true);
+    } else place(inBtn, false);
+    const show = !!petNear && !door && !busy() && zoom > 0.5 && !aboard;
     if (show) {
       const s = toScreen(petNear!.g.getWorldPosition(there).addScaledVector(petNear!.p, 1.1));
       place(petBtn, s.front, s.x, s.y, true);
@@ -1979,6 +1988,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let goalLeft = Infinity;
   let goalStall = 0;
   let goalAt = 0;
+  let goalDoor = false;
   const goalMat = new MeshBasicMaterial({ color: hex('cream'), transparent: true, opacity: 0, depthWrite: false });
   const goalMark = new Group();
   [Math.PI / 4, -Math.PI / 4].forEach((a) => {
@@ -1992,6 +2002,11 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const hit = ray.intersectObject(cur.group, true).find((h) => (h.object as Mesh).isMesh && h.object.visible && h.object !== goalMark.children[0] && h.object.parent !== goalMark);
     if (!hit) return false;
     goal = cur.group.worldToLocal(hit.point.clone()).normalize();
+    // the house itself: walk to its front door, and go in on arriving
+    let o: Object3D | null = hit.object;
+    while (o && o !== casa) o = o.parent;
+    goalDoor = !!o;
+    if (goalDoor) goal = doorStand.clone().normalize();
     goalLeft = Infinity;
     goalStall = 0;
     goalAt = performance.now();
@@ -2047,6 +2062,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       // Browsers also send moves when things slide under a still cursor: only a real one counts.
       if (e.clientX === lastPtr.x && e.clientY === lastPtr.y) return;
       lastPtr = { x: e.clientX, y: e.clientY };
+      if (indoors) return void (canvas.style.cursor = 'crosshair');
       hovered = busy() ? null : pick(e.clientX, e.clientY);
       canvas.style.cursor = hovered || skyAt(e.clientX, e.clientY) || onHero(e.clientX, e.clientY) ? 'pointer' : 'crosshair';
       return;
@@ -2056,6 +2072,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (!down.moved && Math.hypot(dx, dy) < 5) return;
     down.moved = true;
     canvas.style.cursor = 'grabbing';
+    if (indoors) {
+      inTurn -= dx * 0.006;
+      inZoom = Math.min(1.5, Math.max(0.55, inZoom - dy * 0.004));
+      down.x = e.clientX;
+      down.y = e.clientY;
+      return;
+    }
     if (busy()) return;
     // Dragging turns the view round the hero (sideways) and leans in or out (up and down);
     // walking is for clicks and keys.
@@ -2077,6 +2100,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const wasClick = !down.moved;
     down = null;
     canvas.style.cursor = 'crosshair';
+    if (indoors) return void (wasClick && inClick(e.clientX, e.clientY));
     if (!wasClick || busy()) return;
     const sky = skyAt(e.clientX, e.clientY);
     if (sky) return sky.chip.click();
@@ -2092,6 +2116,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     'wheel',
     (e) => {
       e.preventDefault();
+      if (indoors) return void (inZoom = Math.min(1.5, Math.max(0.55, inZoom + e.deltaY * 0.0012)));
       if (busy()) return;
       zoomGoal = Math.min(1, Math.max(0, zoomGoal - e.deltaY * 0.0014));
       touch();
@@ -2117,6 +2142,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       return;
     }
     if (k === 'Escape' && talk) hush();
+    if (indoors && k === 'Escape') return leaveHouse();
     if (k === 'Enter') {
       // A control reached with Tab keeps its own Enter; one merely left focused by a click does not.
       if (tabbing && on?.matches('a, button')) return;
@@ -2124,6 +2150,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       if (busy() || e.repeat) return;
       // only ever what is marked: the nearest thing, ringed on the ground and its sign dark;
       // the mouse opens what it points at by clicking, never by Enter
+      if (indoors) return;
+      if (zoom > 0.55 && nearDoor()) return enterHouse();
       if (chosen) visit(chosen);
       else if (zoom < 0.55) zoomGoal = 1; // from afar, Enter takes you down to the ground
       return;
@@ -2208,6 +2236,232 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   }
   paintScreen();
 
+  // ═══ Indoors ═══
+  // Through the front door of the little house is Daniel's flat, a dollhouse on
+  // a flat floor: the hero walks it with clicks or keys, the view follows from
+  // above, and the same door (or Esc) leads back out to the planet.
+  const flat = buildHouse();
+  let indoors = false;
+  const inPos = new Vector2(flat.spawn.x, flat.spawn.z);
+  let inYaw = -Math.PI / 2;
+  let inGoal: Vector2 | null = null;
+  let inStall = 0;
+  let inLeft = Infinity;
+  let inZoom = 1.3;
+  let inTurn = 0; // the view's turn round the hero, from dragging
+  let inStride = 0;
+  let inT0 = 0;
+  const IN_R = 0.38;
+  const inFoot = new Vector3();
+  const inMark = new Group();
+  [Math.PI / 4, -Math.PI / 4].forEach((a) => {
+    const bar = new Mesh(new BoxGeometry(0.6, 0.03, 0.11), goalMat);
+    bar.rotation.y = a;
+    inMark.add(bar);
+  });
+  inMark.position.y = 0.04;
+  flat.scene.add(inMark);
+  // the rooms' names, floating over each one
+  const roomChips = flat.rooms.map((r) => {
+    const b = document.createElement('span');
+    b.className = 'w-room w-in caps';
+    b.textContent = r.name;
+    labels.append(b);
+    return { b, at: new Vector3(r.x, 1.3, r.z) };
+  });
+  const out = document.createElement('button');
+  out.type = 'button';
+  out.className = 'w-leave w-in caps';
+  out.textContent = '← Leave the house';
+  out.addEventListener('click', () => leaveHouse());
+  labels.append(out);
+  // outside, by the door: a sign to go in
+  const inBtn = document.createElement('button');
+  inBtn.type = 'button';
+  inBtn.className = 'w-pet w-door caps';
+  inBtn.innerHTML = '<span>Go inside</span><kbd>Enter</kbd>';
+  inBtn.addEventListener('click', () => {
+    inBtn.blur();
+    enterHouse();
+  });
+  labels.append(inBtn);
+  const nearDoor = () => {
+    if (cur !== home || busy() || aboard) return false;
+    w.copy(doorStand).normalize().applyQuaternion(cur.q);
+    return w.angleTo(NORTH) * cur.R < 2.4;
+  };
+  function enterHouse() {
+    if (indoors || busy()) return;
+    indoors = true;
+    inPos.set(flat.spawn.x, flat.spawn.z);
+    inYaw = -Math.PI / 2;
+    inGoal = null;
+    inTurn = 0;
+    inZoom = 1.3;
+    inT0 = performance.now();
+    goal = null;
+    keys.clear();
+    talk = null;
+    flat.scene.add(hero.g);
+    hero.suit.visible = false;
+    hero.boots.forEach((b) => (b.visible = false));
+    hero.straw.visible = true;
+    setSea(0);
+    labels.classList.add('indoors');
+    root.classList.add('indoors');
+    play('open');
+  }
+  function leaveHouse() {
+    if (!indoors) return;
+    indoors = false;
+    scene.add(hero.g);
+    labels.classList.remove('indoors');
+    root.classList.remove('indoors');
+    // back on the planet, just outside the door, the house in front of the camera
+    const a = doorStand.clone().normalize();
+    const inward = doorStand.clone().sub(doorAt);
+    inward.addScaledVector(a, -inward.dot(a)).normalize();
+    const right = new Vector3().crossVectors(a, inward).normalize();
+    home.q.copy(new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right, a, inward)).invert());
+    trip = null;
+    vel = { x: 0, z: 0 };
+    zoom = zoomGoal = 1;
+    heroY = home.R + GROUND;
+    burst = performance.now();
+    play('close');
+    touch();
+  }
+  // Pushes a circle out of the walls and the furniture.
+  const inSolve = () => {
+    for (let pass = 0; pass < 3; pass++)
+      for (const r of flat.solids) {
+        const cx = Math.max(r.x1, Math.min(r.x2, inPos.x));
+        const cz = Math.max(r.z1, Math.min(r.z2, inPos.y));
+        const dx = inPos.x - cx;
+        const dz = inPos.y - cz;
+        const d2 = dx * dx + dz * dz;
+        if (d2 >= IN_R * IN_R) continue;
+        if (d2 > 1e-8) {
+          const d = Math.sqrt(d2);
+          inPos.x += (dx / d) * (IN_R - d);
+          inPos.y += (dz / d) * (IN_R - d);
+        } else {
+          // the centre got inside: out by the nearest side
+          const opts = [
+            [r.x1 - IN_R - inPos.x, 0],
+            [r.x2 + IN_R - inPos.x, 0],
+            [0, r.z1 - IN_R - inPos.y],
+            [0, r.z2 + IN_R - inPos.y],
+          ].sort((p, q) => Math.abs(p[0] + p[1]) - Math.abs(q[0] + q[1]))[0];
+          inPos.x += opts[0];
+          inPos.y += opts[1];
+        }
+      }
+  };
+  const inClick = (cx: number, cy: number) => {
+    aim(cx, cy);
+    const hit = ray.intersectObjects(flat.floors, false)[0];
+    if (!hit) return;
+    inGoal = new Vector2(hit.point.x, hit.point.z);
+    inLeft = Infinity;
+    inStall = 0;
+    inMark.position.set(hit.point.x, 0.04, hit.point.z);
+    goalAt = performance.now();
+    play('tap');
+  };
+  function indoorFrame(dt: number, now: number) {
+    // keys walk relative to the view; a click walks to the spot
+    let wx = 0;
+    let wz = 0;
+    keys.forEach((k) => {
+      wx += WALK[k][1];
+      wz -= WALK[k][0];
+    });
+    let mx = 0;
+    let mz = 0;
+    if (wx || wz) {
+      inGoal = null;
+      const c = Math.cos(inTurn);
+      const sn = Math.sin(inTurn);
+      mx = wx * c + wz * sn;
+      mz = -wx * sn + wz * c;
+    } else if (inGoal) {
+      mx = inGoal.x - inPos.x;
+      mz = inGoal.y - inPos.y;
+      const left = Math.hypot(mx, mz);
+      if (left < 0.15) inGoal = null;
+      inStall = left > inLeft - 0.002 ? inStall + dt : 0;
+      inLeft = left;
+      if (inStall > 0.5) inGoal = null;
+    }
+    const len = Math.hypot(mx, mz);
+    const walking = len > 0.001 && (!!inGoal || wx !== 0 || wz !== 0);
+    if (walking) {
+      const step = Math.min(4.2 * dt, inGoal ? len : 4.2 * dt);
+      inPos.x += (mx / len) * step;
+      inPos.y += (mz / len) * step;
+      const yaw = Math.atan2(mx, mz);
+      let diff = yaw - inYaw;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      inYaw += diff * Math.min(1, dt * 12);
+      const foot = Math.floor(inStride / Math.PI);
+      inStride += step * 3.2;
+      if (Math.floor(inStride / Math.PI) !== foot && !jumpY) play('step', 'chip');
+    }
+    inSolve();
+    // out through the front door
+    const o = flat.out;
+    if (now - inT0 > 800 && inPos.x > o.x1 && inPos.y > o.z1 && inPos.y < o.z2) return leaveHouse();
+    if (jumpV || jumpY) {
+      jumpY += jumpV * dt;
+      jumpV -= 22 * dt;
+      if (jumpY <= 0) jumpY = jumpV = 0;
+    }
+    const hop = walking ? Math.abs(Math.sin(inStride)) * 0.2 : 0;
+    hero.g.position.set(inPos.x, hop + jumpY, inPos.y);
+    hero.g.rotation.y = inYaw;
+    hero.g.scale.setScalar(1);
+    hero.g.visible = true;
+    const swing = walking ? Math.sin(inStride) * 0.6 : 0;
+    hero.left.rotation.x = swing;
+    hero.right.rotation.x = -swing;
+    hero.lamp.visible = false;
+    // light: the windows bright by day and dark by night, the lamps warmer as it gets late
+    const dusk = easeInOut(nightNow);
+    flat.ambient.intensity = lerp(1.5, 0.55, dusk);
+    flat.sun.intensity = lerp(1.7, 0.25, dusk);
+    flat.lamps.forEach((l) => (l.intensity = (l.userData.power as number) * lerp(0.22, 1.3, dusk)));
+    flat.windows.color.copy(hex('blue')).lerp(hex(dusk > 0.5 ? 'ink' : 'cream'), dusk > 0.5 ? 0.6 : 0.3);
+    goalMat.opacity = inGoal ? Math.min(1, goalMat.opacity + dt * 6) : Math.max(0, goalMat.opacity - dt * 3);
+    inMark.visible = goalMat.opacity > 0.01;
+    inMark.scale.setScalar(1 + Math.sin(now * 0.008) * 0.08);
+    // the view: from above and in front, following, turned by dragging
+    const D = 10.5 * inZoom;
+    inFoot.set(inPos.x, 0.6, inPos.y);
+    camera.up.set(0, 1, 0);
+    camera.position.set(inPos.x + Math.sin(inTurn) * D * 0.78, D, inPos.y + Math.cos(inTurn) * D * 0.78);
+    camera.lookAt(inFoot);
+    camera.updateMatrixWorld();
+    // the names of the rooms, over each
+    roomChips.forEach(({ b, at }) => {
+      const sp = toScreen(v.copy(at));
+      place(b, sp.front && sp.x > 30 && sp.x < W - 30 && sp.y > 30 && sp.y < H - 30, sp.x, sp.y);
+    });
+    out.classList.add('on');
+    uniforms.night.value = dusk;
+    uniforms.space.value = 0;
+    uniforms.scan.value = 0;
+    uniforms.time.value = now / 1000;
+    uniforms.rad.value = 1;
+    uniforms.centre.value.set(-1e5, -1e5);
+    uniforms.coarse.value = Math.max(1, Math.round((1 - Math.min(1, (now - inT0) / 600)) * 12) || 1);
+    renderer.setRenderTarget(target);
+    renderer.clear();
+    renderer.render(flat.scene, camera);
+    renderer.setRenderTarget(null);
+    renderer.render(quadScene, quadCam);
+  }
+
   function frame(now: number) {
     requestAnimationFrame(frame);
     if (document.hidden || !active()) {
@@ -2218,6 +2472,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const ease = (now - last) / 1000; // real time, so a slow machine still arrives
     const dt = Math.min(0.05, ease);
     last = now;
+    if (indoors) return indoorFrame(dt, now);
     const before = cur.q.clone();
 
     // walking
@@ -2247,7 +2502,11 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       // towards the clicked spot, at walking pace; give up if something solid is in the way
       w.copy(goal).applyQuaternion(cur.q);
       const left = w.angleTo(NORTH) * cur.R;
-      if (left < 0.45 || now - goalAt > 20000) goal = null;
+      if (left < 0.45 && goalDoor) {
+        goal = null;
+        goalDoor = false;
+        enterHouse();
+      } else if (left < 0.45 || now - goalAt > 20000) goal = null;
       else {
         const len = Math.hypot(w.x, w.z) || 1;
         const step = Math.min(left, 8.4 * dt) / cur.R;

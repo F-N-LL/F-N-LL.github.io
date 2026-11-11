@@ -1829,6 +1829,32 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     transition: opacity 0.3s;
     cursor: pointer;
   }
+  /* Inside the flat the name and the lines about the work step aside. */
+  :global(.world.indoors) [data-w-id] {
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* Indoors only the rooms' names and the way out show; outside, none of them. */
+  :global(.w-labels.indoors > :not(.w-in)),
+  :global(.w-labels:not(.indoors) .w-in) {
+    display: none;
+  }
+  :global(.w-room) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0.32rem 0.6rem 0.28rem;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 0.6875rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  :global(.w-room.on) {
+    opacity: 0.9;
+  }
   :global(.w-leave.on) {
     opacity: 1;
     pointer-events: auto;
