@@ -619,26 +619,28 @@ function juiceBox() {
   lamp.position.set(0.62, 0.78, 0.3);
   lamp.visible = false;
   body.add(lamp);
-  // on the station, a spacesuit: a glass helmet over its head and straw, a
-  // collar, a life-support pack on its back and white boots
+  // on the station, a spacesuit: a round white helmet with a dark visor (the
+  // eyes peer out of it), an antenna where the straw was, a collar, a
+  // life-support pack on its back and white boots
   const suit = new Group();
-  const helmet = new Mesh(new IcosahedronGeometry(0.8, 2), new MeshLambertMaterial({ color: hex('cream'), transparent: true, opacity: 0.12, depthWrite: false }));
-  helmet.position.y = 1.32;
-  helmet.scale.y = 0.95;
-  const rim = new Mesh(new TorusGeometry(0.66, 0.09, 6, 20), soft('cream'));
+  const helmet = blob(0.72, 'cream', 0, 1.02, 0, 0.92);
+  const visor = new Group();
+  visor.add(box(0.8, 0.46, 0.14, 'ink', 0, 0, 0), box(0.86, 0.06, 0.15, 'ochre', 0, 0.46, -0.005));
+  visor.position.set(0, 0.68, 0.7);
+  const eyesOut = [-0.17, 0.17].map((x) => box(0.1, 0.1, 0.02, 'cream', x, 0.86, 0.785));
+  const glint = box(0.14, 0.04, 0.02, 'blue', 0.24, 1.04, 0.785);
+  glint.rotation.z = 0.5;
+  const antenna = new Group();
+  antenna.add(cyl(0.025, 0.36, 'ink', 0, 0), blob(0.07, 'red', 0, 0.42, 0));
+  antenna.position.set(0.24, 1.6, -0.1);
+  antenna.rotation.z = -0.2;
+  const rim = new Mesh(new TorusGeometry(0.6, 0.09, 6, 20), soft('ochre'));
   rim.rotation.x = Math.PI / 2;
-  rim.position.y = 0.9;
-  const shine = box(0.08, 0.26, 0.02, 'cream', -0.36, 1.4, 0.62);
-  shine.rotation.z = 0.5;
+  rim.position.y = 0.42;
   const pack = new Group();
   pack.add(box(0.7, 0.85, 0.3, 'cream'), box(0.5, 0.08, 0.04, 'ink', 0, 0.62, 0.15), box(0.08, 0.08, 0.04, 'red', -0.15, 0.4, 0.16), box(0.08, 0.08, 0.04, 'ochre', 0.05, 0.4, 0.16));
   pack.position.set(0, 0.12, -0.48);
-  // glass shows best as its highlights: two white glints on the near side
-  const glint = box(0.06, 0.12, 0.02, 'cream', -0.22, 1.72, 0.66);
-  glint.rotation.z = 0.7;
-  const glint2 = box(0.06, 0.12, 0.02, 'cream', 0.4, 0.96, 0.66);
-  glint2.rotation.z = 0.5;
-  suit.add(helmet, rim, shine, glint, glint2, pack, box(0.94, 0.12, 0.66, 'cream', 0, 0.06), box(0.5, 0.06, 0.02, 'blue', 0, 0.2, 0.34));
+  suit.add(helmet, visor, ...eyesOut, glint, antenna, rim, pack, box(0.94, 0.12, 0.66, 'cream', 0, 0.06), box(0.5, 0.06, 0.02, 'blue', 0, 0.2, 0.34));
   // the boots ride on the legs, so they swing with them
   const boots = [left, right].map((leg) => {
     const b = box(0.2, 0.18, 0.24, 'cream', 0, -0.15, 0.02);
@@ -650,7 +652,7 @@ function juiceBox() {
   body.add(suit);
   body.position.y = 0.26;
   g.add(body);
-  return { g, body, left, right, lamp, shade, suit, boots };
+  return { g, body, left, right, lamp, shade, suit, boots, straw };
 }
 
 // ═══ Bayer, as in scripts/dither.mjs, drawn live ═══
@@ -1227,32 +1229,54 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
 
   // ═══ Passers-by ═══
   // Now and then something lives here too: a cat crossing the terrace, a
-  // hedgehog after dark, a mouse in a hurry, a crab on the sand, gulls over
-  // the coast, a fish leaping, butterflies by day. Never many, never for long.
-  // Shells lie on the beaches all the time.
+  // hedgehog after dark, a tortoise taking its time, gulls over the coast, a
+  // dolphin out at sea. Never many, never for long. Walk up to one on the
+  // ground and it can be petted. Shells lie on the beaches all the time.
+  const legs = (g: Group, k: Pigment, w: number, l: number, h = 0.12, s = 0.06) =>
+    [-w, w].forEach((x) => [-l, l].forEach((z) => g.add(box(s, h, s, k, x, 0, z))));
+  const eyes = (g: Group, w: number, y: number, z: number, k: Pigment = 'ink', s = 0.045) =>
+    g.add(box(s, s, 0.02, k, -w, y, z), box(s, s, 0.02, k, w, y, z));
+  const brown = new MeshLambertMaterial({ color: hex('ochre').lerp(hex('ink'), 0.45) });
   const critter = {
     cat() {
       const g = new Group();
       const k: Pigment = Math.random() < 0.5 ? 'ochre' : 'ink';
+      const e: Pigment = k === 'ink' ? 'ochre' : 'ink';
       g.add(box(0.24, 0.24, 0.56, k, 0, 0.16), box(0.26, 0.24, 0.22, k, 0, 0.32, 0.34));
       g.add(cone(0.06, 0.12, k, -0.08, 0.56, 0.34, 4), cone(0.06, 0.12, k, 0.08, 0.56, 0.34, 4));
-      g.add(box(0.05, 0.05, 0.02, k === 'ink' ? 'ochre' : 'ink', -0.06, 0.44, 0.46), box(0.05, 0.05, 0.02, k === 'ink' ? 'ochre' : 'ink', 0.06, 0.44, 0.46));
+      eyes(g, 0.06, 0.44, 0.46, e, 0.05);
       const tail = cyl(0.035, 0.5, k, 0, 0.2, -0.3, 5);
       tail.rotation.x = -0.6;
       g.add(tail);
-      [-0.08, 0.08].forEach((x) => [-0.18, 0.18].forEach((z) => g.add(box(0.07, 0.16, 0.07, k, x, 0, z))));
+      legs(g, k, 0.08, 0.18, 0.16, 0.07);
       return g;
     },
+    // A European hedgehog: a round brown back of spines tipped dark, a pale
+    // pointed face with a black button nose, small ears, little feet.
     hedgehog() {
       const g = new Group();
-      g.add(blob(0.24, 'ink', 0, 0.18, 0, 0.72), box(0.14, 0.12, 0.14, 'ochre', 0, 0.1, 0.24), box(0.05, 0.05, 0.04, 'ink', 0, 0.12, 0.32));
-      for (let i = 0; i < 9; i++) {
-        const sp = cone(0.05, 0.16, 'ochre', 0, 0, 0, 4);
-        const a = (i / 9) * Math.PI * 2;
-        sp.position.set(Math.cos(a) * 0.16, 0.26, Math.sin(a) * 0.14 - 0.03);
-        sp.rotation.set(Math.sin(a) * 0.7, 0, -Math.cos(a) * 0.7);
-        g.add(sp);
+      // brown: the palette has none, so ochre darkened, which the dither weaves from ochre and ink
+      const coat = blob(0.27, 'ochre', 0, 0.2, -0.04, 0.72);
+      coat.material = brown;
+      g.add(coat);
+      for (let ring = 0; ring < 3; ring++) {
+        const n = 9 - ring * 2;
+        for (let i = 0; i < n; i++) {
+          const a = Math.PI * (0.08 + (0.84 * i) / (n - 1)); // across the back, side to side
+          const tip = cone(0.045, 0.14, (i + ring) % 2 ? 'ink' : 'ochre', 0, 0, 0, 4);
+          const lean = 0.35 + ring * 0.35;
+          tip.position.set(Math.cos(a) * 0.22 * (1 - ring * 0.25), 0.2 + Math.sin(a) * 0.18 * (1 - ring * 0.2), -0.06 - ring * 0.1);
+          tip.rotation.set(-lean, 0, Math.cos(a) * -0.9);
+          g.add(tip);
+        }
       }
+      const snout = cone(0.11, 0.24, 'cream', 0, 0, 0, 8);
+      snout.rotation.x = Math.PI / 2;
+      snout.position.set(0, 0.15, 0.27);
+      g.add(snout, blob(0.035, 'ink', 0, 0.15, 0.4), blob(0.13, 'cream', 0, 0.16, 0.15, 0.85));
+      eyes(g, 0.07, 0.21, 0.25, 'ink', 0.04);
+      g.add(blob(0.04, 'ochre', -0.1, 0.27, 0.17), blob(0.04, 'ochre', 0.1, 0.27, 0.17));
+      legs(g, 'ink', 0.12, 0.12, 0.06, 0.06);
       return g;
     },
     mouse() {
@@ -1270,17 +1294,100 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       });
       return g;
     },
+    // A Mediterranean tortoise: a high domed shell in plates, a wrinkled head.
+    tortoise() {
+      const g = new Group();
+      g.add(blob(0.3, 'olive', 0, 0.16, 0, 0.62), box(0.5, 0.05, 0.56, 'ochre', 0, 0.08));
+      [[0, 0.33, 0], [-0.13, 0.28, 0.1], [0.13, 0.28, 0.1], [-0.13, 0.28, -0.1], [0.13, 0.28, -0.1]].forEach(([x, y, z]) => g.add(box(0.1, 0.03, 0.1, 'ochre', x, y, z)));
+      g.add(box(0.13, 0.12, 0.16, 'ochre', 0, 0.12, 0.33));
+      eyes(g, 0.05, 0.2, 0.41, 'ink', 0.03);
+      legs(g, 'ochre', 0.18, 0.16, 0.1, 0.09);
+      return g;
+    },
+    lizard() {
+      const g = new Group();
+      g.add(box(0.1, 0.05, 0.34, 'olive', 0, 0.03), box(0.09, 0.05, 0.12, 'olive', 0, 0.04, 0.22), box(0.05, 0.03, 0.3, 'olive', 0, 0.02, -0.3), box(0.03, 0.02, 0.18, 'olive', 0, 0.02, -0.52));
+      eyes(g, 0.035, 0.08, 0.24, 'ink', 0.025);
+      [-1, 1].forEach((s) => [-0.1, 0.1].forEach((z) => g.add(box(0.14, 0.02, 0.03, 'olive', s * 0.08, 0, z))));
+      return g;
+    },
+    rabbit() {
+      const g = new Group();
+      g.add(blob(0.2, 'ochre', 0, 0.2, -0.04, 0.9), blob(0.13, 'ochre', 0, 0.34, 0.16), blob(0.07, 'cream', 0, 0.2, -0.24));
+      [-0.05, 0.05].forEach((x) => g.add(tilt(box(0.05, 0.26, 0.04, 'ochre', x, 0.42, 0.12), -0.25, 0, x * 2)));
+      eyes(g, 0.06, 0.37, 0.28, 'ink', 0.035);
+      g.add(box(0.03, 0.03, 0.02, 'red', 0, 0.32, 0.29));
+      legs(g, 'ochre', 0.1, 0.12, 0.08, 0.08);
+      return g;
+    },
+    dog() {
+      const g = new Group();
+      const k: Pigment = Math.random() < 0.5 ? 'ochre' : 'cream';
+      g.add(box(0.34, 0.3, 0.66, k, 0, 0.3), box(0.32, 0.3, 0.3, k, 0, 0.56, 0.4), box(0.18, 0.14, 0.16, 'cream', 0, 0.56, 0.6), box(0.07, 0.06, 0.04, 'ink', 0, 0.65, 0.68));
+      g.add(box(0.08, 0.2, 0.06, 'ink', -0.17, 0.66, 0.36), box(0.08, 0.2, 0.06, 'ink', 0.17, 0.66, 0.36));
+      eyes(g, 0.08, 0.74, 0.56, 'ink', 0.05);
+      const tail = cyl(0.04, 0.34, k, 0, 0.5, -0.34, 5);
+      tail.rotation.x = -0.9;
+      g.add(tail);
+      g.userData.tail = tail;
+      legs(g, k, 0.11, 0.24, 0.3, 0.09);
+      return g;
+    },
+    frog() {
+      const g = new Group();
+      g.add(box(0.3, 0.16, 0.3, 'olive', 0, 0.04), box(0.08, 0.08, 0.08, 'cream', -0.09, 0.2, 0.08), box(0.08, 0.08, 0.08, 'cream', 0.09, 0.2, 0.08));
+      eyes(g, 0.09, 0.22, 0.13, 'ink', 0.04);
+      g.add(box(0.36, 0.06, 0.12, 'olive', 0, 0, -0.12), box(0.14, 0.02, 0.02, 'red', 0, 0.1, 0.16));
+      return g;
+    },
+    snail() {
+      const g = new Group();
+      g.add(box(0.1, 0.07, 0.42, 'cream', 0, 0, 0.04), blob(0.15, 'ochre', 0, 0.18, -0.04));
+      const swirl = new Mesh(new TorusGeometry(0.08, 0.025, 5, 12), soft('red'));
+      swirl.position.set(0.15, 0.18, -0.04);
+      swirl.rotation.y = Math.PI / 2;
+      g.add(swirl, box(0.015, 0.12, 0.015, 'ink', -0.03, 0.06, 0.24), box(0.015, 0.12, 0.015, 'ink', 0.03, 0.06, 0.24));
+      return g;
+    },
+    hen() {
+      const g = new Group();
+      g.add(blob(0.2, 'cream', 0, 0.3, 0, 0.9), blob(0.11, 'cream', 0, 0.5, 0.16), box(0.04, 0.08, 0.1, 'red', 0, 0.62, 0.15), box(0.06, 0.04, 0.08, 'ochre', 0, 0.5, 0.28), box(0.04, 0.06, 0.03, 'red', 0, 0.44, 0.24));
+      g.add(tilt(box(0.14, 0.2, 0.08, 'cream', 0, 0.36, -0.22), -0.5, 0, 0));
+      eyes(g, 0.06, 0.53, 0.25, 'ink', 0.03);
+      g.add(box(0.03, 0.14, 0.03, 'ochre', -0.07, 0, 0), box(0.03, 0.14, 0.03, 'ochre', 0.07, 0, 0));
+      g.userData.head = true;
+      return g;
+    },
+    squirrel() {
+      const g = new Group();
+      g.add(blob(0.13, 'red', 0, 0.16, 0, 1.1), blob(0.09, 'red', 0, 0.3, 0.12), blob(0.05, 'cream', 0, 0.12, 0.08));
+      g.add(box(0.03, 0.07, 0.03, 'red', -0.05, 0.4, 0.12), box(0.03, 0.07, 0.03, 'red', 0.05, 0.4, 0.12));
+      eyes(g, 0.045, 0.32, 0.2, 'ink', 0.03);
+      // the great curled tail
+      g.add(tilt(box(0.12, 0.36, 0.1, 'red', 0, 0.06, -0.2), -0.3, 0, 0), tilt(box(0.12, 0.14, 0.18, 'red', 0, 0.4, -0.2), 0.4, 0, 0));
+      return g;
+    },
     gull() {
       const g = new Group();
       g.add(box(0.18, 0.16, 0.6, 'cream'), box(0.08, 0.05, 0.12, 'ochre', 0, 0.04, 0.34), box(0.16, 0.04, 0.2, 'ink', 0, 0.04, -0.34));
-      const wings = [-1, 1].map((sx) => {
+      g.userData.wings = [-1, 1].map((sx) => {
         const w = new Group();
         w.add(box(0.7, 0.03, 0.26, 'cream', sx * 0.35, 0), box(0.2, 0.035, 0.26, 'ink', sx * 0.62, 0));
         w.position.y = 0.1;
         g.add(w);
         return w;
       });
-      g.userData.wings = wings;
+      return g;
+    },
+    bat() {
+      const g = new Group();
+      g.add(blob(0.09, 'ink', 0, 0, 0, 1.2), box(0.03, 0.06, 0.02, 'ink', -0.04, 0.1, 0.03), box(0.03, 0.06, 0.02, 'ink', 0.04, 0.1, 0.03));
+      g.userData.wings = [-1, 1].map((sx) => {
+        const w = new Group();
+        w.add(box(0.36, 0.02, 0.2, 'ink', sx * 0.18, 0), box(0.1, 0.02, 0.1, 'ink', sx * 0.32, 0, -0.1));
+        g.add(w);
+        return w;
+      });
       return g;
     },
     fish() {
@@ -1291,27 +1398,58 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       g.userData.body = body;
       return g;
     },
+    dolphin() {
+      const g = new Group();
+      const body = new Group();
+      body.add(box(0.34, 0.34, 1.2, 'blue', 0, -0.17), box(0.26, 0.12, 0.3, 'cream', 0, -0.32, 0.2), box(0.12, 0.12, 0.2, 'blue', 0, -0.2, 0.68));
+      body.add(tilt(box(0.05, 0.26, 0.2, 'blue', 0, 0.02, -0.1), -0.5, 0, 0), box(0.5, 0.05, 0.16, 'blue', 0, -0.2, -0.66));
+      eyes(body, 0.16, -0.12, 0.42, 'ink', 0.04);
+      g.add(body);
+      g.userData.body = body;
+      return g;
+    },
     butterfly() {
       const g = new Group();
       const k: Pigment = Math.random() < 0.5 ? 'cream' : 'ochre';
       g.add(box(0.03, 0.03, 0.14, 'ink'));
-      const wings = [-1, 1].map((sx) => {
+      g.userData.wings = [-1, 1].map((sx) => {
         const w = new Group();
         w.add(box(0.16, 0.01, 0.14, k, sx * 0.08, 0, 0.02), box(0.1, 0.01, 0.08, 'red', sx * 0.06, 0, -0.08));
         g.add(w);
         return w;
       });
-      g.userData.wings = wings;
       return g;
     },
   };
   type Kind = keyof typeof critter;
-  type Life = { kind: Kind; g: Group; p: Vector3; h: Vector3; t: number; dur: number; speed: number; alt: number; still: number };
+  // How each one moves, where it lives, and whether it lets itself be petted.
+  type Way = 'walk' | 'dart' | 'hop' | 'crawl' | 'fly' | 'flutter' | 'leap';
+  const LIFE: Record<Kind, { way: Way; speed: number; dur: number; at: 'land' | 'sand' | 'sea' | 'air'; size: number; flock?: number; pet?: boolean }> = {
+    cat: { way: 'walk', speed: 0.9, dur: 12, at: 'land', size: 1.6, pet: true },
+    hedgehog: { way: 'walk', speed: 0.35, dur: 14, at: 'land', size: 1.6, pet: true },
+    mouse: { way: 'dart', speed: 2.6, dur: 7, at: 'land', size: 1.6, pet: true },
+    crab: { way: 'walk', speed: 0.6, dur: 9, at: 'sand', size: 1.6, pet: true },
+    tortoise: { way: 'walk', speed: 0.18, dur: 18, at: 'land', size: 1.5, pet: true },
+    lizard: { way: 'dart', speed: 2.2, dur: 8, at: 'land', size: 1.7, pet: true },
+    rabbit: { way: 'hop', speed: 1.4, dur: 10, at: 'land', size: 1.5, pet: true },
+    dog: { way: 'walk', speed: 1.5, dur: 12, at: 'land', size: 1.25, pet: true },
+    frog: { way: 'hop', speed: 0.9, dur: 10, at: 'land', size: 1.6, pet: true },
+    snail: { way: 'crawl', speed: 0.08, dur: 20, at: 'land', size: 1.7, pet: true },
+    hen: { way: 'walk', speed: 0.6, dur: 13, at: 'land', size: 1.5, pet: true },
+    squirrel: { way: 'hop', speed: 1.8, dur: 9, at: 'land', size: 1.6, pet: true },
+    gull: { way: 'fly', speed: 3.2, dur: 12, at: 'air', size: 1.8, flock: 3 },
+    bat: { way: 'fly', speed: 2.4, dur: 10, at: 'air', size: 2, flock: 2 },
+    butterfly: { way: 'flutter', speed: 0.7, dur: 12, at: 'air', size: 2.2, flock: 2 },
+    fish: { way: 'leap', speed: 0, dur: 1.1, at: 'sea', size: 1.6 },
+    dolphin: { way: 'leap', speed: 0, dur: 1.8, at: 'sea', size: 1.5 },
+  };
+  const DAY: Kind[] = ['cat', 'dog', 'tortoise', 'lizard', 'lizard', 'rabbit', 'hen', 'squirrel', 'mouse', 'crab', 'gull', 'gull', 'fish', 'dolphin', 'butterfly', 'butterfly', 'snail'];
+  const NIGHT: Kind[] = ['hedgehog', 'hedgehog', 'hedgehog', 'cat', 'mouse', 'frog', 'frog', 'snail', 'rabbit', 'bat', 'bat', 'fish', 'crab'];
+  type Life = { kind: Kind; g: Group; p: Vector3; h: Vector3; t: number; dur: number; alt: number; still: number; petted: number; seed: number };
   const living: Life[] = [];
-  let nextCritter = performance.now() + 9000;
+  let nextCritter = performance.now() + 8000;
   const onLand = (d: Vector3) => home.height(d) > SEA + 0.12;
   const onSand = (d: Vector3) => home.height(d) > SEA + 0.02 && home.height(d) < SEA + 0.4;
-  // Somewhere a few steps from the hero that suits the kind.
   // In front of the hero, where the camera looks, rather than behind it.
   const near = (test: (d: Vector3) => boolean, lo: number, hi: number) => {
     const back = new Quaternion().copy(home.q).invert();
@@ -1331,104 +1469,176 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     return u.multiplyScalar(Math.cos(a)).addScaledVector(v, Math.sin(a)).normalize();
   };
   function spawn(force?: Kind) {
-    const dark = nightNow > 0.5;
-    const pool: Kind[] = dark ? ['hedgehog', 'hedgehog', 'cat', 'mouse', 'fish', 'crab'] : ['cat', 'mouse', 'crab', 'gull', 'gull', 'fish', 'butterfly', 'butterfly', 'hedgehog'];
+    const pool = nightNow > 0.5 ? NIGHT : DAY;
     const kind = force ?? pool[Math.floor(Math.random() * pool.length)];
-    const test = kind === 'fish' ? (d: Vector3) => home.height(d) < SEA - 0.5 : kind === 'crab' ? onSand : kind === 'gull' ? () => true : onLand;
-    const p = near(test, 3, kind === 'fish' ? 13 : 7.5);
+    const life = LIFE[kind];
+    const test = life.at === 'sea' ? (d: Vector3) => home.height(d) < SEA - (kind === 'dolphin' ? 0.9 : 0.5) : life.at === 'sand' ? onSand : life.at === 'air' ? () => true : onLand;
+    const p = near(test, 3, life.at === 'sea' ? 13 : 7.5);
     if (!p) return;
-    const flock = kind === 'gull' ? 2 + Math.floor(Math.random() * 2) : kind === 'butterfly' ? 2 : 1;
-    for (let i = 0; i < flock; i++) {
+    const h = tangent(p);
+    for (let i = 0; i < (life.flock ?? 1); i++) {
       const g = critter[kind]();
       home.group.add(g);
       const q = i ? p.clone().multiplyScalar(home.R).add(new Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).multiplyScalar(2.4)).normalize() : p.clone();
-      const life: Life = {
-        kind,
-        g,
-        p: q,
-        h: i && living.length ? living[living.length - 1].h.clone() : tangent(q),
-        t: 0,
-        dur: { cat: 11, hedgehog: 13, mouse: 6, crab: 8, gull: 12, fish: 1.1, butterfly: 12 }[kind],
-        speed: { cat: 0.9, hedgehog: 0.35, mouse: 2.6, crab: 0.6, gull: 3.2, fish: 0, butterfly: 0.7 }[kind],
-        alt: kind === 'gull' ? 6 + Math.random() * 2 : kind === 'butterfly' ? 0.8 : 0,
-        still: 0,
-      };
-      living.push(life);
+      const alt = kind === 'gull' ? 6 + Math.random() * 2 : kind === 'bat' ? 3 + Math.random() : kind === 'butterfly' ? 0.8 : 0;
+      living.push({ kind, g, p: q, h: h.clone(), t: 0, dur: life.dur, alt, still: 0, petted: -1e9, seed: Math.random() * 10 });
     }
-    if (kind === 'cat' && Math.random() < 0.6) window.setTimeout(() => play('meow'), 800);
-    if (kind === 'gull') window.setTimeout(() => play('gull'), 600);
-    if (kind === 'mouse') play('squeak');
-    if (kind === 'fish') play('splash');
+    const call: Partial<Record<Kind, () => void>> = {
+      cat: () => Math.random() < 0.6 && play('meow'),
+      dog: () => Math.random() < 0.5 && play('call', 'dog'),
+      hen: () => play('call', 'hen'),
+      frog: () => play('call', 'frog'),
+      gull: () => play('gull'),
+      mouse: () => play('squeak'),
+      fish: () => play('splash'),
+      dolphin: () => play('plunge'),
+    };
+    window.setTimeout(() => call[kind]?.(), 600);
   }
+
+  // ── Petting ──
+  // Close enough to something on the ground, a "Pet" sign comes up over it
+  // (P does the same). It answers in its own voice, hops for joy, hearts rise,
+  // and it stays a little longer.
+  const petBtn = document.createElement('button');
+  petBtn.type = 'button';
+  petBtn.className = 'w-pet caps';
+  petBtn.innerHTML = '<span>Pet</span><kbd>P</kbd>';
+  labels.append(petBtn);
+  let petNear: Life | null = null;
+  function pet(L: Life) {
+    const now = performance.now();
+    if (now - L.petted < 1200) return;
+    L.petted = now;
+    L.dur = Math.min(L.t + 9, L.dur + 5);
+    play('pet', L.kind);
+    // hearts, rising from it
+    const s = toScreen(L.g.getWorldPosition(new Vector3()).addScaledVector(L.p, 0.8));
+    for (let i = 0; i < 3; i++) {
+      const h = document.createElement('span');
+      h.className = 'w-heart';
+      h.textContent = '♥';
+      h.style.left = `${Math.round(s.x + (i - 1) * 16)}px`;
+      h.style.top = `${Math.round(s.y)}px`;
+      h.style.animationDelay = `${i * 140}ms`;
+      labels.append(h);
+      window.setTimeout(() => h.remove(), 1600 + i * 140);
+    }
+  }
+  petBtn.addEventListener('click', () => {
+    petBtn.blur();
+    if (petNear) pet(petNear);
+  });
+  addEventListener('keydown', (e) => {
+    if ((e.key === 'p' || e.key === 'P') && petNear && !e.repeat && !(e.target as HTMLElement).matches('input, textarea')) pet(petNear);
+  });
+
   const basisM = new Matrix4();
   const side = new Vector3();
+  const heroAt = new Vector3();
+  const there = new Vector3();
   function lives(dt: number, now: number) {
     if (cur === home && !busy() && !aboard && zoom > 0.5 && now > nextCritter) {
       if (living.length < 4) spawn();
-      nextCritter = now + 14000 + Math.random() * 22000;
+      nextCritter = now + 10000 + Math.random() * 16000;
     }
+    hero.g.getWorldPosition(heroAt);
+    let best = 3.4;
+    petNear = null;
     for (let i = living.length - 1; i >= 0; i--) {
       const L = living[i];
+      const life = LIFE[L.kind];
       L.t += dt;
-      const end = L.t >= L.dur || cur !== home;
-      if (end) {
+      if (L.t >= L.dur || cur !== home) {
         L.g.removeFromParent();
         living.splice(i, 1);
         continue;
       }
       // in and out by growing and shrinking, like the hero between worlds
       const grow = Math.min(1, L.t / 0.4, (L.dur - L.t) / 0.5);
-      if (L.kind === 'fish') {
-        // a leap: out of the water and back in, with a ring each way
+      const joy = Math.max(0, 1 - (now - L.petted) / 1400); // just petted: 1, fading to 0
+      if (life.way === 'leap') {
+        // out of the water and back in, with a ring each way
         const t = L.t / L.dur;
-        const y = Math.sin(t * Math.PI) * 1.5;
+        const y = Math.sin(t * Math.PI) * (L.kind === 'dolphin' ? 2.6 : 1.5);
         L.g.position.copy(L.p).multiplyScalar(home.R + SEA - 0.1 + y);
         side.crossVectors(L.p, L.h).normalize();
         basisM.makeBasis(side, L.p, L.h);
         L.g.quaternion.setFromRotationMatrix(basisM);
         (L.g.userData.body as Group).rotation.x = -Math.cos(t * Math.PI) * 0.9;
-        L.g.position.addScaledVector(L.h, (t - 0.5) * 1.6);
-        if (L.t - dt < 0.02) ripple(0.7, L.p);
+        L.g.position.addScaledVector(L.h, (t - 0.5) * (L.kind === 'dolphin' ? 3 : 1.6));
+        if (L.t - dt < 0.02) ripple(L.kind === 'dolphin' ? 1.3 : 0.7, L.p);
         if (t > 0.92 && !L.still) {
           L.still = 1;
-          ripple(0.8, L.g.position.clone().normalize());
+          ripple(L.kind === 'dolphin' ? 1.5 : 0.8, L.g.position.clone().normalize());
           play('splash');
         }
-        L.g.scale.setScalar(1.6);
+        L.g.scale.setScalar(life.size);
         continue;
       }
-      // the mouse darts and stops; the cat sits a while halfway; butterflies wander
-      let go = L.speed;
-      if (L.kind === 'mouse') go *= Math.sin(L.t * 5) > -0.2 ? 1 : 0;
-      if (L.kind === 'cat' && L.t > L.dur * 0.4 && L.t < L.dur * 0.62) go = 0;
-      if (L.kind === 'butterfly' || L.kind === 'gull') {
-        const turn = L.kind === 'butterfly' ? Math.sin(L.t * 2.3 + i) * 1.8 : 0.22;
+      // how it goes: steady, in darts, in hops, or not at all while it enjoys a pat
+      let go = life.speed;
+      const ph = L.t * (life.way === 'hop' ? 3.2 : 5) + L.seed;
+      if (life.way === 'dart') go *= Math.sin(ph) > -0.2 ? 1 : 0;
+      if (life.way === 'hop') go *= Math.sin(ph) > 0 ? 1 : 0.1;
+      if (L.kind === 'cat' && L.t > L.dur * 0.4 && L.t < L.dur * 0.62) go = 0; // sits a while
+      if (L.kind === 'hen' && Math.sin(L.t * 1.7 + L.seed) > 0.4) go = 0; // stops to peck
+      if (joy > 0) go = 0;
+      if (life.way === 'flutter' || life.way === 'fly') {
+        const turn = life.way === 'flutter' ? Math.sin(L.t * 2.3 + L.seed) * 1.8 : L.kind === 'bat' ? Math.sin(L.t * 3.1 + L.seed) * 2.4 : 0.22;
         L.h.applyAxisAngle(L.p, turn * dt);
       }
-      const step = (go * dt) / home.R;
-      const next = L.p.clone().addScaledVector(L.h, step).normalize();
-      const ok = L.alt > 0 || (L.kind === 'crab' ? onSand(next) : onLand(next));
+      const next = L.p.clone().addScaledVector(L.h, (go * dt) / home.R).normalize();
+      const ok = L.alt > 0 || (life.at === 'sand' ? onSand(next) : onLand(next));
       if (ok) L.p.copy(next);
       else L.h.negate(); // the water's edge: turn back
       L.h.addScaledVector(L.p, -L.h.dot(L.p)).normalize();
       const ground = L.alt > 0 ? 0 : Math.max(home.height(L.p), SEA);
-      const bob = L.kind === 'butterfly' ? Math.sin(L.t * 9) * 0.15 : L.kind === 'gull' ? Math.sin(L.t * 0.8) * 0.4 : go ? Math.abs(Math.sin(L.t * go * 9)) * 0.04 : 0;
+      let bob = 0;
+      if (life.way === 'flutter') bob = Math.sin(L.t * 9) * 0.15;
+      else if (life.way === 'fly') bob = Math.sin(L.t * (L.kind === 'bat' ? 2.6 : 0.8)) * 0.4;
+      else if (life.way === 'hop') bob = go > 0.2 ? Math.abs(Math.sin(ph)) * (L.kind === 'frog' ? 0.35 : 0.25) : 0;
+      else if (go) bob = Math.abs(Math.sin(L.t * go * 9)) * 0.04;
+      bob += Math.abs(Math.sin(joy * Math.PI * 3)) * 0.35 * joy; // little hops of joy
       L.g.position.copy(L.p).multiplyScalar(home.R + ground + L.alt + bob);
-      // crabs walk sideways
-      const face = L.kind === 'crab' ? side.crossVectors(L.p, L.h).normalize().clone() : L.h;
+      // petted, it turns to the hero; crabs walk sideways
+      let face = L.h;
+      if (joy > 0) {
+        home.group.worldToLocal(there.copy(heroAt));
+        face = there.sub(L.g.position).addScaledVector(L.p, -there.dot(L.p)).normalize();
+      } else if (L.kind === 'crab') face = side.crossVectors(L.p, L.h).normalize().clone();
       side.crossVectors(L.p, face).normalize();
       basisM.makeBasis(side, L.p, face);
       L.g.quaternion.setFromRotationMatrix(basisM);
       if (L.kind === 'gull') L.g.rotateZ(-0.35); // banking round the turn
+      if (joy > 0) L.g.rotateY(Math.sin(joy * 18) * 0.25 * joy); // a wiggle
       const wings = L.g.userData.wings as Group[] | undefined;
       if (wings) {
-        const f = L.kind === 'butterfly' ? Math.sin(now * 0.03) * 1.1 : Math.sin(now * 0.008) * 0.45;
+        const f = L.kind === 'butterfly' ? Math.sin(now * 0.03) * 1.1 : L.kind === 'bat' ? Math.sin(now * 0.025) * 0.8 : Math.sin(now * 0.008) * 0.45;
         wings[0].rotation.z = f;
         wings[1].rotation.z = -f;
       }
-      // a touch larger than life, so they read from the camera
-      L.g.scale.setScalar(Math.max(0.001, grow) * (L.kind === 'gull' ? 1.8 : L.kind === 'butterfly' ? 2.2 : 1.6));
+      const tail = L.g.userData.tail as Mesh | undefined;
+      if (tail) tail.rotation.z = Math.sin(now * (joy > 0 ? 0.04 : 0.012)) * (joy > 0 ? 0.7 : 0.3);
+      // hens peck: the whole bird tips forward
+      if (L.kind === 'hen' && go === 0 && joy === 0) L.g.rotateX(Math.max(0, Math.sin(now * 0.012)) * 0.5);
+      // snails and hedgehogs squash a little when touched
+      const squash = joy > 0 && (L.kind === 'hedgehog' || L.kind === 'snail') ? 1 - Math.sin(joy * Math.PI) * 0.25 : 1;
+      L.g.scale.set(1, squash, 1).multiplyScalar(Math.max(0.001, grow) * life.size);
+      // the nearest one on the ground within reach can be petted
+      if (life.pet && grow > 0.9) {
+        const dist = L.g.getWorldPosition(there).distanceTo(heroAt);
+        if (dist < best) {
+          best = dist;
+          petNear = L;
+        }
+      }
     }
+    const show = !!petNear && !busy() && zoom > 0.5 && !aboard;
+    if (show) {
+      const s = toScreen(petNear!.g.getWorldPosition(there).addScaledVector(petNear!.p, 1.1));
+      place(petBtn, s.front, s.x, s.y, true);
+    } else place(petBtn, false);
   }
   // Shells on the sand: scallops and cockles, a few on every beach.
   for (let n = 0, tries = 0; n < 16 && tries < 3000; tries++) {
@@ -1743,6 +1953,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let down: { x: number; y: number; moved: boolean } | null = null;
   let hovered: Spot | null = null;
   let chosen: Spot | null = null; // the thing within reach: what Enter opens
+  const markMat = new MeshBasicMaterial({ color: hex('red'), transparent: true, opacity: 0, depthWrite: false });
+  const mark = new Mesh(new RingGeometry(0.86, 1, 44).rotateX(-Math.PI / 2), markMat);
   let lastPtr = { x: -1, y: -1 };
   const heading = new Vector2(0, -1); // where the hero last walked; into the screen on arrival
   const aim = (cx: number, cy: number) => {
@@ -1851,8 +2063,9 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       if (tabbing && on?.matches('a, button')) return;
       e.preventDefault();
       if (busy() || e.repeat) return;
-      const p = hovered ?? chosen;
-      if (p) visit(p);
+      // only ever what is marked: the nearest thing, ringed on the ground and its sign dark;
+      // the mouse opens what it points at by clicking, never by Enter
+      if (chosen) visit(chosen);
       else if (zoom < 0.55) zoomGoal = 1; // from afar, Enter takes you down to the ground
       return;
     }
@@ -2078,6 +2291,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     // dressed for space on the station: on halfway through the jump there, off halfway back
     hero.suit.visible = warp ? (f > 0.5 ? warp.to : warp.from) === station : cur === station;
     hero.boots.forEach((b) => (b.visible = hero.suit.visible));
+    hero.straw.visible = !hero.suit.visible; // the helmet's antenna stands in for it
     // the lantern comes out at dusk and goes away by day
     hero.lamp.visible = dusk > 0.05;
     hero.lamp.scale.setScalar(Math.max(0.001, smooth(0.05, 0.5, dusk)));
@@ -2357,7 +2571,18 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         }
       }
     }
-    const aimed: Spot | null = busy() ? null : hovered ?? chosen;
+    const aimed: Spot | null = busy() ? null : chosen;
+    // The ring on the ground round whatever Enter will open.
+    if (aimed) {
+      if (mark.parent !== cur.group) cur.group.add(mark);
+      const r = Math.max(aimed.box.max.x - aimed.box.min.x, aimed.box.max.z - aimed.box.min.z) * aimed.scale * 0.5 + 0.45;
+      w.copy(aimed.g.position).normalize();
+      mark.position.copy(w).multiplyScalar(aimed.g.position.length() + 0.06);
+      mark.quaternion.setFromUnitVectors(axisY, w);
+      mark.scale.setScalar(r * (1 + Math.sin(now * 0.006) * 0.06));
+      markMat.opacity = Math.min(1, markMat.opacity + dt * 4);
+    } else markMat.opacity = Math.max(0, markMat.opacity - dt * 6);
+    mark.visible = markMat.opacity > 0.01;
     {
       // fade out, move over, fade back in
       const want = dusk > 0.05 && aimed && !aimed.card ? aimed : null;
@@ -2385,7 +2610,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         look.makeBasis(right, up, forward);
         p.g.quaternion.setFromRotationMatrix(look);
       }
-      const lift = (p === aimed ? 1.08 : 1) * p.scale;
+      const lift = (p === aimed || p === hovered ? 1.08 : 1) * p.scale;
       p.g.scale.setScalar(p.g.scale.x + (lift - p.g.scale.x) * 0.2);
       p.g.updateMatrixWorld(true);
       let l = Infinity;
@@ -2423,7 +2648,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       const signY = Math.max(above ? 54 : 6, Math.min(H - 54, y));
       const sign = { l: x - width / 2 - 4, r: x + width / 2 + 4, t: above ? signY - 52 : signY, b: above ? signY : signY + 52 };
       const clash = placed.some((o) => sign.l < o.r && sign.r > o.l && sign.t < o.b && sign.b > o.t);
-      const on = !busy() && (p === aimed || focused || (showTombs && close && !hidden && !clash)) && facing > 0.08 && inFrame;
+      const on = !busy() && (p === aimed || p === hovered || focused || (showTombs && close && !hidden && !clash)) && facing > 0.08 && inFrame;
       if (on) placed.push(sign);
       if (on && width !== p.size) {
         p.size = width;

@@ -312,6 +312,29 @@ if (typeof window !== 'undefined') {
 }
 
 // ── Effects ──
+// The passers-by, each in its own voice.
+const VOICES: Record<string, () => void> = {
+  cat: () => {
+    hiss(1.1, { kind: 'lowpass', freq: 160, gain: 0.35, attack: 0.15 }); // the purr
+    for (let i = 0; i < 9; i++) tone(48, 0.07, { gain: 0.12, at: i * 0.11 });
+    sweep([[0, 620], [0.1, 880], [0.36, 640]], { type: 'sawtooth', gain: 0.03, at: 0.9 });
+  },
+  dog: () => [0, 0.26].forEach((at) => sweep([[0, 330], [0.05, 260], [0.13, 170]], { type: 'sawtooth', gain: 0.07, at })),
+  hedgehog: () => {
+    [0, 0.09, 0.18, 0.3].forEach((at) => hiss(0.05, { freq: 2600, q: 3, gain: 0.18, at }));
+    tone(1900, 0.08, { to: 2500, gain: 0.03, at: 0.42 });
+  },
+  mouse: () => [0, 0.1, 0.2].forEach((at) => tone(2800 + Math.random() * 300, 0.06, { to: 3400, gain: 0.03, at })),
+  crab: () => [0, 0.07, 0.14, 0.24].forEach((at) => hiss(0.025, { freq: 4000, q: 6, gain: 0.25, at })),
+  tortoise: () => tone(170, 0.5, { to: 150, gain: 0.08, attack: 0.1 }),
+  lizard: () => [0, 0.06].forEach((at) => tone(3600, 0.04, { gain: 0.025, at })),
+  rabbit: () => [0, 0.14].forEach((at) => tone(90, 0.1, { to: 60, gain: 0.25, at })),
+  frog: () => [0, 0.22].forEach((at) => sweep([[0, 140], [0.12, 115], [0.18, 160]], { type: 'square', gain: 0.04, at })),
+  snail: () => [0, 0.12, 0.2].forEach((at) => tone(500 + Math.random() * 300, 0.06, { to: 1100, gain: 0.04, at })),
+  hen: () => [0, 0.13, 0.26].forEach((at, i) => sweep([[0, 640 - i * 30], [0.05, 820], [0.1, 470]], { type: 'triangle', gain: 0.05, at })),
+  squirrel: () => [0, 0.05, 0.1, 0.15, 0.2, 0.25].forEach((at) => tone(1800 + Math.random() * 600, 0.035, { type: 'triangle', gain: 0.03, at })),
+};
+
 const PENTA = [72, 74, 77, 79, 81, 84, 86];
 const EFFECTS = {
   // a soft pop, for buttons and things picked
@@ -339,6 +362,13 @@ const EFFECTS = {
   meow: () => sweep([[0, 560], [0.12, 820], [0.42, 600], [0.55, 470]], { type: 'sawtooth', gain: 0.035 }),
   gull: () => [0, 0.32, 0.6].forEach((at, i) => sweep([[0, 1300 - i * 60], [0.07, 1850 - i * 80], [0.24, 1150]], { type: 'sawtooth', gain: 0.022, at })),
   squeak: () => [0, 0.11].forEach((at) => tone(2700 + Math.random() * 400, 0.06, { to: 3300, gain: 0.03, at })),
+  // a call from one of the passers-by, and the same voice with a happy chime when petted
+  call: (kind = '') => VOICES[kind]?.(),
+  pet: (kind = '') => {
+    VOICES[kind]?.();
+    bar(midi(84), 0.5, 0.05, 0.5);
+    bar(midi(88), 0.6, 0.05, 0.6);
+  },
   jump: () => tone(330, 0.2, { type: 'triangle', to: 780, gain: 0.12 }),
   open: () => {
     bar(midi(77), 0.5, 0.12);
