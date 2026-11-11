@@ -2034,7 +2034,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const r = canvas.getBoundingClientRect();
     return planets.find((p, k) => p.slot >= 0 && Math.hypot(cx - r.left - skyPos[k].x, cy - r.top - skyPos[k].y) < skyPos[k].r + 6);
   };
-  const PER_PX = 0.0034;
   canvas.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     canvas.setPointerCapture(e.pointerId);
@@ -2056,12 +2055,19 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const dy = e.clientY - down.y;
     if (!down.moved && Math.hypot(dx, dy) < 5) return;
     down.moved = true;
-    goal = null;
     canvas.style.cursor = 'grabbing';
     if (busy()) return;
-    const speed = PER_PX * lerp(1.5, 1, zoom) * (20 / cur.R);
-    roll(dy * speed, -dx * speed);
-    vel = { x: dy * speed, z: -dx * speed };
+    // Dragging turns the view round the hero (sideways) and leans in or out (up and down);
+    // walking is for clicks and keys.
+    const a = dx * 0.006;
+    dq.setFromAxisAngle(axisY, a);
+    cur.q.premultiply(dq).normalize();
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    heading.set(heading.x * c + heading.y * sn, -heading.x * sn + heading.y * c);
+    if (goal) goalAt = performance.now(); // keep walking to it; the spot turns with the ground
+    zoomGoal = Math.min(1, Math.max(0, zoomGoal + dy * 0.004));
+    vel = { x: 0, z: 0 };
     down.x = e.clientX;
     down.y = e.clientY;
     touch();
@@ -2379,7 +2385,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
 
     // How far did the ground move under the hero?
     dq.copy(cur.q).multiply(inv.copy(before).invert()).normalize();
-    const speed = (2 * Math.acos(Math.min(1, Math.abs(dq.w)))) / Math.max(dt, 0.001);
+    // only the ground sliding under the hero counts, not the view turning round it
+    const speed = (2 * Math.hypot(dq.x, dq.z)) / Math.max(dt, 0.001);
     inv.copy(cur.q).invert();
     under.copy(NORTH).applyQuaternion(inv);
     // In the sea, a step at a time: deep enough, and the hero wades in to the knees.

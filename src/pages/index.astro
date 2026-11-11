@@ -108,6 +108,7 @@ const cv = elsewhere.find((l) => l.href.endsWith('.pdf'))!;
 const social = elsewhere.filter((l) => l !== email && l !== cv);
 const shortcuts: [string[], string][] = [
   [['Click'], 'Walk to that spot'],
+  [['Drag'], 'Turn the view; up and down to lean in or out'],
   [['←', '↑', '→', '↓'], 'Walk'],
   [['W', 'A', 'S', 'D'], 'Walk, on the home row'],
   [['H', 'J', 'K', 'L'], 'Walk, vim-style; J K walk the index'],
@@ -268,7 +269,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         ))}
       </ul>
       <p class="f-hint caps muted">Drag or scroll to move · Pinch or Ctrl + scroll to zoom · <kbd>?</kbd> Shortcuts</p>
-      <p class="f-hint w-hint caps muted">Click the ground or use the arrows to walk · Enter opens what is ringed · Space to jump · <kbd>?</kbd> Shortcuts</p>
+      <p class="f-hint w-hint caps muted">Click to walk · Drag to turn the view · Enter opens what is ringed · Space to jump · <kbd>?</kbd> Shortcuts</p>
       <div class="zoom" data-zoom>
         <button type="button" class="z-btn key-up" data-zoom-out aria-label="Zoom out" data-key="−">−</button>
         <div class="ruler" data-ruler role="slider" tabindex="0" aria-label="Zoom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
