@@ -1814,6 +1814,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     cur.q.premultiply(dq).normalize();
   }
   function turnTo(to: Quaternion, dur: number, then?: Then) {
+    goal = null;
     trip = { from: cur.q.clone(), to, t0: performance.now(), dur, then };
     vel = { x: 0, z: 0 };
     touch();
@@ -1864,6 +1865,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   function jump(to: Planet, then?: Then) {
     if (to === cur || warp) return then?.();
     trip = null;
+    goal = null;
     vel = { x: 0, z: 0 };
     keys.clear();
     warp = { from: cur, to, t0: performance.now(), dur: ms(1700), then };
@@ -1971,6 +1973,39 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let chosen: Spot | null = null; // the thing within reach: what Enter opens
   const markMat = new MeshBasicMaterial({ color: hex('red'), transparent: true, opacity: 0, depthWrite: false });
   const mark = new Mesh(new RingGeometry(0.86, 1, 44).rotateX(-Math.PI / 2), markMat);
+  // Click the ground and the hero walks there, as units do in a strategy game;
+  // a small cross marks the spot until it arrives.
+  let goal: Vector3 | null = null; // in the planet's own frame
+  let goalLeft = Infinity;
+  let goalStall = 0;
+  let goalAt = 0;
+  const goalMat = new MeshBasicMaterial({ color: hex('cream'), transparent: true, opacity: 0, depthWrite: false });
+  const goalMark = new Group();
+  [Math.PI / 4, -Math.PI / 4].forEach((a) => {
+    const bar = new Mesh(new BoxGeometry(0.9, 0.04, 0.16), goalMat);
+    bar.rotation.y = a;
+    goalMark.add(bar);
+  });
+  goalMark.add(new Mesh(new RingGeometry(0.62, 0.74, 28).rotateX(-Math.PI / 2), goalMat));
+  const walkTo = (cx: number, cy: number) => {
+    aim(cx, cy);
+    const hit = ray.intersectObject(cur.group, true).find((h) => (h.object as Mesh).isMesh && h.object.visible && h.object !== goalMark.children[0] && h.object.parent !== goalMark);
+    if (!hit) return false;
+    goal = cur.group.worldToLocal(hit.point.clone()).normalize();
+    goalLeft = Infinity;
+    goalStall = 0;
+    goalAt = performance.now();
+    trip = null;
+    vel = { x: 0, z: 0 };
+    zoomGoal = 1;
+    if (goalMark.parent !== cur.group) cur.group.add(goalMark);
+    goalMark.position.copy(goal).multiplyScalar(cur.R + Math.max(cur.height(goal), SEA) + 0.08);
+    goalMark.quaternion.setFromUnitVectors(axisY, goal);
+    goalMat.opacity = 1;
+    play('tap');
+    touch();
+    return true;
+  };
   let lastPtr = { x: -1, y: -1 };
   const heading = new Vector2(0, -1); // where the hero last walked; into the screen on arrival
   const aim = (cx: number, cy: number) => {
@@ -2014,13 +2049,14 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       if (e.clientX === lastPtr.x && e.clientY === lastPtr.y) return;
       lastPtr = { x: e.clientX, y: e.clientY };
       hovered = busy() ? null : pick(e.clientX, e.clientY);
-      canvas.style.cursor = hovered || skyAt(e.clientX, e.clientY) || onHero(e.clientX, e.clientY) ? 'pointer' : 'grab';
+      canvas.style.cursor = hovered || skyAt(e.clientX, e.clientY) || onHero(e.clientX, e.clientY) ? 'pointer' : 'crosshair';
       return;
     }
     const dx = e.clientX - down.x;
     const dy = e.clientY - down.y;
     if (!down.moved && Math.hypot(dx, dy) < 5) return;
     down.moved = true;
+    goal = null;
     canvas.style.cursor = 'grabbing';
     if (busy()) return;
     const speed = PER_PX * lerp(1.5, 1, zoom) * (20 / cur.R);
@@ -2034,13 +2070,14 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (!down) return;
     const wasClick = !down.moved;
     down = null;
-    canvas.style.cursor = 'grab';
+    canvas.style.cursor = 'crosshair';
     if (!wasClick || busy()) return;
     const sky = skyAt(e.clientX, e.clientY);
     if (sky) return sky.chip.click();
     const p = pick(e.clientX, e.clientY);
     if (p) return visit(p);
-    if (onHero(e.clientX, e.clientY)) say(guide.intro, true);
+    if (onHero(e.clientX, e.clientY)) return say(guide.intro, true);
+    walkTo(e.clientX, e.clientY);
   };
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointercancel', release);
@@ -2187,6 +2224,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (warp || dive || launch || land) {
       // handled below, with the camera
     } else if (wx || wz) {
+      goal = null; // the keys take over
       const len = Math.hypot(wx, wz);
       const step = (8.4 / cur.R) * dt;
       roll((wx / len) * step, (wz / len) * step);
@@ -2198,6 +2236,20 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         const then = trip.then;
         trip = null;
         then?.();
+      }
+    } else if (goal) {
+      // towards the clicked spot, at walking pace; give up if something solid is in the way
+      w.copy(goal).applyQuaternion(cur.q);
+      const left = w.angleTo(NORTH) * cur.R;
+      if (left < 0.45 || now - goalAt > 20000) goal = null;
+      else {
+        const len = Math.hypot(w.x, w.z) || 1;
+        const step = Math.min(left, 8.4 * dt) / cur.R;
+        roll((-w.z / len) * step, (w.x / len) * step);
+        goalStall = left > goalLeft - 0.003 ? goalStall + dt : 0;
+        goalLeft = left;
+        if (goalStall > 0.5) goal = null;
+        touch();
       }
     } else if (!down && Math.abs(vel.x) + Math.abs(vel.z) > 0.0003) {
       roll(vel.x, vel.z);
@@ -2335,7 +2387,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     wet += ((inSea ? 1 : 0) - wet) * Math.min(1, dt * 6);
     const ground = rEff + (warp ? GROUND : Math.max(cur.height(under), SEA) - wet * 0.32);
     heroY += (ground - heroY) * (1 - Math.pow(0.0001, Math.min(0.3, ease)));
-    const walking = speed > 0.06 && (zoom > 0.15 || keys.size > 0 || !!trip) && !aboard;
+    const walking = speed > 0.06 && (zoom > 0.15 || keys.size > 0 || !!trip || !!goal) && !aboard;
     if (walking) {
       const s = dq.w < 0 ? -1 : 1;
       const yaw = Math.atan2(dq.z * s, -dq.x * s);
@@ -2600,6 +2652,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       markMat.opacity = Math.min(1, markMat.opacity + dt * 4);
     } else markMat.opacity = Math.max(0, markMat.opacity - dt * 6);
     mark.visible = markMat.opacity > 0.01;
+    // the cross where the hero is heading: it pops in, breathes, and fades on arrival
+    goalMat.opacity = goal ? Math.min(1, goalMat.opacity + dt * 6) : Math.max(0, goalMat.opacity - dt * 3);
+    goalMark.visible = goalMat.opacity > 0.01 && goalMark.parent === cur.group;
+    if (goalMark.visible) goalMark.scale.setScalar(1 + Math.sin(now * 0.008) * 0.08 + Math.max(0, 1 - (now - goalAt) / 250) * 0.6);
     {
       // fade out, move over, fade back in
       const want = dusk > 0.05 && aimed && !aimed.card ? aimed : null;
