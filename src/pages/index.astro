@@ -1851,6 +1851,97 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  /* At the workbench: two sides to choose, laid over the bench top. */
+  :global(.w-bench) {
+    position: absolute;
+    left: 50%;
+    bottom: clamp(1.5rem, 8vh, 4rem);
+    z-index: 30;
+    width: min(44rem, calc(100vw - 2rem));
+    padding: 1rem 1rem 0.8rem;
+    border-radius: 1rem;
+    color: var(--ink);
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--rule), 0 18px 40px -18px rgb(38 46 58 / 0.45);
+    transform: translateX(-50%);
+    animation: w-rise 0.45s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  }
+  :global(.w-bench[hidden]) {
+    display: none;
+  }
+  @keyframes w-rise {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 16px);
+    }
+  }
+  :global(.w-bench-t) {
+    margin: 0 0 0.7rem;
+    color: var(--ink-2);
+    font-size: 0.6875rem;
+  }
+  :global(.w-bench-c) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+  :global(.w-bench-o) {
+    display: grid;
+    gap: 0.3rem;
+    align-content: start;
+    padding: 0.9rem 1rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 0.7rem;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 0.2s,
+      background-color 0.2s;
+  }
+  :global(.w-bench-o span) {
+    color: var(--dot);
+    font-size: 0.6875rem;
+  }
+  :global(.w-bench-o b) {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  :global(.w-bench-o em) {
+    color: var(--ink-2);
+    font-size: 0.8125rem;
+    font-style: normal;
+    line-height: 1.35;
+  }
+  :global(.w-bench-o:hover),
+  :global(.w-bench-o:focus-visible) {
+    border-color: var(--ink);
+    outline: none;
+  }
+  :global(.w-bench-o.nudge) {
+    animation: w-nudge 0.4s;
+  }
+  @keyframes w-nudge {
+    30% {
+      transform: translateX(-5px);
+    }
+    60% {
+      transform: translateX(4px);
+    }
+  }
+  :global(.w-bench-x) {
+    display: block;
+    margin: 0.7rem 0 0 auto;
+    padding: 0.3rem 0.2rem;
+    border: 0;
+    color: var(--ink-2);
+    background: none;
+    font: inherit;
+    font-size: 0.6875rem;
+    cursor: pointer;
+  }
   /* At the door, the card sits low, under the door, like a voice from inside. */
   :global(.w-lock.pov) {
     top: 72%;
