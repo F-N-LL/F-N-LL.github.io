@@ -1829,6 +1829,95 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     transition: opacity 0.3s;
     cursor: pointer;
   }
+  /* The lock on the flat's door: a small card over the world. */
+  :global(.w-lock) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 30;
+    width: min(20rem, calc(100vw - 2rem));
+    padding: 1.1rem 1.1rem 0.8rem;
+    border-radius: 0.9rem;
+    color: var(--ink);
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--rule), 0 18px 40px -18px rgb(38 46 58 / 0.45);
+    transform: translate(-50%, -50%);
+  }
+  :global(.w-lock .sr-only) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  :global(.w-lock[hidden]) {
+    display: none;
+  }
+  :global(.w-lock-t) {
+    margin: 0 0 0.7rem;
+    color: var(--ink-2);
+    font-size: 0.6875rem;
+  }
+  :global(.w-lock input) {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: 0.5rem;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+  }
+  :global(.w-lock input:focus-visible) {
+    outline: 2px solid var(--dot);
+    outline-offset: 1px;
+  }
+  :global(.w-lock-m) {
+    min-height: 1.2em;
+    margin: 0.45rem 0 0.2rem;
+    color: var(--dot);
+    font-size: 0.8125rem;
+  }
+  :global(.w-lock-f) {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  :global(.w-lock button) {
+    padding: 0.45rem 0.8rem 0.4rem;
+    border: 0;
+    border-radius: 999px;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  :global(.w-lock .w-lock-go) {
+    color: #fff;
+    background: var(--dot);
+  }
+  :global(.w-lock.busy) {
+    opacity: 0.8;
+    pointer-events: none;
+  }
+  :global(.w-lock.shake) {
+    animation: w-shake 0.4s;
+  }
+  @keyframes w-shake {
+    20%,
+    60% {
+      transform: translate(calc(-50% - 8px), -50%);
+    }
+    40%,
+    80% {
+      transform: translate(calc(-50% + 8px), -50%);
+    }
+  }
   /* Inside the flat the name and the lines about the work step aside. */
   :global(.world.indoors) [data-w-id] {
     opacity: 0;

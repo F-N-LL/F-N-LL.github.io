@@ -3,3 +3,6 @@ dist/
 node_modules/
 .env
 .DS_Store
+
+# The flat stays private: only its sealed copy (public/house.sealed.json) is published
+private/

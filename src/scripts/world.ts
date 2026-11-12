@@ -52,7 +52,6 @@ import {
 } from 'three';
 import { PIGMENTS } from '../data/pigments';
 import { play, setEngine, setSea } from './sound';
-import { buildHouse } from './house';
 
 export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
 export type WorldOptions = {
@@ -2240,9 +2239,88 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   // Through the front door of the little house is Daniel's flat, a dollhouse on
   // a flat floor: the hero walks it with clicks or keys, the view follows from
   // above, and the same door (or Esc) leads back out to the planet.
-  const flat = buildHouse();
+  // The flat is private: the site carries it only sealed (AES-GCM, the key from
+  // the password by PBKDF2), and builds it once the right password opens it.
+  type Rect = { x1: number; z1: number; x2: number; z2: number };
+  type House = {
+    scene: Scene;
+    floors: Mesh[];
+    solids: Rect[];
+    rooms: { name: string; x: number; z: number }[];
+    spawn: { x: number; z: number };
+    out: Rect;
+    lamps: PointLight[];
+    windows: MeshBasicMaterial;
+    ambient: AmbientLight;
+    sun: DirectionalLight;
+  };
+  let flat: House | null = null;
+  const KIT = { AmbientLight, BoxGeometry, Color, CylinderGeometry, DirectionalLight, Group, IcosahedronGeometry, Mesh, MeshBasicMaterial, MeshLambertMaterial, PlaneGeometry, PointLight, Scene, TorusGeometry, SRGBColorSpace };
+  async function unseal(pw: string): Promise<House> {
+    const res = await fetch('/house.sealed.json', { cache: 'no-store' });
+    const box = (await res.json()) as { iter: number; salt: string; iv: string; data: string };
+    const bytes = (b: string) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: bytes(box.salt), iterations: box.iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(box.iv) }, key, bytes(box.data)); // throws on a wrong password
+    const url = URL.createObjectURL(new Blob([plain], { type: 'text/javascript' }));
+    try {
+      const mod = (await import(/* @vite-ignore */ url)) as { buildHouse: (k: typeof KIT, p: typeof PIGMENTS) => House };
+      return mod.buildHouse(KIT, PIGMENTS);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  // The lock on the door: sixteen characters, asked for once per visit.
+  const lock = document.createElement('form');
+  lock.className = 'w-lock';
+  lock.hidden = true;
+  lock.innerHTML = `<p class="w-lock-t caps">Private · the flat</p><label class="sr-only" for="w-lock-in">Password</label><input id="w-lock-in" type="password" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Password" /><p class="w-lock-m" aria-live="polite"></p><p class="w-lock-f"><button type="button" class="w-lock-x caps">Cancel</button><button type="submit" class="w-lock-go caps">Unlock</button></p>`;
+  root.append(lock);
+  const lockIn = lock.querySelector<HTMLInputElement>('input')!;
+  const lockMsg = lock.querySelector<HTMLElement>('.w-lock-m')!;
+  const closeLock = () => {
+    lock.hidden = true;
+    lockIn.value = '';
+    lockMsg.textContent = '';
+    canvas.focus({ preventScroll: true });
+  };
+  lock.querySelector('.w-lock-x')!.addEventListener('click', closeLock);
+  lock.addEventListener('keydown', (e) => {
+    e.stopPropagation(); // typing is not walking
+    if (e.key === 'Escape') closeLock();
+  });
+  lock.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw = lockIn.value;
+    if (!pw) return;
+    lock.classList.add('busy');
+    lockMsg.textContent = 'Opening…';
+    try {
+      flat = await unseal(pw);
+      flat.scene.add(inMark);
+      roomChips = flat.rooms.map((r) => {
+        const b = document.createElement('span');
+        b.className = 'w-room w-in caps';
+        b.textContent = r.name;
+        labels.append(b);
+        return { b, at: new Vector3(r.x, 1.3, r.z) };
+      });
+      closeLock();
+      enterHouse();
+    } catch {
+      lockMsg.textContent = 'That is not the key.';
+      lock.classList.remove('shake');
+      void lock.offsetWidth;
+      lock.classList.add('shake');
+      lockIn.select();
+      play('close');
+    } finally {
+      lock.classList.remove('busy');
+    }
+  });
   let indoors = false;
-  const inPos = new Vector2(flat.spawn.x, flat.spawn.z);
+  const inPos = new Vector2();
   let inYaw = -Math.PI / 2;
   let inGoal: Vector2 | null = null;
   let inStall = 0;
@@ -2260,15 +2338,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     inMark.add(bar);
   });
   inMark.position.y = 0.04;
-  flat.scene.add(inMark);
-  // the rooms' names, floating over each one
-  const roomChips = flat.rooms.map((r) => {
-    const b = document.createElement('span');
-    b.className = 'w-room w-in caps';
-    b.textContent = r.name;
-    labels.append(b);
-    return { b, at: new Vector3(r.x, 1.3, r.z) };
-  });
+  // the rooms' names, floating over each one (made when the flat is opened)
+  let roomChips: { b: HTMLElement; at: Vector3 }[] = [];
   const out = document.createElement('button');
   out.type = 'button';
   out.className = 'w-leave w-in caps';
@@ -2292,8 +2363,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   };
   function enterHouse() {
     if (indoors || busy()) return;
+    if (!flat) {
+      lock.hidden = false;
+      lockIn.focus();
+      return;
+    }
     indoors = true;
-    inPos.set(flat.spawn.x, flat.spawn.z);
+    inPos.set(flat!.spawn.x, flat!.spawn.z);
     inYaw = -Math.PI / 2;
     inGoal = null;
     inTurn = 0;
@@ -2302,7 +2378,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     goal = null;
     keys.clear();
     talk = null;
-    flat.scene.add(hero.g);
+    flat!.scene.add(hero.g);
     hero.suit.visible = false;
     hero.boots.forEach((b) => (b.visible = false));
     hero.straw.visible = true;
@@ -2334,7 +2410,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   // Pushes a circle out of the walls and the furniture.
   const inSolve = () => {
     for (let pass = 0; pass < 3; pass++)
-      for (const r of flat.solids) {
+      for (const r of flat!.solids) {
         const cx = Math.max(r.x1, Math.min(r.x2, inPos.x));
         const cz = Math.max(r.z1, Math.min(r.z2, inPos.y));
         const dx = inPos.x - cx;
@@ -2360,7 +2436,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   };
   const inClick = (cx: number, cy: number) => {
     aim(cx, cy);
-    const hit = ray.intersectObjects(flat.floors, false)[0];
+    const hit = ray.intersectObjects(flat!.floors, false)[0];
     if (!hit) return;
     inGoal = new Vector2(hit.point.x, hit.point.z);
     inLeft = Infinity;
@@ -2410,7 +2486,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     }
     inSolve();
     // out through the front door
-    const o = flat.out;
+    const o = flat!.out;
     if (now - inT0 > 800 && inPos.x > o.x1 && inPos.y > o.z1 && inPos.y < o.z2) return leaveHouse();
     if (jumpV || jumpY) {
       jumpY += jumpV * dt;
@@ -2428,10 +2504,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     hero.lamp.visible = false;
     // light: the windows bright by day and dark by night, the lamps warmer as it gets late
     const dusk = easeInOut(nightNow);
-    flat.ambient.intensity = lerp(1.5, 0.55, dusk);
-    flat.sun.intensity = lerp(1.7, 0.25, dusk);
-    flat.lamps.forEach((l) => (l.intensity = (l.userData.power as number) * lerp(0.22, 1.3, dusk)));
-    flat.windows.color.copy(hex('blue')).lerp(hex(dusk > 0.5 ? 'ink' : 'cream'), dusk > 0.5 ? 0.6 : 0.3);
+    flat!.ambient.intensity = lerp(1.5, 0.55, dusk);
+    flat!.sun.intensity = lerp(1.7, 0.25, dusk);
+    flat!.lamps.forEach((l) => (l.intensity = (l.userData.power as number) * lerp(0.22, 1.3, dusk)));
+    flat!.windows.color.copy(hex('blue')).lerp(hex(dusk > 0.5 ? 'ink' : 'cream'), dusk > 0.5 ? 0.6 : 0.3);
     goalMat.opacity = inGoal ? Math.min(1, goalMat.opacity + dt * 6) : Math.max(0, goalMat.opacity - dt * 3);
     inMark.visible = goalMat.opacity > 0.01;
     inMark.scale.setScalar(1 + Math.sin(now * 0.008) * 0.08);
@@ -2457,7 +2533,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     uniforms.coarse.value = Math.max(1, Math.round((1 - Math.min(1, (now - inT0) / 600)) * 12) || 1);
     renderer.setRenderTarget(target);
     renderer.clear();
-    renderer.render(flat.scene, camera);
+    renderer.render(flat!.scene, camera);
     renderer.setRenderTarget(null);
     renderer.render(quadScene, quadCam);
   }
