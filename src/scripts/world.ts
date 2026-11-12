@@ -52,6 +52,7 @@ import {
 } from 'three';
 import { PIGMENTS } from '../data/pigments';
 import { play, setEngine, setSea } from './sound';
+import { openLab } from './lab';
 
 export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
 export type WorldOptions = {
@@ -326,6 +327,8 @@ const lit = new MeshBasicMaterial({ color: hex('ink') });
 // Lantern glass: pale by day, glowing by night.
 const glass = new MeshBasicMaterial({ color: hex('cream') });
 const flameMat = new MeshBasicMaterial({ color: hex('ochre') });
+// The laptop's screen: always on, pale blue.
+const laptopGlow = new MeshBasicMaterial({ color: hex('blue').lerp(hex('cream'), 0.55) });
 const flameCore = new MeshBasicMaterial({ color: hex('cream') });
 function shade<T extends Mesh>(m: T, x = 0, y = 0, z = 0) {
   m.position.set(x, y, z);
@@ -489,7 +492,20 @@ function workbench() {
   // soldering station and iron
   g.add(box(0.42, 0.22, 0.34, 'ink', 0.62, 1.02, -0.05), cyl(0.07, 0.2, 'cream', 1.0, 1.02, -0.02), tilt(cyl(0.028, 0.62, 'red', 0.9, 1.08, 0.12), 0, 0, 0.95));
   // breadboard with two wires, and a spool
-  g.add(box(0.62, 0.04, 0.3, 'cream', -0.1, 1.02, 0.36), box(0.3, 0.03, 0.03, 'red', -0.1, 1.06, 0.34), box(0.03, 0.03, 0.2, 'blue', 0.05, 1.06, 0.36), cyl(0.1, 0.09, 'cream', 0.42, 1.02, 0.36));
+  g.add(box(0.62, 0.04, 0.3, 'cream', -0.1, 1.02, 0.36), box(0.3, 0.03, 0.03, 'red', -0.1, 1.06, 0.34), box(0.03, 0.03, 0.2, 'blue', 0.05, 1.06, 0.36), cyl(0.1, 0.09, 'cream', -1.12, 1.02, 0.4));
+  // the laptop, open, its screen lit: the software side of the bench
+  const laptop = new Group();
+  laptop.add(box(0.66, 0.03, 0.44, 'ink'), box(0.56, 0.005, 0.22, 'cream', 0, 0.03, 0.06), box(0.18, 0.005, 0.1, 'cream', 0, 0.03, 0.17));
+  const lid = new Group();
+  const glowing = new Mesh(new BoxGeometry(0.58, 0.36, 0.01), laptopGlow);
+  glowing.position.set(0, 0.21, 0.02);
+  lid.add(box(0.66, 0.42, 0.025, 'ink'), glowing);
+  lid.position.z = -0.21;
+  lid.rotation.x = -0.28;
+  laptop.add(lid);
+  laptop.position.set(0.5, 1.02, 0.52);
+  laptop.rotation.y = -0.15;
+  g.add(laptop);
   g.add(cyl(0.26, 0.62, 'red', 0, 0, 0.95), cyl(0.04, 0.62, 'ink', 0, 0, 0.95));
   return g;
 }
@@ -1791,7 +1807,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let pending: string | null = null;
   let burst = -1e9; // a moment of coarse pixels, to cover a cut
   let qDesk: Quaternion | null = null;
-  const busy = () => !!(warp || dive || launch || land || knock);
+  const busy = () => !!(warp || dive || launch || land || knock || bench);
+  // At the workbench: the view drops to the stool, and the bench asks hardware or software.
+  let bench: { s: Spot; out: boolean } | null = null;
+  let benchK = 0;
   // Knocking at the flat's door: the view drops to the juice box's eyes.
   let knock: { t0: number; out: boolean; fired: number } | null = null;
   let knockK = 0;
@@ -1871,8 +1890,55 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       window.open(it.href, '_blank', 'noopener');
       return face(s);
     }
+    if (it.slug === 'workbench') return face(s, () => sitAtBench(s));
     face(s, () => (it.room ? select(it.room) : open(s.i)));
   }
+  // ── The workbench: hardware on the left, the laptop's software on the right ──
+  const benchUI = document.createElement('div');
+  benchUI.className = 'w-bench';
+  benchUI.hidden = true;
+  benchUI.setAttribute('role', 'dialog');
+  benchUI.setAttribute('aria-label', 'The workbench');
+  benchUI.innerHTML = `<p class="w-bench-t caps">The workbench</p><div class="w-bench-c"><button type="button" class="w-bench-o" data-side="hardware"><span class="caps">Hardware</span><b>Soldering, servos, the oscilloscope</b><em>Haskarm, the servo arm that follows a face, and the solder log. Being tidied up.</em></button><button type="button" class="w-bench-o" data-side="software"><span class="caps">Software</span><b>The lab, on the laptop</b><em>A bench for trying out interface ideas: dials, wallets, receipts, signatures.</em></button></div><button type="button" class="w-bench-x caps">Stand up · Esc</button>`;
+  root.append(benchUI);
+  const benchHw = benchUI.querySelector<HTMLElement>('[data-side="hardware"]')!;
+  function sitAtBench(s: Spot) {
+    if (bench) return;
+    bench = { s, out: false };
+    goal = null;
+    keys.clear();
+    window.setTimeout(() => {
+      if (!bench || bench.out) return;
+      benchUI.hidden = false;
+      benchUI.querySelector<HTMLButtonElement>('[data-side="software"]')!.focus({ preventScroll: true });
+    }, reduced() ? 0 : 700);
+    play('tap');
+  }
+  function standUp() {
+    if (!bench) return;
+    bench.out = true;
+    benchUI.hidden = true;
+    canvas.focus({ preventScroll: true });
+  }
+  benchUI.querySelector('[data-side="software"]')!.addEventListener('click', () => {
+    benchUI.hidden = true;
+    openLab(() => {
+      if (!bench || bench.out) return;
+      benchUI.hidden = false;
+      benchUI.querySelector<HTMLButtonElement>('[data-side="software"]')!.focus({ preventScroll: true });
+    });
+  });
+  benchHw.addEventListener('click', () => {
+    benchHw.classList.remove('nudge');
+    void benchHw.offsetWidth;
+    benchHw.classList.add('nudge');
+    play('squeak');
+  });
+  benchUI.querySelector('.w-bench-x')!.addEventListener('click', standUp);
+  benchUI.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') standUp();
+  });
   function jump(to: Planet, then?: Then) {
     if (to === cur || warp) return then?.();
     trip = null;
@@ -2145,6 +2211,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     }
     if (k === 'Escape' && talk) hush();
     if (indoors && k === 'Escape') return leaveHouse();
+    if (bench && k === 'Escape') return standUp();
     if (k === 'Enter') {
       // A control reached with Tab keeps its own Enter; one merely left focused by a click does not.
       if (tabbing && on?.matches('a, button')) return;
@@ -2950,6 +3017,26 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       camTarget.lerp(look, kk);
       camera.up.lerp(up, kk).normalize();
       if (kk > 0.4) hero.g.visible = false; // the view is its eyes
+    }
+    if (bench) {
+      benchK += ((bench.out ? 0 : 1) - benchK) * Math.min(1, dt * (bench.out ? 4 : 2.5));
+      if (bench.out && benchK < 0.02) {
+        bench = null;
+        benchK = 0;
+      }
+    }
+    if (bench && benchK > 0.001) {
+      // on the stool, looking down at the bench top and the laptop
+      const kk = easeInOut(Math.min(1, benchK));
+      const g = bench.s.g;
+      const pos = g.position.clone();
+      const up = pos.clone().normalize();
+      const eye = pos.clone().addScaledVector(bench.s.inward, 5.4).addScaledVector(up, 3.6).applyQuaternion(cur.q);
+      const look = pos.clone().addScaledVector(up, 1.1).addScaledVector(bench.s.inward, -0.1).applyQuaternion(cur.q);
+      camPos.lerp(eye, kk);
+      camTarget.lerp(look, kk);
+      camera.up.lerp(up.applyQuaternion(cur.q), kk).normalize();
+      if (kk > 0.4) hero.g.visible = false;
     }
     camera.position.copy(camPos);
     camera.lookAt(camTarget);
