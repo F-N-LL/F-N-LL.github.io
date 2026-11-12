@@ -371,8 +371,12 @@ const EFFECTS = {
   },
   // a knuckle on a wooden door
   knock: () => {
-    tone(150, 0.09, { to: 85, gain: 0.5 });
-    hiss(0.06, { kind: 'lowpass', freq: 900, to: 300, gain: 0.35 });
+    // the thud of the wood, the knuckle's crack, and the door ringing a little after
+    tone(170, 0.14, { to: 70, gain: 1.6 });
+    tone(95, 0.22, { to: 55, gain: 1.1, type: 'triangle' });
+    hiss(0.05, { freq: 2400, q: 1.2, gain: 1.4 });
+    hiss(0.12, { kind: 'lowpass', freq: 1400, to: 250, gain: 1.4 });
+    bar(240, 0.25, 0.25, 0.01);
   },
   jump: () => tone(330, 0.2, { type: 'triangle', to: 780, gain: 0.12 }),
   open: () => {
