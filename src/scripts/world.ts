@@ -1791,7 +1791,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let pending: string | null = null;
   let burst = -1e9; // a moment of coarse pixels, to cover a cut
   let qDesk: Quaternion | null = null;
-  const busy = () => !!(warp || dive || launch || land);
+  const busy = () => !!(warp || dive || launch || land || knock);
+  // Knocking at the flat's door: the view drops to the juice box's eyes.
+  let knock: { t0: number; out: boolean; fired: number } | null = null;
+  let knockK = 0;
   let vel = { x: 0, z: 0 };
   let lastInput = -1e9;
   let heroY = cur.R + GROUND;
@@ -2275,15 +2278,39 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const lock = document.createElement('form');
   lock.className = 'w-lock';
   lock.hidden = true;
-  lock.innerHTML = `<p class="w-lock-t caps">Private · the flat</p><label class="sr-only" for="w-lock-in">Password</label><input id="w-lock-in" type="password" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Password" /><p class="w-lock-m" aria-live="polite"></p><p class="w-lock-f"><button type="button" class="w-lock-x caps">Cancel</button><button type="submit" class="w-lock-go caps">Unlock</button></p>`;
+  lock.innerHTML = `<p class="w-lock-t caps">Behind the door</p><p class="w-lock-say"></p><label class="sr-only" for="w-lock-in">Password</label><input id="w-lock-in" type="password" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Password" /><p class="w-lock-m" aria-live="polite"></p><p class="w-lock-f"><button type="button" class="w-lock-x caps">Cancel</button><button type="submit" class="w-lock-go caps">Unlock</button></p>`;
   root.append(lock);
   const lockIn = lock.querySelector<HTMLInputElement>('input')!;
   const lockMsg = lock.querySelector<HTMLElement>('.w-lock-m')!;
+  const lockSay = lock.querySelector<HTMLElement>('.w-lock-say')!;
+  let sayTimer = 0;
   const closeLock = () => {
     lock.hidden = true;
     lockIn.value = '';
     lockMsg.textContent = '';
+    clearInterval(sayTimer);
+    if (knock) knock.out = true; // back from the door
     canvas.focus({ preventScroll: true });
+  };
+  // Someone answers from inside, a letter at a time, then asks for the word.
+  const openLock = () => {
+    lock.hidden = false;
+    lock.classList.add('pov');
+    const line = 'Who\u2019s there? If you\u2019re a friend, you know the password.';
+    let n = 0;
+    lockSay.textContent = '';
+    lockIn.disabled = true;
+    clearInterval(sayTimer);
+    sayTimer = window.setInterval(() => {
+      n = reduced() ? line.length : n + 1;
+      lockSay.textContent = line.slice(0, n);
+      if (n % 3 === 0 && line[n - 1] !== ' ') play('blip');
+      if (n >= line.length) {
+        clearInterval(sayTimer);
+        lockIn.disabled = false;
+        lockIn.focus();
+      }
+    }, 34);
   };
   lock.querySelector('.w-lock-x')!.addEventListener('click', closeLock);
   lock.addEventListener('keydown', (e) => {
@@ -2307,6 +2334,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         return { b, at: new Vector3(r.x, 1.3, r.z) };
       });
       closeLock();
+      knock = null;
+      knockK = 0;
       enterHouse();
     } catch {
       lockMsg.textContent = 'That is not the key.';
@@ -2364,8 +2393,14 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   function enterHouse() {
     if (indoors || busy()) return;
     if (!flat) {
-      lock.hidden = false;
-      lockIn.focus();
+      // knock first; whoever is in asks for the password
+      if (!knock) {
+        knock = { t0: performance.now(), out: false, fired: 0 };
+        goal = null;
+        keys.clear();
+        zoomGoal = 1;
+        touch();
+      }
       return;
     }
     indoors = true;
@@ -2883,6 +2918,38 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         dive = null;
         then?.();
       }
+    }
+    // Knocking: down to the juice box's eyes, facing its own front door, a nudge with each knock.
+    if (knock) {
+      const t = (now - knock.t0) / 1000;
+      const beats = [0.9, 1.25, 1.6];
+      if (!knock.out && knock.fired < beats.length && t > beats[knock.fired]) {
+        knock.fired++;
+        play('knock');
+      }
+      if (!knock.out && knock.fired === beats.length && t > 2.1 && lock.hidden) openLock();
+      knockK += ((knock.out ? 0 : 1) - knockK) * Math.min(1, dt * (knock.out ? 4 : 2.5));
+      if (knock.out && knockK < 0.02) {
+        knock = null;
+        knockK = 0;
+      }
+    }
+    if (knockK > 0.001) {
+      const kk = easeInOut(Math.min(1, knockK));
+      // a few steps back from the door, at the juice box's eye height, so the whole door is in view
+      const front = doorStand.clone().sub(doorAt).normalize();
+      const at = doorAt.clone().addScaledVector(front, 4.6).applyQuaternion(home.q);
+      const up = w.copy(at).normalize();
+      const eye = up.clone().multiplyScalar(home.R + GROUND + 1.35);
+      const look = v.copy(doorAt).applyQuaternion(home.q).addScaledVector(up, 1.05);
+      // each knock leans the view in a little, then back
+      const since = knock ? (now - knock.t0) / 1000 : 9;
+      const nudge = [0.9, 1.25, 1.6].reduce((m, b) => Math.max(m, Math.max(0, 1 - Math.abs(since - b) / 0.08)), 0);
+      eye.lerp(look, 0.06 * nudge);
+      camPos.lerp(eye, kk);
+      camTarget.lerp(look, kk);
+      camera.up.lerp(up, kk).normalize();
+      if (kk > 0.4) hero.g.visible = false; // the view is its eyes
     }
     camera.position.copy(camPos);
     camera.lookAt(camTarget);

@@ -1851,6 +1851,27 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  /* At the door, the card sits low, under the door, like a voice from inside. */
+  :global(.w-lock.pov) {
+    top: 72%;
+  }
+  :global(.w-lock.pov)::before {
+    content: '';
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    background: var(--bg);
+    box-shadow: -1px -1px 0 0 var(--rule);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  :global(.w-lock-say) {
+    min-height: 2.6em;
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+    line-height: 1.35;
+  }
   :global(.w-lock[hidden]) {
     display: none;
   }

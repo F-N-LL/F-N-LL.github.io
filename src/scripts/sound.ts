@@ -369,6 +369,11 @@ const EFFECTS = {
     bar(midi(84), 0.5, 0.05, 0.5);
     bar(midi(88), 0.6, 0.05, 0.6);
   },
+  // a knuckle on a wooden door
+  knock: () => {
+    tone(150, 0.09, { to: 85, gain: 0.5 });
+    hiss(0.06, { kind: 'lowpass', freq: 900, to: 300, gain: 0.35 });
+  },
   jump: () => tone(330, 0.2, { type: 'triangle', to: 780, gain: 0.12 }),
   open: () => {
     bar(midi(77), 0.5, 0.12);
