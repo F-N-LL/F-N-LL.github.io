@@ -107,6 +107,8 @@ const email = elsewhere.find((l) => l.href.startsWith('mailto:'))!;
 const cv = elsewhere.find((l) => l.href.endsWith('.pdf'))!;
 const social = elsewhere.filter((l) => l !== email && l !== cv);
 const shortcuts: [string[], string][] = [
+  [['Click'], 'Walk to that spot'],
+  [['Drag'], 'Turn the view; up and down to lean in or out'],
   [['←', '↑', '→', '↓'], 'Walk'],
   [['W', 'A', 'S', 'D'], 'Walk, on the home row'],
   [['H', 'J', 'K', 'L'], 'Walk, vim-style; J K walk the index'],
@@ -267,7 +269,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
         ))}
       </ul>
       <p class="f-hint caps muted">Drag or scroll to move · Pinch or Ctrl + scroll to zoom · <kbd>?</kbd> Shortcuts</p>
-      <p class="f-hint w-hint caps muted">Arrows or drag to walk · Enter opens what is ringed · Space to jump · <kbd>?</kbd> Shortcuts</p>
+      <p class="f-hint w-hint caps muted">Click to walk · Drag to turn the view · Enter opens what is ringed · Space to jump · <kbd>?</kbd> Shortcuts</p>
       <div class="zoom" data-zoom>
         <button type="button" class="z-btn key-up" data-zoom-out aria-label="Zoom out" data-key="−">−</button>
         <div class="ruler" data-ruler role="slider" tabindex="0" aria-label="Zoom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -1693,24 +1695,34 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   }
   :global(.w-heart) {
     position: absolute;
-    color: var(--dot);
-    font-size: 1.1rem;
+    display: block;
     pointer-events: none;
-    text-shadow: 0 1px 0 rgb(38 46 58 / 0.4);
-    animation: w-heart 1.5s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+    filter: drop-shadow(0 2px 0 rgb(38 46 58 / 0.45));
+    animation: w-heart 1.9s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  }
+  :global(.w-heart svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
   @keyframes w-heart {
     0% {
       opacity: 0;
-      transform: translate(-50%, 0) scale(0.6);
+      transform: translate(-50%, 0) scale(0.4);
     }
-    20% {
+    18% {
       opacity: 1;
-      transform: translate(-50%, -14px) scale(1.1);
+      transform: translate(-50%, -18px) scale(1.25);
+    }
+    30% {
+      transform: translate(-50%, -26px) scale(1);
+    }
+    75% {
+      opacity: 1;
     }
     100% {
       opacity: 0;
-      transform: translate(-50%, -64px) scale(0.9);
+      transform: translate(-50%, -90px) scale(0.9);
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -1816,6 +1828,142 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     pointer-events: none;
     transition: opacity 0.3s;
     cursor: pointer;
+  }
+  /* The lock on the flat's door: a small card over the world. */
+  :global(.w-lock) {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 30;
+    width: min(20rem, calc(100vw - 2rem));
+    padding: 1.1rem 1.1rem 0.8rem;
+    border-radius: 0.9rem;
+    color: var(--ink);
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--rule), 0 18px 40px -18px rgb(38 46 58 / 0.45);
+    transform: translate(-50%, -50%);
+  }
+  :global(.w-lock .sr-only) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* At the door, the card sits low, under the door, like a voice from inside. */
+  :global(.w-lock.pov) {
+    top: 72%;
+  }
+  :global(.w-lock.pov)::before {
+    content: '';
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    background: var(--bg);
+    box-shadow: -1px -1px 0 0 var(--rule);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  :global(.w-lock-say) {
+    min-height: 2.6em;
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+  :global(.w-lock[hidden]) {
+    display: none;
+  }
+  :global(.w-lock-t) {
+    margin: 0 0 0.7rem;
+    color: var(--ink-2);
+    font-size: 0.6875rem;
+  }
+  :global(.w-lock input) {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--rule);
+    border-radius: 0.5rem;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+  }
+  :global(.w-lock input:focus-visible) {
+    outline: 2px solid var(--dot);
+    outline-offset: 1px;
+  }
+  :global(.w-lock-m) {
+    min-height: 1.2em;
+    margin: 0.45rem 0 0.2rem;
+    color: var(--dot);
+    font-size: 0.8125rem;
+  }
+  :global(.w-lock-f) {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  :global(.w-lock button) {
+    padding: 0.45rem 0.8rem 0.4rem;
+    border: 0;
+    border-radius: 999px;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  :global(.w-lock .w-lock-go) {
+    color: #fff;
+    background: var(--dot);
+  }
+  :global(.w-lock.busy) {
+    opacity: 0.8;
+    pointer-events: none;
+  }
+  :global(.w-lock.shake) {
+    animation: w-shake 0.4s;
+  }
+  @keyframes w-shake {
+    20%,
+    60% {
+      transform: translate(calc(-50% - 8px), -50%);
+    }
+    40%,
+    80% {
+      transform: translate(calc(-50% + 8px), -50%);
+    }
+  }
+  /* Inside the flat the name and the lines about the work step aside. */
+  :global(.world.indoors) [data-w-id] {
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* Indoors only the rooms' names and the way out show; outside, none of them. */
+  :global(.w-labels.indoors > :not(.w-in)),
+  :global(.w-labels:not(.indoors) .w-in) {
+    display: none;
+  }
+  :global(.w-room) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0.32rem 0.6rem 0.28rem;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 0.6875rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  :global(.w-room.on) {
+    opacity: 0.9;
   }
   :global(.w-leave.on) {
     opacity: 1;
@@ -2446,9 +2594,11 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
 
   /* First open: both arrows draw the eye (inked, a ring breathes out of
      them) and a caption under → says how to browse. */
+  /* hidden but still holding their grid cells, so the plate and text keep their columns */
   .detail.solo .d-arrow,
   .detail.solo [data-d-count] {
-    display: none;
+    visibility: hidden;
+    pointer-events: none;
   }
   .detail.teach .d-arrow {
     border-color: var(--ink);
