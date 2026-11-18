@@ -4,7 +4,9 @@
 // screen, a factory (machines joined by belts, documents riding along them)
 // or a world map (levels along a road, students walking it), with an
 // inspector in the corner that says what each piece is and what it gave.
-// The same desktop, in miniature, is what the monitor shows from outside.
+// The same desktop, in miniature, is what the monitor shows from outside. On
+// the phone one folder opens on its own, full screen, and its game screen
+// pans sideways under the finger.
 
 import { play } from './sound';
 import { PIGMENTS } from '../data/pigments';
@@ -98,7 +100,8 @@ const CSS = `
 .pc-bob{animation:pc-bob .5s steps(1) infinite}
 @keyframes pc-bob{50%{transform:translateY(-3px)}}
 @keyframes pc-blink{50%{opacity:.2}}
-.pc-plant{position:relative}
+.pc-stage{position:relative}
+.pc-swipe{display:none}
 .pc-insp{position:absolute;left:${(INSP.x / GRID.w) * 100}%;top:${(INSP.y / GRID.h) * 100}%;width:${(INSP.w / GRID.w) * 100}%;height:${(INSP.h / GRID.h) * 100}%;overflow:auto;box-sizing:border-box;padding:10px 12px;border:3px solid ${rgb('cream')};background:${rgb('ink')};box-shadow:6px 6px 0 rgb(0 0 0/.35);font-size:clamp(11px,1vw,14px);line-height:1.35;scrollbar-width:none}
 .pc-insp h3{display:flex;justify-content:space-between;gap:12px;margin:0 0 4px;font-size:1.15em;font-weight:400}
 .pc-insp h3 small{color:${rgb('cream', 0.55)};font-size:.8em}
@@ -109,6 +112,22 @@ const CSS = `
 .pc-soon{display:grid;place-items:center;align-content:center;gap:16px;min-height:340px;border:3px dashed ${rgb('cream', 0.25)};text-align:center}
 .pc-soon p{margin:0;color:${rgb('cream', 0.7)}}
 .pc-soon .cur{display:inline-block;width:.6em;height:1em;vertical-align:-2px;background:${rgb('ochre')};animation:pc-blink 1s steps(1) infinite}
+.pc.solo .pc-win{inset:12px}
+.pc.solo .pc-icons,.pc.solo .pc-hello{display:none}
+@media (max-width:760px){
+  .pc{font-size:14px}
+  .pc-bar{gap:14px}
+  .pc-desk{padding:0}
+  .pc-win,.pc.solo .pc-win{inset:8px 6px 6px;box-shadow:none}
+  .pc-body{padding:16px 14px 20px}
+  .pc-head{grid-template-columns:1fr;gap:14px}
+  .pc-stats{grid-template-columns:repeat(4,auto);justify-content:start;gap:6px 18px}
+  .pc-stats dd{font-size:19px}
+  .pc-swipe{display:block;margin:0 0 6px;color:${rgb('cream', 0.55)};font-size:12px}
+  .pc-pan{overflow-x:auto;margin:0 -14px;padding:0 14px 6px;scrollbar-width:none;overscroll-behavior-x:contain}
+  .pc-pan .pc-floor{width:980px;max-width:none}
+  .pc-insp{position:sticky;left:auto;top:auto;bottom:-20px;width:auto;height:auto;min-height:7.5em;margin-top:10px;font-size:13px;box-shadow:none}
+}
 @media (prefers-reduced-motion:reduce){.pc *{animation:none!important}}
 `;
 
@@ -337,13 +356,14 @@ function windowFor(f: Folder, reduced: boolean) {
     f.stats ? `<dl class="pc-stats">${f.stats.map((s) => `<div><dt>${esc(s.label)}</dt><dd>${esc(s.value)}</dd></div>`).join('')}</dl>` : ''
   }</header>`;
   const body = f.plant || f.map || f.town
-    ? `<div class="pc-plant">${f.plant ? floor(f, reduced) : f.map ? worldMap(f, reduced) : town(f, reduced)}<section class="pc-insp" aria-live="polite"></section></div>${f.stack ? `<ul class="pc-stack" aria-label="Stack">${f.stack.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}`
+    ? `<div class="pc-stage"><p class="pc-swipe">← Swipe to look around · tap a piece →</p><div class="pc-pan">${f.plant ? floor(f, reduced) : f.map ? worldMap(f, reduced) : town(f, reduced)}</div><section class="pc-insp" aria-live="polite"></section></div>${f.stack ? `<ul class="pc-stack" aria-label="Stack">${f.stack.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}`
     : `<div class="pc-soon"><svg width="120" height="90" viewBox="0 0 120 90" aria-hidden="true"><rect x="10" y="10" width="100" height="70" fill="none" stroke="${rgb('cream', 0.4)}" stroke-width="4" stroke-dasharray="10 8"/>${bitmap(ICONS.brain, 5, rgb('cream', 0.3), 40, 25)}</svg><p>This factory is still being laid out.</p><p>Back soon<span class="cur"></span></p></div>`;
   return el(`<section class="pc-win" role="dialog" aria-label="${esc(f.name)}"><div class="pc-title"><span>${esc(f.name.toUpperCase())}</span><i></i><button type="button" class="pc-x" aria-label="Close ${esc(f.name)}">×</button></div><div class="pc-body" tabindex="-1">${head}${body}</div></section>`);
 }
 
 // ── Open and close ──
-export function openPC(onClose?: () => void, reduced = false) {
+// `only` opens straight onto that folder, alone: closing it closes the computer.
+export function openPC(onClose?: () => void, reduced = false, only?: string) {
   if (!styled) {
     const s = document.createElement('style');
     s.textContent = CSS;
@@ -406,6 +426,7 @@ export function openPC(onClose?: () => void, reduced = false) {
     win.querySelector<HTMLElement>('.pc-body')!.focus({ preventScroll: true });
   }
   function shut() {
+    if (only) return close();
     if (!win) return;
     win.remove();
     win = null;
@@ -430,7 +451,11 @@ export function openPC(onClose?: () => void, reduced = false) {
   });
   veil.querySelector('.pc-off')!.addEventListener('click', close);
   document.body.append(veil);
-  buttons[0].focus({ preventScroll: true });
+  const first = folders.findIndex((f) => f.slug === only);
+  if (first >= 0) {
+    veil.classList.add('solo');
+    show(folders[first], buttons[first]);
+  } else buttons[0].focus({ preventScroll: true });
   play('open');
 }
 

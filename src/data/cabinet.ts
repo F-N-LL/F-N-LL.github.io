@@ -376,8 +376,8 @@ export const cicerone = {
   // On the phone the worlds pass by as you swipe; it names each one as it comes.
   phone: {
     intro: 'Hi, I’m Zumo! Swipe up to walk through Daniel’s universe.',
-    pc: 'Inside the computer: projects and work.',
-    home: 'Back home: the huerta and the workbench.',
+    pc: 'Inside the computer: a folder for each job.',
+    home: 'At home: the projects, the huerta and the workbench.',
     station: 'Up on the station: pictures and posts.',
   } as Record<string, string>,
 };

@@ -5,6 +5,7 @@
 // catalogue entry rises over it.
 import { profile } from '../data/site';
 import { specimens, flow, elsewhere, cicerone } from '../data/cabinet';
+import { folders } from '../data/work';
 
 const bySlug = new Map(specimens.map((s) => [s.slug, s]));
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -21,7 +22,9 @@ const cards = [
   ),
 ];
 // Which of the desktop's worlds each section lives on: the phone's sky follows it.
-const WORLD: Record<string, string> = { Projects: 'pc', Experience: 'pc', Garden: 'home', Gallery: 'station', Posts: 'station' };
+const WORLD: Record<string, string> = { Projects: 'home', Experience: 'pc', Garden: 'home', Gallery: 'station', Posts: 'station' };
+// The jobs that have a folder on the computer open it, full screen.
+const inPC = new Set(folders.map((f) => f.slug));
 const starts = sections.map(({ section, slugs }) => ({
   section,
   count: slugs.length,
@@ -82,6 +85,7 @@ const starts = sections.map(({ section, slugs }) => ({
                 <p class="meta caps">{c.kind} · {c.year}</p>
                 <p class="medium">{c.medium}</p>
                 <p class="text">{c.text}</p>
+ {inPC.has(c.slug) && <button type="button" class="cta" data-f-folder={c.slug}>Open the folder <span aria-hidden="true">▸</span></button>}
                 {c.href && <a class="cta" href={c.href} {...(c.href.startsWith('http') ? { target: '_blank', rel: 'noopener' } : {})}>{c.link ?? 'Open'} <span aria-hidden="true">↗</span></a>}
               </div>
             )}
@@ -610,13 +614,18 @@ const starts = sections.map(({ section, slugs }) => ({
     // Tap: a neighbour comes to centre; the centred card toggles its entry.
     cards.forEach((el, i) =>
       el.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).closest('a')) return;
+        if ((e.target as HTMLElement).closest('a, [data-f-folder]')) return;
         if (i !== nearest) goTo(i);
         else if (active === i) close();
         else open(i);
       }),
     );
     tabs.forEach((t) => t.addEventListener('click', () => goTo(Number(t.dataset.fJump))));
+    root.querySelectorAll<HTMLButtonElement>('[data-f-folder]').forEach((b) =>
+      b.addEventListener('click', () =>
+        import('../scripts/pc').then(({ openPC }) => openPC(() => b.focus({ preventScroll: true }), reduced.matches, b.dataset.fFolder)),
+      ),
+    );
 
     // ── Scrub: drag the red dot along the rail to fly through every card.
     // The rail maps back to cards exactly as it was drawn (card k of a
@@ -1278,6 +1287,13 @@ const starts = sections.map(({ section, slugs }) => ({
       align-self: flex-start;
       margin-top: 0.35rem;
       padding: 0.35rem 0;
+    }
+    button.cta {
+      border: 0;
+      background: none;
+      font-family: inherit;
+      text-align: left;
+      cursor: pointer;
     }
     .links {
       display: flex;
