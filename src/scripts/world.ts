@@ -1,8 +1,8 @@
 // Desktop: Daniel's universe as three small worlds in six Mediterranean
 // pigments, drawn through the same Bayer dither as the plates. Home is a
-// planet with the huerta, the workbench and the computer; inside the
-// computer's screen turns a circuit-board planet with the projects and the
-// work; a station in orbit, reached by rocket, keeps the posts, the links and
+// planet with the huerta, the workshop (the projects, the workbench, the
+// diploma wall and the computer, whose screen holds the work as a small
+// desktop of folders); a station in orbit, reached by rocket, keeps the posts, the links and
 // the gallery. The juice box stands at the top of the scene while the ground
 // turns under it, and shows the visitor around.
 import {
@@ -12,6 +12,7 @@ import {
   BoxGeometry,
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   CircleGeometry,
   Color,
   ConeGeometry,
@@ -53,6 +54,7 @@ import {
 import { PIGMENTS } from '../data/pigments';
 import { play, setEngine, setSea } from './sound';
 import { openLab } from './lab';
+import { openPC, paintDesk } from './pc';
 
 export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
 export type WorldOptions = {
@@ -97,14 +99,13 @@ const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 // Which districts stand on which world. Anything else lives at a pole.
 const WORLDS = {
   home: ['Garden', 'Workshop', 'Launch'],
-  pc: ['Projects', 'Experience', 'Education'],
   station: ['Posts', 'Links', 'Gallery'],
 };
 const SHOWN: Record<string, string> = { Launch: 'Launch pad' };
 // Districts of things rather than plates keep their own spacing.
 const SPREAD: Record<string, { ring: number; arc: number }> = {
   Garden: { ring: 5.6, arc: 1.75 },
-  Workshop: { ring: 4.6, arc: 1.0 },
+  Workshop: { ring: 9.4, arc: 1.75 },
   Launch: { ring: 3.4, arc: 0 },
 };
 
@@ -123,7 +124,7 @@ const terrace = (x: number) => {
   return (n + smooth(0.78, 1, f - n)) * 1.05;
 };
 
-type Look = 'earth' | 'chip' | 'hull';
+type Look = 'earth' | 'hull';
 type District = { section: string; dir: Vector3; u: Vector3; v: Vector3; ring: number; arc: number };
 const frameAt = (dir: Vector3) => {
   const pole = Math.abs(dir.y) > 0.99;
@@ -164,7 +165,7 @@ function makeGround(R: number, ds: District[], coast: number, look: Look, ridge?
     const lat = d.angleTo(NORTH);
     const edge = coast + relief(d) * 0.13;
     const land = smooth(edge, edge - 0.13, lat);
-    let x = (look === 'chip' ? 0.5 : 0.8) + relief(d) * (look === 'chip' ? 0.55 : 0.75);
+    let x = 0.8 + relief(d) * 0.75;
     if (ridge) x += Math.exp(-((d.angleTo(ridge) / 0.3) ** 2)) * 3.6;
     const h = lerp(-1.7, terrace(x) + 0.2, land);
     return lerp(h, GROUND, level(d));
@@ -293,14 +294,6 @@ const paintEarth =
     if (h > 3.4) return n > 0.5 ? 'cream' : 'olive';
     return relief(c.clone().multiplyScalar(1.6)) > 0.38 ? 'ochre' : 'olive';
   };
-// A circuit board: green laminate, gold traces, dark chips.
-const paintChip: Paint = (c, h, slope, pv, n) => {
-  if (pv > 0.55) return n > 0.9 ? 'cream' : n > 0.3 ? 'blue' : 'ink'; // lit, like a screen
-  if (h < SEA + 0.34 || slope > 0.42) return 'ink';
-  if (n > 0.985) return 'cream';
-  const iso = (relief(c.clone().multiplyScalar(1.4)) + 2) * 3.2;
-  return iso - Math.floor(iso) < 0.17 ? 'ochre' : 'olive';
-};
 // A hull of panels: mostly white, some solar, some dark.
 const paintHull: Paint = (c, _h, _s, pv, n) => {
   if (pv > 0.55) return n > 0.9 ? 'ochre' : 'cream';
@@ -519,7 +512,7 @@ function drawingBoard() {
   g.add(board, box(1.5, 0.06, 0.18, 'ochre', 0, 0.94, 0.2), cyl(0.09, 0.2, 'blue', 0.55, 1.0, 0.22), cyl(0.012, 0.22, 'red', 0.55, 1.1, 0.22, 4));
   return g;
 }
-// The screen shows the planet inside; its size sets how far the camera dives.
+// The screen shows the desktop inside; its size sets how far the camera dives.
 const SCREEN_W = 2.1;
 const SCREEN_H = 1.26;
 function computer(screen: Mesh) {
@@ -563,32 +556,23 @@ function launchPad() {
   return g;
 }
 
-// ── Inside the computer ──
-function cpu() {
+// Studies and service, framed on a wall beside the computer.
+function diplomaWall() {
   const g = new Group();
-  g.add(box(5, 0.55, 5, 'ink'), box(2.6, 0.06, 1.6, 'cream', 0, 0.55, 0.6), box(1.0, 0.06, 0.3, 'ochre', -0.6, 0.55, -1.2));
-  for (let i = 0; i < 9; i++) {
-    const t = -2 + i * 0.5;
-    g.add(box(0.14, 0.12, 0.5, 'ochre', t, 0, 2.7), box(0.14, 0.12, 0.5, 'ochre', t, 0, -2.7), box(0.5, 0.12, 0.14, 'ochre', 2.7, 0, t), box(0.5, 0.12, 0.14, 'ochre', -2.7, 0, t));
-  }
-  return g;
-}
-function rack() {
-  const g = new Group();
-  g.add(box(1.4, 3.0, 1.1, 'ink'));
-  for (let i = 0; i < 5; i++) g.add(box(1.2, 0.06, 0.02, 'cream', 0, 0.35 + i * 0.52, 0.56), pane(0.12, 0.12, 0.4, 0.45 + i * 0.52, 0.58), pane(0.12, 0.12, 0.2, 0.45 + i * 0.52, 0.58));
-  return g;
-}
-function milestones() {
-  const g = new Group();
-  [-3, -1, 1, 3].forEach((x, i) => g.add(cyl(0.34, 1.5 + (i % 2) * 0.7, 'cream', x), box(0.86, 0.2, 0.86, 'ochre', x, 1.5 + (i % 2) * 0.7)));
-  return g;
-}
-function shelf() {
-  const g = new Group();
-  g.add(box(2.6, 0.1, 0.7, 'ochre', 0, 0, 0), box(2.6, 0.1, 0.7, 'ochre', 0, 1.2, 0), box(0.1, 2.3, 0.7, 'ochre', -1.25, 0, 0), box(0.1, 2.3, 0.7, 'ochre', 1.25, 0, 0));
-  const tones: Pigment[] = ['red', 'blue', 'cream', 'olive', 'ochre', 'ink'];
-  for (let r = 0; r < 2; r++) for (let i = 0; i < 9; i++) g.add(box(0.2, 0.8 + hash(i, r, 1) * 0.25, 0.5, tones[(i + r * 2) % 6], -1.0 + i * 0.25, 0.1 + r * 1.2, 0));
+  g.add(box(3.4, 2.7, 0.14, 'cream', 0, 0, -0.1), box(3.4, 0.1, 0.3, 'ochre', 0, 2.7, -0.05), box(3.4, 0.16, 0.24, 'ochre', 0, 0, -0.03));
+  const frames: [number, number, number, number, Pigment][] = [
+    [-1.05, 1.75, 0.9, 0.66, 'red'],
+    [0.05, 1.82, 0.8, 0.58, 'blue'],
+    [1.08, 1.7, 0.86, 0.66, 'ochre'],
+    [-1.1, 0.72, 0.72, 0.56, 'olive'],
+    [-0.05, 0.66, 0.96, 0.7, 'red'],
+    [1.06, 0.78, 0.74, 0.56, 'blue'],
+  ];
+  frames.forEach(([x, y, w, h, seal]) => {
+    g.add(box(w, h, 0.07, 'ink', x, y - h / 2, 0), box(w - 0.14, h - 0.14, 0.02, 'cream', x, y - h / 2 + 0.07, 0.05));
+    g.add(box(w * 0.5, 0.035, 0.02, 'ink', x, y - h * 0.32, 0.07), box(w * 0.36, 0.03, 0.02, 'ink', x - w * 0.07, y - h * 0.48, 0.07));
+    g.add(tilt(cyl(0.07, 0.02, seal, x + w * 0.26, y - h * 0.72, 0.07, 10), Math.PI / 2, 0, 0));
+  });
   return g;
 }
 // ── The station ──
@@ -815,10 +799,21 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const white = new Color(0xffffff);
   const moonlight = hex('blue');
 
-  // The computer's screen: the planet inside, rendered small and live.
-  const screenRT = new WebGLRenderTarget(336, 202, { minFilter: NearestFilter, magFilter: NearestFilter });
-  const screen = new Mesh(new PlaneGeometry(SCREEN_W, SCREEN_H), new MeshBasicMaterial({ map: screenRT.texture }));
-  const screenCam = new PerspectiveCamera(FOV, SCREEN_W / SCREEN_H, 0.5, 500);
+  // The computer's screen: the desktop inside, in miniature.
+  const deskCanvas = document.createElement('canvas');
+  deskCanvas.width = 336;
+  deskCanvas.height = 202;
+  paintDesk(deskCanvas);
+  const deskTex = new CanvasTexture(deskCanvas);
+  deskTex.colorSpace = SRGBColorSpace;
+  deskTex.magFilter = deskTex.minFilter = NearestFilter;
+  deskTex.generateMipmaps = false;
+  // the pixel font may land after the first paint
+  document.fonts?.ready.then(() => {
+    paintDesk(deskCanvas);
+    deskTex.needsUpdate = true;
+  });
+  const screen = new Mesh(new PlaneGeometry(SCREEN_W, SCREEN_H), new MeshBasicMaterial({ map: deskTex }));
 
   const BUILD: Record<string, () => Group> = {
     tomatoes,
@@ -830,6 +825,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     workbench,
     drawings: drawingBoard,
     computer: () => computer(screen),
+    diplomas: diplomaWall,
     rocket: launchPad,
     'rocket-home': launchPad,
   };
@@ -859,7 +855,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const ds = districts(names, R);
     const { height, paved } = makeGround(R, ds, coast, look, ridge);
     const garden = ds.find((z) => z.section === 'Garden');
-    const paint = look === 'chip' ? paintChip : look === 'hull' ? paintHull : paintEarth((c) => !!garden && c.angleTo(garden.dir) * R < garden.ring + 2.4);
+    const paint = look === 'hull' ? paintHull : paintEarth((c) => !!garden && c.angleTo(garden.dir) * R < garden.ring + 2.4);
     group.add(terrain(R, detail, height, paved, paint));
     const sea = look === 'earth' ? water(R, detail, height) : new Mesh(new IcosahedronGeometry(R + SEA, Math.max(10, Math.round(detail * 0.5))), new MeshLambertMaterial({ color: hex('ink').multiplyScalar(0.7) }));
     sea.receiveShadow = true;
@@ -966,24 +962,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         n++;
       }
       (['cream', 'red', 'ochre'] as Pigment[]).forEach((k) => forest(new IcosahedronGeometry(0.1, 1), soft(k), spots(Math.round(trees * 0.55), verge), 0.12, 1));
-    } else if (look === 'chip') {
-      // Chips and capacitors instead of trees.
-      const chips = spots(trees);
-      chips.forEach(({ d }) => solids.push({ dir: d, r: 0.8 }));
-      forest(new BoxGeometry(1.5, 0.4, 1.1), mat('ink'), chips, 0.2, 1);
-      forest(new BoxGeometry(0.9, 0.06, 0.5), mat('cream'), chips, 0.44, 1);
-      const caps = spots(Math.round(trees * 0.6));
-      caps.forEach(({ d }) => solids.push({ dir: d, r: 0.35 }));
-      forest(new CylinderGeometry(0.3, 0.3, 1, 12), soft('blue'), caps, 0.5, 1);
-      forest(new CylinderGeometry(0.31, 0.31, 0.08, 12), soft('cream'), caps, 1.02, 1);
-      forest(new IcosahedronGeometry(0.1, 1), soft('red'), spots(Math.round(trees * 0.5), verge), 0.12, 1);
     }
 
     // Spots: plates on stands, or things, each with a sign
     const all: Spot[] = [];
     const makeSpot = (i: number, zi: number, a: number, z: District | null) => {
       const it = items[i];
-      const build = look !== 'chip' ? BUILD[it.slug] : undefined;
+      const build = BUILD[it.slug] as (() => Group) | undefined;
       let g: Group;
       let box3: Box3;
       if (build) {
@@ -1025,9 +1010,17 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       labels.append(b);
       all.push(spot);
     };
+    // Along the arc each takes room by its width: a desk wants more than a plate.
+    const widthOf = (it: WorldItem) => (it.slug === 'computer' || it.slug === 'workbench' ? 4.2 : BUILD[it.slug] ? 3 : 2.3);
     ds.forEach((z, zi) => {
       const here = items.map((_, i) => i).filter((i) => districtOf(items[i]) === z.section);
-      here.forEach((i, k) => makeSpot(i, zi, here.length > 1 ? -z.arc + (k / (here.length - 1)) * z.arc * 2 : 0, z));
+      const ws = here.map((i) => widthOf(items[i]));
+      const span = ws.reduce((a, b) => a + b, 0) - (ws[0] + ws[ws.length - 1]) / 2;
+      let run = 0;
+      here.forEach((i, k) => {
+        if (k) run += (ws[k - 1] + ws[k]) / 2;
+        makeSpot(i, zi, here.length > 1 ? -z.arc + (run / span) * z.arc * 2 : 0, z);
+      });
     });
     // The station's dock sits at its pole.
     if (look === 'hull') items.forEach((it, i) => it.place === 'Dock' && makeSpot(i, -1, 0, null));
@@ -1076,20 +1069,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const fliesMat = new PointsMaterial({ color: hex('ochre'), size: 0.07, transparent: true, opacity: 0, depthWrite: false });
 
   const home = makePlanet('Home', 'earth', WORLDS.home, 20, 44, 1.28, 150, new Vector3(-0.7, 0.34, 0.62).normalize());
-  const pc = makePlanet('Computer', 'chip', WORLDS.pc, 13, 34, 1.5, 70);
   const station = makePlanet('Station', 'hull', WORLDS.station, 10, 26, 3.2, 0);
-  const planets = [home, pc, station];
+  const planets = [home, station];
   station.slot = 0;
-  pc.slot = -2;
   home.chip.textContent = 'Home';
   station.chip.textContent = 'Station';
   home.chip.addEventListener('click', () => select('Home'));
   station.chip.addEventListener('click', () => select('Station'));
-  // Nothing inside the computer casts or catches a shadow: it is all light.
-  pc.group.traverse((o) => {
-    o.castShadow = false;
-    o.receiveShadow = false;
-  });
   let cur = home;
   const spotOf = (slug: string) => planets.flatMap((p) => p.spots).find((s) => items[s.i].slug === slug)!;
   const computerSpot = spotOf('computer');
@@ -1119,9 +1105,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const doorStand = new Vector3(-0.7, 0, 3.1).applyQuaternion(casa.quaternion).add(casa.position);
   const doorAt = new Vector3(-0.7, 0, 1.6).applyQuaternion(casa.quaternion).add(casa.position);
   placeOn(home, palm(), NORTH, poleFrame.u, poleFrame.v, 4.2, -2.6);
-  placeOn(pc, cpu(), NORTH, poleFrame.u, poleFrame.v, 0, -3.4);
-  const backs: Record<string, () => Group> = { Projects: rack, Experience: milestones, Education: shelf };
-  pc.ds.forEach((z) => placeOn(pc, backs[z.section](), z.dir, z.u, z.v, 0, z.ring + 3.4));
   // The station: a ring round its middle, two solar wings, modules and dishes on the hull.
   const ring = new Mesh(new TorusGeometry(station.R + 3.2, 0.32, 8, 72), mat('cream'));
   ring.rotation.x = Math.PI / 2;
@@ -1807,7 +1790,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let pending: string | null = null;
   let burst = -1e9; // a moment of coarse pixels, to cover a cut
   let qDesk: Quaternion | null = null;
-  const busy = () => !!(warp || dive || launch || land || knock || bench);
+  let inPC = false; // the desktop inside the computer is open
+  const busy = () => !!(warp || dive || launch || land || knock || bench || inPC);
   // At the workbench: the view drops to the stool, and the bench asks hardware or software.
   let bench: { s: Spot; out: boolean } | null = null;
   let benchK = 0;
@@ -1891,6 +1875,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       return face(s);
     }
     if (it.slug === 'workbench') return face(s, () => sitAtBench(s));
+    if (it.slug === 'diplomas') return face(s, showWall);
     face(s, () => (it.room ? select(it.room) : open(s.i)));
   }
   // ── The workbench: hardware on the left, the laptop's software on the right ──
@@ -1939,6 +1924,42 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     e.stopPropagation();
     if (e.key === 'Escape') standUp();
   });
+  // ── The diploma wall: studies and service, each opening its card ──
+  const wallUI = document.createElement('div');
+  wallUI.className = 'w-bench w-wall';
+  wallUI.hidden = true;
+  wallUI.setAttribute('role', 'dialog');
+  wallUI.setAttribute('aria-label', 'The diploma wall');
+  wallUI.innerHTML = `<p class="w-bench-t caps">The diploma wall</p><div class="w-bench-c"></div><button type="button" class="w-bench-x caps">Close · Esc</button>`;
+  root.append(wallUI);
+  items.forEach((it, i) => {
+    if (it.place !== 'Education') return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'w-bench-o';
+    b.innerHTML = `<span class="caps"></span><b></b><em></em>`;
+    b.querySelector('span')!.textContent = `${it.kind === 'Service' ? 'Service' : 'Study'} · ${it.year}`;
+    b.querySelector('b')!.textContent = it.title;
+    b.addEventListener('click', () => {
+      hideWall();
+      open(i);
+    });
+    wallUI.querySelector('.w-bench-c')!.append(b);
+  });
+  function showWall() {
+    wallUI.hidden = false;
+    wallUI.querySelector<HTMLButtonElement>('.w-bench-o')?.focus({ preventScroll: true });
+  }
+  function hideWall() {
+    if (wallUI.hidden) return;
+    wallUI.hidden = true;
+    canvas.focus({ preventScroll: true });
+  }
+  wallUI.querySelector('.w-bench-x')!.addEventListener('click', hideWall);
+  wallUI.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') hideWall();
+  });
   function jump(to: Planet, then?: Then) {
     if (to === cur || warp) return then?.();
     trip = null;
@@ -1979,40 +2000,37 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     };
     touch();
   }
+  // Into the screen until it fills the view, and then the desktop itself;
+  // shutting it down backs out of the screen to the desk.
   function enterPC(then?: Then) {
     qDesk = home.q.clone();
     play('dive');
+    cur.spots.forEach((p) => p.label.classList.remove('on'));
+    inPC = true;
     dive = {
       dir: 1,
       t0: performance.now(),
       dur: ms(1800),
       then: () => {
-        cur.spots.forEach((p) => p.label.classList.remove('on'));
-        cur = pc;
-        zoom = zoomGoal = 0;
-        heroY = pc.R + GROUND;
-        burst = performance.now();
+        openPC(exitPC, reduced());
         then?.();
       },
     };
     touch();
   }
-  function exitPC(then?: Then) {
-    cur.spots.forEach((p) => p.label.classList.remove('on'));
-    cur = home;
+  function exitPC() {
+    inPC = false;
     home.q.copy(qDesk ?? facing(computerSpot));
     trip = null;
-    zoom = zoomGoal = 1;
-    heroY = home.R + GROUND;
     burst = performance.now();
-    dive = { dir: -1, t0: performance.now(), dur: ms(1400), then };
+    dive = { dir: -1, t0: performance.now(), dur: ms(1400) };
     play('surface');
+    canvas.focus({ preventScroll: true });
     touch();
   }
   // Names a place: a district, a world, or 'all' for the whole home planet.
   function resolve(name: string) {
     if (name === 'all' || name === 'Home') return { p: home, z: null };
-    if (name === 'Computer') return { p: pc, z: null };
     if (name === 'Station') return { p: station, z: null };
     for (const p of planets) {
       const z = p.ds.find((d) => d.section === name);
@@ -2022,6 +2040,12 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   }
   function travel(name: string) {
     if (busy()) return void (pending = name);
+    // the sections that no longer have a district of their own
+    name = ({ Projects: 'Workshop', Experience: 'Computer' } as Record<string, string>)[name] ?? name;
+    if (name === 'Computer') {
+      if (cur === station) return fly(home, () => travel(name));
+      return face(computerSpot, () => enterPC());
+    }
     const to = resolve(name);
     if (!to) return;
     const done = () => {
@@ -2033,11 +2057,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       if (to.z) return arrive(to.z);
       if (name !== 'Home') overview();
       return;
-    }
-    if (cur === pc) return exitPC(() => (name === 'Home' ? undefined : travel(name)));
-    if (to.p === pc) {
-      if (cur === station) return fly(home, () => travel(name));
-      return face(computerSpot, () => enterPC(done));
     }
     face(padOf(cur)!, () => fly(to.p, () => (to.p === home && !to.z && name !== 'all' ? say([guide.places.Home], false, 2600) : done())));
   }
@@ -2246,14 +2265,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   addEventListener('keyup', (e) => keys.delete(keyName(e)));
   addEventListener('blur', () => keys.clear());
 
-  // Out of the computer, by a button where the name was.
-  const leave = document.createElement('button');
-  leave.type = 'button';
-  leave.className = 'w-leave caps';
-  leave.textContent = '← Leave the computer';
-  leave.addEventListener('click', () => select('Home'));
-  labels.append(leave);
-
   // ═══ Frame ═══
   const camPos = new Vector3();
   const camTarget = new Vector3();
@@ -2284,26 +2295,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (on) el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, ${above ? '-100%' : '0'})`;
   };
   const inSky = (slot: Vector2, dist: number) => v.set(slot.x, slot.y, 0.5).unproject(camera).sub(camera.position).normalize().multiplyScalar(dist).add(camera.position);
-  // The planet inside, as the screen shows it: the same view as arriving there.
-  screenCam.position.copy(CAM_DIR).multiplyScalar(88 * 1.18 * (pc.R / 20));
-  screenCam.lookAt(0, 0, 0);
-  const inkClear = hex('ink');
-  function paintScreen() {
-    const shown = scene.children.map((o) => o.visible);
-    scene.children.forEach((o) => (o.visible = o === pc.group || o === ambient || o === sun || o === sun.target));
-    pc.group.position.set(0, 0, 0);
-    pc.group.scale.setScalar(1);
-    pc.group.quaternion.copy(pc.q);
-    renderer.shadowMap.autoUpdate = false;
-    renderer.setRenderTarget(screenRT);
-    renderer.setClearColor(inkClear, 1);
-    renderer.clear();
-    renderer.render(scene, screenCam);
-    renderer.setClearColor(0x000000, 0);
-    renderer.shadowMap.autoUpdate = true;
-    scene.children.forEach((o, k) => (o.visible = shown[k]));
-  }
-  paintScreen();
 
   // ═══ Indoors ═══
   // Through the front door of the little house is Daniel's flat, a dollhouse on
@@ -2790,7 +2781,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const orbiting = warp ? lerp(warp.from === station ? 1 : 0, warp.to === station ? 1 : 0, f) : cur === station ? 1 : 0;
     uniforms.night.value = dusk;
     uniforms.space.value = orbiting;
-    uniforms.scan.value = cur === pc ? 1 : 0;
     uniforms.time.value = now / 1000;
     seaTime.value = reduced() ? 0 : now / 1000;
     seaLight.value = lerp(1, 0.42, dusk);
@@ -2809,10 +2799,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     ambient.color.copy(white).lerp(moonlight, dusk * 0.55);
     sun.intensity = lerp(2.8, lerp(2.3, 1.1, lampNight), dusk);
     sun.color.copy(white).lerp(moonlight, dusk * 0.55);
-    lit.color.copy(hex('ink')).lerp(hex('ochre'), cur === pc ? 1 : smooth(0.45, 0.9, Math.max(dusk, orbiting)));
+    lit.color.copy(hex('ink')).lerp(hex('ochre'), smooth(0.45, 0.9, Math.max(dusk, orbiting)));
     glass.color.copy(hex('cream')).lerp(hex('ochre'), smooth(0.45, 0.9, Math.max(dusk, orbiting)));
     haloMat.uniforms.amount.value = Math.max(dusk, orbiting * 0.6) * 1.7;
-    fliesMat.opacity = cur === home ? dusk : cur === pc ? 1 : 0;
+    fliesMat.opacity = cur === home ? dusk : 0;
 
     clouds.rotation.y += dt * 0.016;
     clouds.scale.setScalar(rEff / 20 + 0.02);
@@ -3068,15 +3058,13 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     sun.target.position.set(0, heroY * e * 0.8, 0);
     sun.shadow.autoUpdate = (tick++ & 1) === 0;
 
-    // Everything in the sky is held in screen space. Inside the computer there is no sky.
+    // Everything in the sky is held in screen space.
     const dist = lerp(D * 1.32, 62, e);
     const skyScale = dist / 110;
-    const inside = cur === pc && !dive;
     planets.forEach((p, idx) => {
       const isFrom = warp?.from === p;
       const isTo = warp?.to === p;
       p.sea.rotation.y += dt * 0.012;
-      p.group.visible = inside ? p === pc : p !== pc;
       // A world hung in the sky casts no shadow on the one underfoot.
       const aloft = p.slot >= 0 && !isTo;
       if (p.group.userData.aloft !== aloft) {
@@ -3109,7 +3097,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       const c = toScreen(v.copy(w));
       const r = (rd / (dist * TAN)) * (H / 2);
       skyPos[idx] = { x: c.x, y: c.y, r };
-      place(p.chip, !warp && !intro && !inside && !busy() && p.slot >= 0, c.x, c.y + r + 6);
+      place(p.chip, !warp && !intro && !busy() && p.slot >= 0, c.x, c.y + r + 6);
     });
 
     // Plates turn to face whoever is looking; things stay as they stand.
@@ -3234,7 +3222,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       const c = toScreen(v.copy(w));
       place(chip, zoom < 0.45 && !intro && fc > -0.25, c.x, Math.max(10, c.y));
     });
-    leave.classList.toggle('on', cur === pc && !busy());
 
     const pc0 = v.set(0, 0, 0).project(camera);
     uniforms.centre.value.set(((pc0.x + 1) / 2) * uniforms.size.value.x, ((pc0.y + 1) / 2) * uniforms.size.value.y);
@@ -3249,7 +3236,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     moon.position.copy(inSky(ndc.set(cornerX, lerp(-1.5, cornerY, dusk)), sd));
     moon.scale.setScalar(sd * 0.034);
     moon.lookAt(camera.position);
-    sunDisc.visible = moon.visible = !inside;
+    sunDisc.visible = moon.visible = true;
 
     identity.classList.toggle('away', zoom > 0.3 || cur !== home || busy());
 
@@ -3290,12 +3277,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       bubble.style.setProperty('--tail', `${Math.round(Math.max(18, Math.min(bw - 18, top.x - bx)))}px`);
     }
 
-    // The screen on the desk shows the planet inside, turning.
-    if (cur === home && (dive || ((zoom > 0.3 || tick % 30 === 0) && tick % 3 === 0))) {
-      dq.setFromAxisAngle(axisY, dt * 0.15 * (dive ? 1 : 3));
-      pc.q.premultiply(dq).normalize();
-      paintScreen();
-    }
 
     renderer.setRenderTarget(target);
     renderer.clear();
