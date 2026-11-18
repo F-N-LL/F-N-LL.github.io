@@ -214,7 +214,7 @@ const starts = sections.map(({ section, slugs }) => ({
   }
 
   function start() {
-    if (started || !phone.matches) return;
+    if (started || !phone.matches || document.body.classList.contains('phone-world')) return;
     started = true;
 
     const root = document.querySelector<HTMLElement>('[data-flow]')!;
@@ -707,6 +707,10 @@ const starts = sections.map(({ section, slugs }) => ({
 <style>
   .flow {
     display: none;
+  }
+  /* a trial: the desktop's world on the phone, instead of the flow */
+  :global(body.phone-world) .flow {
+    display: none !important;
   }
 
   @media (max-width: 760px) {

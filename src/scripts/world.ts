@@ -2977,12 +2977,16 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const aspect = W / H;
     // only home leaves room for the words on the left
     const homeness = warp ? lerp(warp.from === home ? 1 : 0, warp.to === home ? 1 : 0, f) : cur === home ? 1 : 0;
-    const D = 88 * k * lerp(1.18, 1, homeness); // small worlds, seen from a little further off
+    // a tall screen (a phone) is narrow: back off until the planet fits across it
+    const tall = aspect < 1 ? Math.min(2.4, 0.9 / aspect) : 1;
+    const D = 88 * k * lerp(1.18, 1, homeness) * tall; // small worlds, seen from a little further off
     const halfW = D * TAN * aspect;
     const sx = Math.max(0, rEff - 0.1 * halfW) * (aspect > 1.15 ? 1 : 0.2) * homeness;
-    camPos.set(-sx, 0, 0).addScaledVector(CAM_DIR, D);
-    camTarget.set(-sx, 0, 0);
-    const n = Math.min(1, 0.6 + 0.4 * k);
+    // on a tall screen the words sit above the planet rather than beside it
+    const lift = tall > 1 ? rEff * 0.45 * homeness : 0;
+    camPos.set(-sx, lift, 0).addScaledVector(CAM_DIR, D);
+    camTarget.set(-sx, lift, 0);
+    const n = Math.min(1, 0.6 + 0.4 * k) * (aspect < 1 ? 1 + (1 - aspect) * 0.8 : 1);
     // a wider district needs the camera a little further back
     const nearest = cur.ds.reduce((a, b) => (under.angleTo(a.dir) < under.angleTo(b.dir) ? a : b));
     const room = lerp(1, 1.24, smooth(4.5, 7, nearest.ring));
