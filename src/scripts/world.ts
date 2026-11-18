@@ -773,7 +773,7 @@ type Planet = {
 // Where the other world hangs, in screen space (overview, then seen from the ground).
 // On a tall screen the planet fills the width: the others hang below it.
 const TALL_SLOTS = [
-  { far: new Vector2(0.42, -0.7), near: new Vector2(0.6, -0.84), radius: 6.4 },
+  { far: new Vector2(0.5, -0.84), near: new Vector2(0.6, -0.86), radius: 5.6 },
   { far: new Vector2(-0.5, -0.82), near: new Vector2(-0.62, -0.88), radius: 4.2 },
 ];
 const SLOTS = [

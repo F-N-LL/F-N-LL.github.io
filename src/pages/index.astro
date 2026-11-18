@@ -763,6 +763,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     const filterBtns = $$<HTMLButtonElement>('[data-filter]');
     function applyFilter(name: string) {
       filterBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === name)));
+      // on a phone the bar scrolls: keep the section it is on in sight
+      if (document.body.classList.contains('phone-world')) filterBtns.find((b) => b.dataset.filter === name)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
       document.body.dataset.filter = name;
       cards.forEach((c) => c.classList.toggle('dim', name !== 'all' && c.dataset.section !== name));
 
@@ -3044,9 +3046,48 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     :global(body:not(.phone-world)) .scrim {
       display: none !important;
     }
-    /* The world on a phone: the whole screen, the words narrower and smaller */
+    /* The world on a phone: the whole screen but a bar along the bottom, the words narrower and smaller */
     :global(body.phone-world) .world {
-      inset: 0;
+      inset: 0 0 calc(3.25rem + env(safe-area-inset-bottom));
+    }
+    /* The bar comes down to where the thumb is, with only the sections, the sound and the night */
+    :global(body.phone-world) .bar {
+      inset: auto 0 0;
+      display: flex !important;
+      align-items: center;
+      gap: 0.75rem;
+      height: calc(3.25rem + env(safe-area-inset-bottom));
+      padding: 0 var(--margin) env(safe-area-inset-bottom);
+      background: var(--bg);
+      border-top: 1px solid var(--rule);
+      font-size: 0.6875rem;
+    }
+    :global(body.phone-world) .b-name,
+    :global(body.phone-world) .b-right > :not(.b-theme) {
+      display: none;
+    }
+    :global(body.phone-world) .b-filters {
+      flex: 1;
+      gap: 1.1rem;
+      align-items: center;
+      align-self: stretch;
+      overflow-x: auto;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to right, #000 85%, transparent);
+    }
+    :global(body.phone-world) .b-filters button {
+      flex: none;
+      padding: 0.9rem 0;
+    }
+    :global(body.phone-world) .b-filters button::after {
+      bottom: 0.45rem;
+    }
+    :global(body.phone-world) .b-right {
+      gap: 1.4rem;
+      align-items: center;
+    }
+    :global(body.phone-world) .b-right .b-theme {
+      margin-left: 0;
     }
     :global(body.phone-world) .w-id {
       top: 1rem;
