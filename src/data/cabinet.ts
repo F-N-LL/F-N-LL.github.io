@@ -22,9 +22,10 @@ const sown = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => 
 // The phone reads the cabinet as a story: what gets made, where the work
 // happened, what grows at home, what got seen and written. Slugs in reading
 // order, grouped by section. The phone opens on the introduction before all of them.
-// On the desktop the same sections are spread over three worlds: the home
-// planet (Garden, Workshop), the one inside the computer (Projects,
-// Experience, Education) and the station in orbit (Posts, Links, Gallery).
+// On the desktop the same sections are spread over two worlds and a computer:
+// the home planet (Garden, and the Workshop with the projects and a wall of
+// diplomas), the desktop inside the computer (Experience, one folder per job,
+// from src/data/work.ts) and the station in orbit (Posts, Links, Gallery).
 export const flow: { section: string; slugs: string[] }[] = [
   { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile', 'trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
   { section: 'Experience', slugs: ['tui', 'immune', 'afconsulting', 'fibsen', 'nuclio', 'mitx', 'uv', 'uned', 'sfl', 'caritas'] },
@@ -37,7 +38,8 @@ export const flow: { section: string; slugs: string[] }[] = [
 // the networks, which stand on the station as plates.
 export type Thing = { slug: string; title: string; kind: string; year: string; place: string; href?: string; room?: string };
 export const worldOnly: Thing[] = [
-  { slug: 'computer', title: 'The computer', kind: 'Door', year: 'Projects and work inside', place: 'Workshop', room: 'Computer' },
+  { slug: 'computer', title: 'The computer', kind: 'Door', year: 'The work, inside', place: 'Workshop', room: 'Computer' },
+  { slug: 'diplomas', title: 'The diploma wall', kind: 'Wall', year: 'Studies and service', place: 'Workshop' },
   { slug: 'rocket', title: 'The rocket', kind: 'Door', year: 'To the station', place: 'Launch', room: 'Station' },
   { slug: 'rocket-home', title: 'The rocket', kind: 'Door', year: 'Back home', place: 'Dock', room: 'Home' },
   { slug: 'x', title: 'X', kind: 'Link', year: '@zumodeia', place: 'Links', href: 'https://x.com/zumodeia' },
@@ -55,6 +57,7 @@ export const specimens: Specimen[] = [
     year: '2026',
     medium: 'Kotlin, Android, on-device OCR · private',
     text: 'A light PDF reader for an e-ink Boox. Scanned book pages are split at the fold, deskewed and reflowed at a larger size, or turned into an EPUB with offline OCR.',
+    place: 'Workshop',
   },
   {
     slug: 'new_dumb_iPhone',
@@ -65,6 +68,7 @@ export const specimens: Specimen[] = [
     text: 'An old iPhone 4S turned into a quiet phone: a black screen, a big clock and a list of words. One script and one cable, plus a small Go bridge that brings WhatsApp back to iOS 9.',
     href: 'https://github.com/F-N-LL/new_dumb_iPhone',
     link: 'View source',
+    place: 'Workshop',
   },
   {
     slug: 'campanile',
@@ -75,6 +79,7 @@ export const specimens: Specimen[] = [
     text: 'The hours of prayer in the Mac menu bar: a reminder at each hour, a cross that fills in when one is due, and a quiet reader for the traditional Office, rendered daily on CI.',
     href: 'https://f-n-ll.github.io/campanile-office/',
     link: 'Visit',
+    place: 'Workshop',
   },
   {
     slug: 'trackpad-curve',
@@ -85,6 +90,7 @@ export const specimens: Specimen[] = [
     text: 'Speed-dependent cursor and two-finger scroll curves for Niri on Linux. Slow movements stay precise; fast ones travel farther. Nothing in the system is replaced.',
     href: 'https://github.com/F-N-LL/trackpad-curve',
     link: 'View source',
+    place: 'Workshop',
   },
   {
     slug: 'haskarm',
@@ -95,6 +101,7 @@ export const specimens: Specimen[] = [
     text: 'A camera finds your hand; a servo turns to follow it. Python sees, Haskell decides, an ESP32 moves.',
     href: 'https://github.com/F-N-LL/haskarm',
     link: 'View source',
+    place: 'Workshop',
   },
   {
     slug: 'dino_ML',
@@ -105,6 +112,7 @@ export const specimens: Specimen[] = [
     text: 'The Chrome dino runner, rebuilt with learning layers to crack the high score.',
     href: 'https://github.com/F-N-LL/dino_ML',
     link: 'View source',
+    place: 'Workshop',
   },
   {
     slug: 'HTTPServer_C',
@@ -115,6 +123,7 @@ export const specimens: Specimen[] = [
     text: 'An HTTP server written from scratch in C: structs, sockets, parsing, responses, and every error along the way.',
     href: 'https://github.com/F-N-LL/HTTPServer_C',
     link: 'View source',
+    place: 'Workshop',
   },
   {
     slug: 'ui-ai',
@@ -354,21 +363,21 @@ export const elsewhere = [
 export const cicerone = {
   intro: [
     'Hi! I’m Zumo, the juice box of zumodeia, and the cicerone of this site.',
-    'I’ll show you Daniel’s universe. Here at home: the huerta, the workbench and the computer.',
-    'Projects and work live inside the computer. Posts, links and pictures are up on the station: take the rocket.',
+    'I’ll show you Daniel’s universe. Here at home: the huerta, and the workshop with the projects, the workbench and the diplomas.',
+    'His work lives inside the computer, a folder per job. Posts, links and pictures are up on the station: take the rocket.',
     'Drag or use the arrow keys to walk. Click a thing, or press Enter by it, to open it. Keys 1 to 5 jump around.',
   ],
   back: 'Welcome back! Click me for the tour again.',
   places: {
-    Computer: 'Inside the computer: projects, work, and the studies in a corner.',
+    Computer: 'Inside the computer: a folder for each job.',
     Station: 'The station: posts, links and the gallery. The rocket takes you home.',
     Home: 'Home again.',
   } as Record<string, string>,
   // On the phone the worlds pass by as you swipe; it names each one as it comes.
   phone: {
     intro: 'Hi, I’m Zumo! Swipe up to walk through Daniel’s universe.',
-    pc: 'Inside the computer: projects and work.',
-    home: 'Back home: the huerta and the workbench.',
+    pc: 'Inside the computer: a folder for each job.',
+    home: 'At home: the projects, the huerta and the workbench.',
     station: 'Up on the station: pictures and posts.',
   } as Record<string, string>,
 };
