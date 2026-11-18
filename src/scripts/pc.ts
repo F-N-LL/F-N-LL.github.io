@@ -36,6 +36,9 @@ const ICONS: Record<Machine['icon'], string[]> = {
   hex: ['...##...', '.##..##.', '#......#', '#.#..#.#', '#.####.#', '#......#', '.##..##.', '...##...'],
   check: ['........', '.......#', '......##', '#....##.', '##..##..', '.####...', '..##....', '........'],
   rocket: ['...##...', '..####..', '..#..#..', '..####..', '..####..', '.######.', '##.##.##', '#..##..#'],
+  scales: ['...##...', '########', '.#....#.', '#.#..#.#', '###..###', '...##...', '...##...', '.######.'],
+  bottle: ['...##...', '...##...', '..####..', '.######.', '.#....#.', '.#.##.#.', '.#....#.', '.######.'],
+  tooth: ['.##..##.', '########', '########', '.######.', '.######.', '.##..##.', '.#....#.', '........'],
 };
 const FOLDER_ICON = ['.#####..........', '#.....#.........', '################', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '################'];
 const bitmap = (rows: string[], px: number, fill: string, x = 0, y = 0) =>
@@ -114,14 +117,38 @@ const el = (html: string) => {
   return t.content.firstElementChild as HTMLElement;
 };
 
+// One machine: a block with its icon, name, what it puts out and a light.
+function machine(m: Machine, k: number) {
+  const w = (m.w ?? 5) * CELL;
+  const h = (m.h ?? 3) * CELL;
+  const x = m.x * CELL;
+  const y = m.y * CELL;
+  const t = m.tone ?? 'ochre';
+  const fill = rgb(t);
+  const ink = t === 'cream' || t === 'ochre' ? rgb('ink') : rgb('cream');
+  const small = h < 3 * CELL;
+  const ipx = small ? 3 : 4;
+  const iy = small ? (h - 8 * ipx) / 2 : 16;
+  return `<g class="pc-m" data-m="${k}" tabindex="0" role="button" aria-label="${esc(`${m.name}, ${m.sub}`)}">
+    <rect x="${x + 6}" y="${y + 6}" width="${w}" height="${h}" fill="rgb(0 0 0/.35)"/>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${rgb('ink')}" stroke-width="4"/>
+    <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="6" fill="rgb(255 255 255/.28)"/>
+    ${[[6, 10], [w - 10, 10], [6, h - 10], [w - 10, h - 10]].map(([bx, by]) => `<rect x="${x + bx}" y="${y + by}" width="4" height="4" fill="${rgb('ink', 0.55)}"/>`).join('')}
+    ${bitmap(ICONS[m.icon], ipx, ink, x + 14, y + iy)}
+    <text x="${x + 14 + 8 * ipx + 10}" y="${y + (small ? h / 2 - 2 : 34)}" fill="${ink}" font-size="${small ? 15 : 18}">${esc(m.name)}</text>
+    <text x="${x + 14 + 8 * ipx + 10}" y="${y + (small ? h / 2 + 14 : 54)}" fill="${ink}" fill-opacity=".7" font-size="12">${esc(m.sub)}</text>
+    ${m.result && !small ? `<rect x="${x + 12}" y="${y + h - 34}" width="${w - 24}" height="22" fill="rgb(0 0 0/.18)"/><text x="${x + 20}" y="${y + h - 18}" fill="${ink}" font-size="13">▸ ${esc(m.result)}</text>` : ''}
+    <rect class="pc-led" x="${x + w - 18}" y="${y + 14}" width="6" height="6" fill="${rgb(t === 'olive' ? 'ochre' : 'olive')}" style="animation-delay:-${(k * 0.37) % 1.2}s"/>
+    <rect class="sel" x="${x - 7}" y="${y - 7}" width="${w + 14}" height="${h + 14}"/>
+  </g>`;
+}
+
 // ── The factory floor of one job ──
 function floor(f: Folder, reduced: boolean) {
   const { machines, belts } = f.plant!;
   const W = GRID.w * CELL;
   const H = GRID.h * CELL;
   const pt = ([x, y]: [number, number]) => `${x * CELL},${y * CELL}`;
-  const tone = (m: Machine) => m.tone ?? 'ochre';
-  const ink = (m: Machine) => (tone(m) === 'cream' || tone(m) === 'ochre' ? rgb('ink') : rgb('cream'));
 
   const beltsSvg = belts
     .map((b, k) => {
@@ -146,30 +173,7 @@ function floor(f: Folder, reduced: boolean) {
     })
     .join('');
 
-  const machinesSvg = machines
-    .map((m, k) => {
-      const w = (m.w ?? 5) * CELL;
-      const h = (m.h ?? 3) * CELL;
-      const x = m.x * CELL;
-      const y = m.y * CELL;
-      const fill = rgb(tone(m));
-      const small = h < 3 * CELL;
-      const ipx = small ? 3 : 4;
-      const iy = small ? (h - 8 * ipx) / 2 : 16;
-      return `<g class="pc-m" data-m="${k}" tabindex="0" role="button" aria-label="${esc(`${m.name}, ${m.sub}`)}">
-        <rect x="${x + 6}" y="${y + 6}" width="${w}" height="${h}" fill="rgb(0 0 0/.35)"/>
-        <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${rgb('ink')}" stroke-width="4"/>
-        <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="6" fill="rgb(255 255 255/.28)"/>
-        ${[[6, 10], [w - 10, 10], [6, h - 10], [w - 10, h - 10]].map(([bx, by]) => `<rect x="${x + bx}" y="${y + by}" width="4" height="4" fill="${rgb('ink', 0.55)}"/>`).join('')}
-        ${bitmap(ICONS[m.icon], ipx, ink(m), x + 14, y + iy)}
-        <text x="${x + 14 + 8 * ipx + 10}" y="${y + (small ? h / 2 - 2 : 34)}" fill="${ink(m)}" font-size="${small ? 15 : 18}">${esc(m.name)}</text>
-        <text x="${x + 14 + 8 * ipx + 10}" y="${y + (small ? h / 2 + 14 : 54)}" fill="${ink(m)}" fill-opacity=".7" font-size="12">${esc(m.sub)}</text>
-        ${m.result && !small ? `<rect x="${x + 12}" y="${y + h - 34}" width="${w - 24}" height="22" fill="rgb(0 0 0/.18)"/><text x="${x + 20}" y="${y + h - 18}" fill="${ink(m)}" font-size="13">▸ ${esc(m.result)}</text>` : ''}
-        <rect class="pc-led" x="${x + w - 18}" y="${y + 14}" width="6" height="6" fill="${rgb(tone(m) === 'olive' ? 'ochre' : 'olive')}" style="animation-delay:-${(k * 0.37) % 1.2}s"/>
-        <rect class="sel" x="${x - 7}" y="${y - 7}" width="${w + 14}" height="${h + 14}"/>
-      </g>`;
-    })
-    .join('');
+  const machinesSvg = machines.map(machine).join('');
 
   return `<svg class="pc-floor" viewBox="0 0 ${W} ${H}" role="group" aria-label="${esc(`How the work at ${f.org} fits together`)}">
     <defs><pattern id="pc-tile" width="${CELL}" height="${CELL}" patternUnits="userSpaceOnUse"><rect width="${CELL}" height="${CELL}" fill="#222a35"/><rect width="${CELL - 2}" height="${CELL - 2}" fill="#252e3a"/><rect x="6" y="${CELL - 12}" width="2" height="2" fill="#2d3745"/></pattern></defs>
@@ -245,12 +249,74 @@ function worldMap(f: Folder, reduced: boolean) {
   </svg>`;
 }
 
+// ── A town: the clients' buildings along one street, the way each job went below ──
+const STREET = 9.5; // the pavement, in cells from the top
+function town(f: Folder, reduced: boolean) {
+  const { buildings, steps } = f.town!;
+  const W = GRID.w * CELL;
+  const H = GRID.h * CELL;
+  const base = STREET * CELL;
+  let seed = 3;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const stars = Array.from({ length: 40 }, () => `<rect x="${Math.round(rand() * W)}" y="${Math.round(rand() * (base - 120))}" width="2" height="2" fill="${rgb('cream', 0.25 + rand() * 0.4)}"/>`).join('');
+  const houses = buildings
+    .map((m, k) => {
+      const x = m.x * CELL;
+      const w = (m.w ?? 5) * CELL;
+      const h = (m.h ?? 5) * CELL;
+      const top = base - h;
+      const t = m.tone ?? 'ochre';
+      const ink = t === 'cream' || t === 'ochre' ? rgb('ink') : rgb('cream');
+      // a stepped gable on every other one, a flat cornice on the rest
+      const roof =
+        k % 2
+          ? `<rect x="${x - 4}" y="${top - 10}" width="${w + 8}" height="12" fill="${rgb('ink')}"/>`
+          : [0, 1, 2].map((i) => `<rect x="${x + w * (0.12 + i * 0.12)}" y="${top - 12 - i * 12}" width="${w * (0.76 - i * 0.24)}" height="14" fill="${rgb(t)}" stroke="${rgb('ink')}" stroke-width="4"/>`).join('');
+      const cols = Math.floor((w - 24) / 34);
+      const rows = Math.max(0, Math.floor((h - 64 - 60) / 38));
+      const left = x + (w - cols * 34 + 14) / 2;
+      const windows = Array.from({ length: rows * cols }, (_, i) => {
+        const lit = hash(k, i) > 0.45;
+        return `<rect x="${left + (i % cols) * 34}" y="${top + 62 + Math.floor(i / cols) * 38}" width="18" height="22" fill="${lit ? rgb('ochre') : '#151a21'}" stroke="${rgb('ink')}" stroke-width="3"${lit && hash(i, k) > 0.8 && !reduced ? ' class="pc-led"' : ''}/>`;
+      }).join('');
+      const door = `<rect x="${x + w / 2 - 14}" y="${base - 44}" width="28" height="44" fill="${rgb('ink')}"/><rect x="${x + w / 2 + 6}" y="${base - 24}" width="4" height="4" fill="${rgb('ochre')}"/>`;
+      // the shop gets an awning
+      const awning = m.icon === 'bottle' ? Array.from({ length: Math.floor(w / 20) }, (_, i) => `<rect x="${x + 4 + i * 20}" y="${base - 66}" width="20" height="14" fill="${i % 2 ? rgb('cream') : rgb('red')}" stroke="${rgb('ink')}" stroke-width="2"/>`).join('') : '';
+      return `<g class="pc-m" data-m="${k}" tabindex="0" role="button" aria-label="${esc(`${m.name}, ${m.sub}`)}">
+        ${roof}
+        <rect x="${x}" y="${top}" width="${w}" height="${h}" fill="${rgb(t)}" stroke="${rgb('ink')}" stroke-width="4"/>
+        <rect x="${x + 10}" y="${top + 10}" width="${w - 20}" height="42" fill="${rgb('ink')}"/>
+        ${bitmap(ICONS[m.icon], 3, rgb('ochre'), x + 18, top + 19)}
+        <text x="${x + 52}" y="${top + 28}" fill="${rgb('cream')}" font-size="14">${esc(m.name)}</text>
+        <text x="${x + 52}" y="${top + 44}" fill="${rgb('cream', 0.6)}" font-size="11">${esc(m.sub)}</text>
+        ${windows}${awning}${door}
+        <rect class="sel" x="${x - 9}" y="${top - (k % 2 ? 17 : 45)}" width="${w + 18}" height="${h + (k % 2 ? 24 : 52)}"/>
+      </g>`;
+    })
+    .join('');
+  const lamps = [6.25, 11.75, 18.25, 23.75].map((c) => `<rect x="${c * CELL - 2}" y="${base - 70}" width="4" height="70" fill="${rgb('ink')}"/><rect x="${c * CELL - 7}" y="${base - 80}" width="14" height="10" fill="${rgb('ochre')}"/>`).join('');
+  const street = `<rect y="${base}" width="${W}" height="24" fill="${rgb('cream', 0.22)}"/><rect y="${base + 24}" width="${W}" height="40" fill="#151a21"/>${Array.from({ length: 24 }, (_, i) => `<rect x="${i * 50 + 10}" y="${base + 42}" width="24" height="4" fill="${rgb('ochre', 0.7)}"/>`).join('')}`;
+  const walkY = base + 12;
+  const me = reduced
+    ? ''
+    : `<g><g class="pc-bob"><rect x="-4" y="-22" width="8" height="8" fill="#e8b48a" stroke="${rgb('ink')}" stroke-width="2"/><rect x="-5" y="-14" width="10" height="9" fill="${rgb('red')}" stroke="${rgb('ink')}" stroke-width="2"/><rect x="5" y="-10" width="6" height="5" fill="${rgb('ochre')}" stroke="${rgb('ink')}" stroke-width="1"/><rect x="-4" y="-5" width="3" height="5" fill="${rgb('ink')}"/><rect x="1" y="-5" width="3" height="5" fill="${rgb('ink')}"/></g><animateMotion dur="30s" repeatCount="indefinite" path="M${1.5 * CELL},${walkY} L${28.5 * CELL},${walkY} L${1.5 * CELL},${walkY}"/></g>`;
+  const arrows = steps.slice(1).map((m) => `<path d="M-7,-9 L5,0 L-7,9 Z" fill="${rgb('ochre')}" transform="translate(${m.x * CELL - 6},${(m.y + (m.h ?? 2) / 2) * CELL})"/>`).join('');
+  const stepsSvg = `<text x="${0.5 * CELL}" y="${11.7 * CELL}" fill="${rgb('cream', 0.6)}" font-size="13">How each job went</text>${steps.map((m, i) => machine(m, buildings.length + i)).join('')}${arrows}`;
+  return `<svg class="pc-floor" viewBox="0 0 ${W} ${H}" role="group" aria-label="${esc(`The clients of ${f.org}`)}">
+    <rect width="${W}" height="${H}" fill="#1f2630"/>${stars}${lamps}${houses}${street}${me}${stepsSvg}
+  </svg>`;
+}
+const hash = (a: number, b: number) => {
+  const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return s - Math.floor(s);
+};
+
 function windowFor(f: Folder, reduced: boolean) {
   const head = `<header class="pc-head"><div><p class="pc-kick">${esc(f.org)} · ${esc(f.period)}</p><h2 class="pc-h">${esc(f.title)}</h2>${f.lead ? `<p class="pc-lead">${esc(f.lead)}</p>` : ''}</div>${
     f.stats ? `<dl class="pc-stats">${f.stats.map((s) => `<div><dt>${esc(s.label)}</dt><dd>${esc(s.value)}</dd></div>`).join('')}</dl>` : ''
   }</header>`;
-  const body = f.plant || f.map
-    ? `<div class="pc-plant">${f.plant ? floor(f, reduced) : worldMap(f, reduced)}<section class="pc-insp" aria-live="polite"></section></div>${f.stack ? `<ul class="pc-stack" aria-label="Stack">${f.stack.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}`
+  const body = f.plant || f.map || f.town
+    ? `<div class="pc-plant">${f.plant ? floor(f, reduced) : f.map ? worldMap(f, reduced) : town(f, reduced)}<section class="pc-insp" aria-live="polite"></section></div>${f.stack ? `<ul class="pc-stack" aria-label="Stack">${f.stack.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}`
     : `<div class="pc-soon"><svg width="120" height="90" viewBox="0 0 120 90" aria-hidden="true"><rect x="10" y="10" width="100" height="70" fill="none" stroke="${rgb('cream', 0.4)}" stroke-width="4" stroke-dasharray="10 8"/>${bitmap(ICONS.brain, 5, rgb('cream', 0.3), 40, 25)}</svg><p>This factory is still being laid out.</p><p>Back soon<span class="cur"></span></p></div>`;
   return el(`<section class="pc-win" role="dialog" aria-label="${esc(f.name)}"><div class="pc-title"><span>${esc(f.name.toUpperCase())}</span><i></i><button type="button" class="pc-x" aria-label="Close ${esc(f.name)}">×</button></div><div class="pc-body" tabindex="-1">${head}${body}</div></section>`);
 }
@@ -290,12 +356,12 @@ export function openPC(onClose?: () => void, reduced = false) {
     play('open');
     win.querySelector('.pc-x')!.addEventListener('click', shut);
     const insp = win.querySelector<HTMLElement>('.pc-insp');
-    const ms = f.plant?.machines ?? f.map?.levels ?? [];
+    const ms = f.plant?.machines ?? f.map?.levels ?? (f.town ? [...f.town.buildings, ...f.town.steps] : []);
     const pick = (k: number | null) => {
       if (!insp) return;
       win!.querySelectorAll('.pc-m').forEach((g, i) => g.classList.toggle('on', i === k));
       if (k === null) {
-        insp.innerHTML = `<h3>Inspector<small>click a ${f.map ? 'level' : 'machine'}</small></h3><p>${esc(f.hint ?? '')}</p>`;
+        insp.innerHTML = `<h3>Inspector<small>click a ${f.map ? 'level' : f.town ? 'building' : 'machine'}</small></h3><p>${esc(f.hint ?? '')}</p>`;
         return;
       }
       const m = ms[k];

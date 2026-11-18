@@ -1,14 +1,15 @@
 // What the computer on the desk holds: one folder per job. Opening a folder
 // shows the work as a small game screen: a `plant` is a factory, machines
 // joined by belts the way a factory game draws a production line; a `map` is a
-// world map, levels along a road that the students walk. A folder with
-// neither yet shows a placeholder.
+// world map, levels along a road that the students walk; a `town` is a street
+// of the clients' buildings, with how each job went laid out below it. A
+// folder with none of them yet shows a placeholder.
 
 export type Machine = {
   id: string;
   name: string; // on the machine, short
   sub: string; // under it, in small type
-  icon: 'docs' | 'rust' | 'vault' | 'lens' | 'screen' | 'brain' | 'pen' | 'people' | 'chat' | 'crate' | 'flag' | 'book' | 'atom' | 'trophy' | 'branch' | 'hex' | 'check' | 'rocket';
+  icon: 'docs' | 'rust' | 'vault' | 'lens' | 'screen' | 'brain' | 'pen' | 'people' | 'chat' | 'crate' | 'flag' | 'book' | 'atom' | 'trophy' | 'branch' | 'hex' | 'check' | 'rocket' | 'scales' | 'bottle' | 'tooth';
   x: number; // grid cell of its top-left corner (the grid is 30 × 15)
   y: number;
   w?: number; // in cells, 5 if left out
@@ -22,6 +23,8 @@ export type Belt = { from: string; to: string; path: [number, number][]; slow?: 
 // On a world map: the worlds are tinted ground, the levels are machines (2 × 2
 // unless told otherwise) and the road runs through them; side roads lead off it.
 export type World = { name: string; sub: string; x: number; y: number; w: number; h: number; tone: 'ochre' | 'blue' | 'olive' | 'red' };
+// In a town the buildings stand on one street: x and w place them along it, h is how tall.
+export type Town = { buildings: Machine[]; steps: Machine[] };
 export type WorldMap = { worlds: World[]; levels: Machine[]; road: [number, number][]; sides: [number, number][][]; walkers: number };
 
 export type Folder = {
@@ -36,6 +39,7 @@ export type Folder = {
   hint?: string; // what the inspector says before anything is picked
   plant?: { machines: Machine[]; belts: Belt[] };
   map?: WorldMap;
+  town?: Town;
 };
 
 export const folders: Folder[] = [
@@ -275,6 +279,34 @@ export const folders: Folder[] = [
       walkers: 8,
     },
   },
-  { slug: 'afconsulting', name: 'AF Consulting', title: 'Software Developer', org: 'AF Consulting', period: 'Jun 2022 – Sep 2023' },
+  {
+    slug: 'afconsulting',
+    name: 'AF Consulting',
+    title: 'Software Developer',
+    org: 'AF Consulting',
+    period: 'Jun 2022 – Sep 2023',
+    stack: ['WordPress', 'WooCommerce', 'PHP', 'JavaScript', 'React', 'Node', 'SEO'],
+    lead: 'Web apps and online stores for small and medium businesses, in Spain and abroad. The business side spoke with the clients; everything technical was mine, from the brief to production.',
+    stats: [
+      { value: '5', label: 'kinds of client' },
+      { value: 'ES · DE', label: 'clients in' },
+    ],
+    hint: 'A street of the clients: each building is one kind of job. Below it, how every one of them went.',
+    town: {
+      buildings: [
+        { id: 'law', name: 'Law firms', sub: 'Websites', icon: 'scales', x: 1, w: 5, h: 6, y: 0, tone: 'cream', text: 'Websites for law firms, built to their brief and easy for them to keep up to date.' },
+        { id: 'tax', name: 'Tax advisers', sub: 'Websites, web apps', icon: 'docs', x: 6.5, w: 5, h: 5, y: 0, tone: 'blue', text: 'Sites and web tools for tax and business advisory firms.' },
+        { id: 'software', name: 'Software rollouts', sub: 'For other companies', icon: 'crate', x: 12, w: 6, h: 7, y: 0, tone: 'ochre', text: 'Software set up for other companies: installed, configured, connected to what they already had, and running.' },
+        { id: 'wine', name: 'Wine shop', sub: 'E-commerce', icon: 'bottle', x: 18.5, w: 5, h: 4.5, y: 0, tone: 'red', text: 'An online store for wine: the catalogue, the cart, payments and shipping.' },
+        { id: 'dental', name: 'Dental clinic', sub: 'Germany', icon: 'tooth', x: 24, w: 5, h: 5.5, y: 0, tone: 'olive', text: 'The website of a dental clinic in Germany.' },
+      ],
+      steps: [
+        { id: 'brief', name: 'Brief', sub: 'Business side', icon: 'people', x: 0.5, y: 12, w: 4, h: 2, tone: 'cream', text: 'The business side spoke with each client; I turned what they asked for into the technical plan.' },
+        { id: 'build', name: 'Build', sub: 'Apps · stores', icon: 'screen', x: 5, y: 12, w: 4, h: 2, tone: 'cream', text: 'Whatever fit the client: WordPress and WooCommerce for most, custom code in JavaScript, React or Node when it needed more.' },
+        { id: 'seo', name: 'SEO', sub: 'The basics', icon: 'lens', x: 9.5, y: 12, w: 4, h: 2, tone: 'cream', text: 'Basic SEO on every site: structure, metadata and speed.' },
+        { id: 'live', name: 'Online', sub: 'Maintained', icon: 'rocket', x: 14, y: 12, w: 4, h: 2, tone: 'cream', text: 'Deployed, handed over and maintained afterwards.' },
+      ],
+    },
+  },
   { slug: 'fibsen', name: 'fibsen', title: 'Developer & Designer, founding team', org: 'fibsen', period: 'Jun 2019 – Jan 2020' },
 ];
