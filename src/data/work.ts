@@ -9,7 +9,7 @@ export type Machine = {
   id: string;
   name: string; // on the machine, short
   sub: string; // under it, in small type
-  icon: 'docs' | 'rust' | 'vault' | 'lens' | 'screen' | 'brain' | 'pen' | 'people' | 'chat' | 'crate' | 'flag' | 'book' | 'atom' | 'trophy' | 'branch' | 'hex' | 'check' | 'rocket' | 'scales' | 'bottle' | 'tooth';
+  icon: 'docs' | 'rust' | 'vault' | 'lens' | 'screen' | 'brain' | 'pen' | 'people' | 'chat' | 'crate' | 'flag' | 'book' | 'atom' | 'trophy' | 'branch' | 'hex' | 'check' | 'rocket' | 'scales' | 'bottle' | 'tooth' | 'drop' | 'wave';
   x: number; // grid cell of its top-left corner (the grid is 30 × 15)
   y: number;
   w?: number; // in cells, 5 if left out
@@ -19,7 +19,8 @@ export type Machine = {
   result?: string; // what it puts out
 };
 // A belt runs through grid points; items ride it from the first to the last.
-export type Belt = { from: string; to: string; path: [number, number][]; slow?: boolean };
+// With `water`, the belts are pipes and what rides them is water; `leak` marks a leak on one.
+export type Belt = { from: string; to: string; path: [number, number][]; slow?: boolean; leak?: string };
 // On a world map: the worlds are tinted ground, the levels are machines (2 × 2
 // unless told otherwise) and the road runs through them; side roads lead off it.
 export type World = { name: string; sub: string; x: number; y: number; w: number; h: number; tone: 'ochre' | 'blue' | 'olive' | 'red' };
@@ -37,7 +38,7 @@ export type Folder = {
   lead?: string;
   stats?: { value: string; label: string }[];
   hint?: string; // what the inspector says before anything is picked
-  plant?: { machines: Machine[]; belts: Belt[] };
+  plant?: { machines: Machine[]; belts: Belt[]; water?: boolean };
   map?: WorldMap;
   town?: Town;
 };
@@ -308,5 +309,120 @@ export const folders: Folder[] = [
       ],
     },
   },
-  { slug: 'fibsen', name: 'fibsen', title: 'Developer & Designer, founding team', org: 'fibsen', period: 'Jun 2019 – Jan 2020' },
+  {
+    slug: 'fibsen',
+    name: 'fibsen',
+    title: 'Co-founder, software & design',
+    org: 'fibsen',
+    period: 'Jun 2019 – Jan 2020',
+    stack: ['Dashboard', 'Web', 'Brand', 'Pitch deck', 'Fibre-optic sensing'],
+    lead: 'A water-tech startup with two co-founders and a lab: optical fibre along high-pressure water mains, to find leaks within 0.4 m. I took the software and the look of it, for about a year, until the funding did not come through.',
+    stats: [
+      { value: '±0.4 m', label: 'leak precision' },
+      { value: '2', label: 'co-founders' },
+      { value: 'EN · ES', label: 'pitches' },
+      { value: '~1 yr', label: 'on board' },
+    ],
+    hint: 'Water runs left to right: from the mains, past the fibre that hears a leak, into data and onto a screen. Below, the company around it.',
+    plant: {
+      water: true,
+      machines: [
+        {
+          id: 'mains',
+          name: 'Water mains',
+          sub: 'High pressure',
+          icon: 'drop',
+          x: 1,
+          y: 2,
+          tone: 'blue',
+          text: 'The high-pressure network that carries water between cities and reservoirs: big pipes, long distances, and leaks that are hard to find.',
+          result: 'Kilometres of pipe',
+        },
+        {
+          id: 'fibre',
+          name: 'Fibre optics',
+          sub: 'Along the pipe',
+          icon: 'wave',
+          x: 8,
+          y: 2,
+          tone: 'ochre',
+          text: 'Optical fibre laid along the pipe reads its parameters all the way down, and points to a leak within 0.4 metres.',
+          result: 'Leaks within ±0.4 m',
+        },
+        {
+          id: 'hardware',
+          name: 'Hardware',
+          sub: 'The lab',
+          icon: 'crate',
+          x: 15,
+          y: 2,
+          tone: 'cream',
+          text: 'The sensing hardware, built in the lab by my co-founder and the lab assistants.',
+          result: 'Built in the lab',
+        },
+        {
+          id: 'data',
+          name: 'Data',
+          sub: 'Every parameter',
+          icon: 'vault',
+          x: 22,
+          y: 2,
+          tone: 'ochre',
+          text: 'Every reading the network gives off, kept: the software side I planned around it.',
+          result: 'Readings, all the time',
+        },
+        {
+          id: 'dashboard',
+          name: 'Dashboard',
+          sub: 'The first app',
+          icon: 'screen',
+          x: 22,
+          y: 8,
+          tone: 'cream',
+          text: 'The first app: a dashboard to watch the network and see where it leaks. Mine, from the look of it to the code.',
+          result: 'The first app',
+        },
+        {
+          id: 'smart',
+          name: 'Smart cities',
+          sub: 'Where it was going',
+          icon: 'hex',
+          x: 15,
+          y: 8,
+          tone: 'olive',
+          text: 'Where the software was headed: the same stream of data, useful far beyond leaks, for smart cities.',
+          result: 'The plan',
+        },
+        {
+          id: 'brand',
+          name: 'Brand',
+          sub: 'Look · website',
+          icon: 'pen',
+          x: 1,
+          y: 8,
+          tone: 'red',
+          text: 'The look of the company and its website.',
+        },
+        {
+          id: 'pitch',
+          name: 'Pitch',
+          sub: 'English · Spanish',
+          icon: 'chat',
+          x: 8,
+          y: 8,
+          tone: 'red',
+          text: 'Pitched at several forums, in English and Spanish, and went after funding from VCs. It did not come through, and after about a year I stepped away.',
+          result: 'Several forums',
+        },
+      ],
+      belts: [
+        { from: 'mains', to: 'fibre', path: [[6, 3.5], [8, 3.5]], leak: '±0.4 m' },
+        { from: 'fibre', to: 'hardware', path: [[13, 3.5], [15, 3.5]] },
+        { from: 'hardware', to: 'data', path: [[20, 3.5], [22, 3.5]] },
+        { from: 'data', to: 'dashboard', path: [[24.5, 5], [24.5, 8]] },
+        { from: 'data', to: 'smart', path: [[22, 4.6], [21, 4.6], [21, 9.5], [20, 9.5]], slow: true },
+        { from: 'brand', to: 'pitch', path: [[6, 9.5], [8, 9.5]], slow: true },
+      ],
+    },
+  },
 ];

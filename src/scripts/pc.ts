@@ -38,6 +38,8 @@ const ICONS: Record<Machine['icon'], string[]> = {
   rocket: ['...##...', '..####..', '..#..#..', '..####..', '..####..', '.######.', '##.##.##', '#..##..#'],
   scales: ['...##...', '########', '.#....#.', '#.#..#.#', '###..###', '...##...', '...##...', '.######.'],
   bottle: ['...##...', '...##...', '..####..', '.######.', '.#....#.', '.#.##.#.', '.#....#.', '.######.'],
+  drop: ['...#....', '..###...', '..###...', '.#####..', '#######.', '##.####.', '.#####..', '..###...'],
+  wave: ['........', '.##...##', '#..#.#..', '....#...', '........', '.##...##', '#..#.#..', '....#...'],
   tooth: ['.##..##.', '########', '########', '.######.', '.######.', '.##..##.', '.#....#.', '........'],
 };
 const FOLDER_ICON = ['.#####..........', '#.....#.........', '################', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '################'];
@@ -145,7 +147,7 @@ function machine(m: Machine, k: number) {
 
 // ── The factory floor of one job ──
 function floor(f: Folder, reduced: boolean) {
-  const { machines, belts } = f.plant!;
+  const { machines, belts, water } = f.plant!;
   const W = GRID.w * CELL;
   const H = GRID.h * CELL;
   const pt = ([x, y]: [number, number]) => `${x * CELL},${y * CELL}`;
@@ -162,7 +164,26 @@ function floor(f: Folder, reduced: boolean) {
       const ang = (Math.atan2(ey - py, ex - px) * 180) / Math.PI;
       const items = reduced
         ? ''
-        : Array.from({ length: n }, (_, i) => `<rect x="-5" y="-5" width="10" height="10" fill="${rgb(b.slow ? 'olive' : 'cream')}" stroke="${rgb('ink')}" stroke-width="2"><animateMotion dur="${dur.toFixed(2)}s" begin="${(-(i / n) * dur).toFixed(2)}s" repeatCount="indefinite" path="${d}"/></rect>`).join('');
+        : water
+          ? Array.from({ length: n }, (_, i) => `<rect x="-3" y="-3" width="6" height="6" fill="${rgb('cream', 0.85)}"><animateMotion dur="${(dur * 0.8).toFixed(2)}s" begin="${(-(i / n) * dur * 0.8).toFixed(2)}s" repeatCount="indefinite" path="${d}"/></rect>`).join('')
+          : Array.from({ length: n }, (_, i) => `<rect x="-5" y="-5" width="10" height="10" fill="${rgb(b.slow ? 'olive' : 'cream')}" stroke="${rgb('ink')}" stroke-width="2"><animateMotion dur="${dur.toFixed(2)}s" begin="${(-(i / n) * dur).toFixed(2)}s" repeatCount="indefinite" path="${d}"/></rect>`).join('');
+      if (water) {
+        // a pipe: a pale wall, water inside, a flange at every joint, and maybe a leak
+        const [ax, ay] = b.path[0];
+        const [bx, by] = b.path[1];
+        const [lx, ly] = [((ax + bx) / 2) * CELL, ((ay + by) / 2) * CELL];
+        const leak = b.leak
+          ? `<g class="pc-led">${[[-10, -20], [-2, -26], [6, -19], [-6, -34], [8, -32]].map(([dx, dy]) => `<rect x="${lx + dx}" y="${ly + dy}" width="5" height="5" fill="${rgb('blue')}"/>`).join('')}</g><rect x="${lx - 4}" y="${ly - 14}" width="8" height="8" fill="${rgb('red')}" class="pc-led"/><text x="${lx}" y="${ly - 46}" fill="${rgb('red')}" font-size="12" text-anchor="middle">${esc(b.leak)}</text>`
+          : '';
+        return `<g data-belt="${k}">
+        <path d="${d}" fill="none" stroke="#151a21" stroke-width="26" stroke-linejoin="miter"/>
+        <path d="${d}" fill="none" stroke="${rgb('cream', 0.4)}" stroke-width="20" stroke-linejoin="miter"/>
+        <path d="${d}" fill="none" stroke="${rgb(b.slow ? 'olive' : 'blue')}" stroke-width="12" stroke-linejoin="miter"/>
+        <path class="pc-belt-run${b.slow ? ' slow' : ''}" d="${d}" fill="none" stroke="${rgb('cream', 0.35)}" stroke-width="4" stroke-dasharray="6 10"/>
+        ${b.path.slice(1, -1).map(([jx, jy]) => `<rect x="${jx * CELL - 15}" y="${jy * CELL - 15}" width="30" height="30" fill="${rgb('ink')}" stroke="${rgb('cream', 0.4)}" stroke-width="3"/>`).join('')}
+        ${items}${leak}
+      </g>`;
+      }
       return `<g data-belt="${k}">
         <path d="${d}" fill="none" stroke="#151a21" stroke-width="22" stroke-linejoin="miter"/>
         <path d="${d}" fill="none" stroke="${rgb('cream', 0.14)}" stroke-width="16" stroke-linejoin="miter"/>
