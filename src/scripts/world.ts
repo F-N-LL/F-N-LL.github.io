@@ -105,7 +105,7 @@ const SHOWN: Record<string, string> = { Launch: 'Launch pad' };
 // Districts of things rather than plates keep their own spacing.
 const SPREAD: Record<string, { ring: number; arc: number }> = {
   Garden: { ring: 5.6, arc: 1.75 },
-  Workshop: { ring: 6, arc: 1.0 },
+  Workshop: { ring: 6, arc: 1.2 },
   Launch: { ring: 3.4, arc: 0 },
 };
 
@@ -1016,7 +1016,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       all.push(spot);
     };
     // Along the arc each takes room by its width: a desk wants more than a plate.
-    const widthOf = (it: WorldItem) => (it.slug === 'computer' || it.slug === 'workbench' ? 4.2 : BUILD[it.slug] ? 3 : 2.3);
+    // the diploma wall keeps a little apart, so it is not in the way of the computer
+    const widthOf = (it: WorldItem) => (it.slug === 'diplomas' ? 6 : it.slug === 'computer' || it.slug === 'workbench' ? 4.2 : BUILD[it.slug] ? 3 : 2.3);
     ds.forEach((z, zi) => {
       const here = items.map((_, i) => i).filter((i) => districtOf(items[i]) === z.section);
       const ws = here.map((i) => widthOf(items[i]));
@@ -2130,13 +2131,22 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let goalAt = 0;
   let goalDoor = false;
   const goalMat = new MeshBasicMaterial({ color: hex('cream'), transparent: true, opacity: 0, depthWrite: false });
+  // a thick green edge under the cream, so the mark reads on pale ground too
+  const goalEdge = new MeshBasicMaterial({ color: hex('olive'), transparent: true, opacity: 0, depthWrite: false });
+  const edged = (geo: BufferGeometry, edge: BufferGeometry) => {
+    const top = new Mesh(geo, goalMat);
+    const under = new Mesh(edge, goalEdge);
+    top.renderOrder = 1;
+    return [under, top];
+  };
   const goalMark = new Group();
   [Math.PI / 4, -Math.PI / 4].forEach((a) => {
-    const bar = new Mesh(new BoxGeometry(0.9, 0.04, 0.16), goalMat);
-    bar.rotation.y = a;
-    goalMark.add(bar);
+    edged(new BoxGeometry(0.9, 0.04, 0.16), new BoxGeometry(1.08, 0.03, 0.34)).forEach((bar) => {
+      bar.rotation.y = a;
+      goalMark.add(bar);
+    });
   });
-  goalMark.add(new Mesh(new RingGeometry(0.62, 0.74, 28).rotateX(-Math.PI / 2), goalMat));
+  goalMark.add(...edged(new RingGeometry(0.62, 0.74, 28).rotateX(-Math.PI / 2), new RingGeometry(0.53, 0.83, 28).rotateX(-Math.PI / 2)));
   const walkTo = (cx: number, cy: number) => {
     aim(cx, cy);
     const hit = ray.intersectObject(cur.group, true).find((h) => (h.object as Mesh).isMesh && h.object.visible && h.object !== goalMark.children[0] && h.object.parent !== goalMark);
@@ -2164,7 +2174,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (goalMark.parent !== cur.group) cur.group.add(goalMark);
     goalMark.position.copy(goal).multiplyScalar(cur.R + Math.max(cur.height(goal), SEA) + 0.08);
     goalMark.quaternion.setFromUnitVectors(axisY, goal);
-    goalMat.opacity = 1;
+    goalMat.opacity = goalEdge.opacity = 1;
     play('tap');
     touch();
   }
@@ -2480,9 +2490,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const inFoot = new Vector3();
   const inMark = new Group();
   [Math.PI / 4, -Math.PI / 4].forEach((a) => {
-    const bar = new Mesh(new BoxGeometry(0.6, 0.03, 0.11), goalMat);
-    bar.rotation.y = a;
-    inMark.add(bar);
+    edged(new BoxGeometry(0.6, 0.03, 0.11), new BoxGeometry(0.74, 0.02, 0.24)).forEach((bar) => {
+      bar.rotation.y = a;
+      inMark.add(bar);
+    });
   });
   inMark.position.y = 0.04;
   // the rooms' names, floating over each one (made when the flat is opened)
@@ -2662,6 +2673,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     flat!.lamps.forEach((l) => (l.intensity = (l.userData.power as number) * lerp(0.22, 1.3, dusk)));
     flat!.windows.color.copy(hex('blue')).lerp(hex(dusk > 0.5 ? 'ink' : 'cream'), dusk > 0.5 ? 0.6 : 0.3);
     goalMat.opacity = inGoal ? Math.min(1, goalMat.opacity + dt * 6) : Math.max(0, goalMat.opacity - dt * 3);
+    goalEdge.opacity = goalMat.opacity;
     inMark.visible = goalMat.opacity > 0.01;
     inMark.scale.setScalar(1 + Math.sin(now * 0.008) * 0.08);
     // the view: from above and in front, following, turned by dragging
@@ -3203,6 +3215,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     mark.visible = markMat.opacity > 0.01;
     // the cross where the hero is heading: it pops in, breathes, and fades on arrival
     goalMat.opacity = goal ? Math.min(1, goalMat.opacity + dt * 6) : Math.max(0, goalMat.opacity - dt * 3);
+    goalEdge.opacity = goalMat.opacity;
     goalMark.visible = goalMat.opacity > 0.01 && goalMark.parent === cur.group;
     if (goalMark.visible) goalMark.scale.setScalar(1 + Math.sin(now * 0.008) * 0.08 + Math.max(0, 1 - (now - goalAt) / 250) * 0.6);
     {
