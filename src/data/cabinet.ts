@@ -370,6 +370,11 @@ export const cicerone = {
     'Drag or use the arrow keys to walk. Click a thing, or press Enter by it, to open it. Keys 1 to 5 jump around.',
   ],
   back: 'Welcome back! Click me for the tour again.',
+  // The same tour with a finger instead of keys, for the world on a phone.
+  touch: {
+    last: 'Tap the ground to walk; drag to turn, and up or down to lean in or out. Tap a thing once you stand inside its ring to open it.',
+    back: 'Welcome back! Tap me for the tour again.',
+  },
   places: {
     Computer: 'Inside the computer: a folder for each job.',
     Station: 'The station: posts, links and the gallery. The rocket takes you home.',

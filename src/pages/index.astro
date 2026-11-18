@@ -1266,7 +1266,10 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
             root: $('[data-world]'),
             // the cabinet first, so an index here is an index there; then what only the worlds have
             items: [...S, ...extra.things.map((t: { place: string }) => ({ ...t, section: t.place }))],
-            guide: extra.guide,
+            // with a finger, the tour talks about taps rather than keys
+            guide: document.body.classList.contains('phone-world')
+              ? { ...extra.guide, intro: [...extra.guide.intro.slice(0, -1), extra.guide.touch.last], back: extra.guide.touch.back }
+              : extra.guide,
             open: (i) => {
               soloNext = true;
               open(i, null);
@@ -3049,6 +3052,20 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       top: 1rem;
       width: calc(100vw - 2 * var(--margin));
       font-size: 0.8em;
+    }
+    /* the name and the two links are enough up there; and no keys to press */
+    :global(body.phone-world) .w-line,
+    :global(body.phone-world .w-tomb .k),
+    :global(body.phone-world) .detail kbd {
+      display: none;
+    }
+    /* the bench and the wall: one column, and they scroll rather than run off the screen */
+    :global(body.phone-world .w-bench) {
+      max-height: 72svh;
+      overflow-y: auto;
+    }
+    :global(body.phone-world .w-bench-c) {
+      grid-template-columns: 1fr;
     }
     :global(body.phone-world) .detail {
       grid-template-columns: 1fr;

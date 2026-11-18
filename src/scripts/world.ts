@@ -771,6 +771,11 @@ type Planet = {
 };
 
 // Where the other world hangs, in screen space (overview, then seen from the ground).
+// On a tall screen the planet fills the width: the others hang below it.
+const TALL_SLOTS = [
+  { far: new Vector2(0.42, -0.7), near: new Vector2(0.6, -0.84), radius: 6.4 },
+  { far: new Vector2(-0.5, -0.82), near: new Vector2(-0.62, -0.88), radius: 4.2 },
+];
 const SLOTS = [
   { far: new Vector2(-0.56, -0.42), near: new Vector2(-0.8, 0.8), radius: 7.6 },
   { far: new Vector2(-0.24, -0.76), near: new Vector2(-0.58, 0.86), radius: 4.8 },
@@ -1869,7 +1874,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (busy()) return;
     // Only what is within reach, ringed on the ground, opens; anything further
     // off is walked to first. (Tab still brings a thing to the hero.)
-    if (s !== chosen && !tabbing) {
+    if (s !== chosen && !tabbing && !inReach(s)) {
       return headFor(v.copy(s.dir).multiplyScalar(cur.R).addScaledVector(s.inward, s.reach * 0.85).normalize());
     }
     play('tap');
@@ -1892,7 +1897,9 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   // The projects live here: software in the laptop, hardware on the bench itself.
   const benchSide = (side: 'software' | 'hardware') => items.filter((it) => it.bench === side);
   const hwNames = benchSide('hardware').map((it) => it.title).join(', ');
-  benchUI.innerHTML = `<p class="w-bench-t caps">The workbench</p><div class="w-bench-c"><button type="button" class="w-bench-o" data-side="hardware"><span class="caps">Hardware</span><b>On the bench</b><em></em></button><button type="button" class="w-bench-o" data-side="software"><span class="caps">Software</span><b>On the laptop</b><em></em></button></div><div class="w-bench-hw" hidden></div><button type="button" class="w-bench-x caps">Stand up · Esc</button>`;
+  // with a finger there is no Esc to mention
+  const esc = matchMedia('(pointer: coarse)').matches ? '' : ' · Esc';
+  benchUI.innerHTML = `<p class="w-bench-t caps">The workbench</p><div class="w-bench-c"><button type="button" class="w-bench-o" data-side="hardware"><span class="caps">Hardware</span><b>On the bench</b><em></em></button><button type="button" class="w-bench-o" data-side="software"><span class="caps">Software</span><b>On the laptop</b><em></em></button></div><div class="w-bench-hw" hidden></div><button type="button" class="w-bench-x caps">Stand up${esc}</button>`;
   root.append(benchUI);
   benchUI.querySelector('[data-side="hardware"] em')!.textContent = `${hwNames}, with the soldering iron, the scope and the servos.`;
   benchUI.querySelector('[data-side="software"] em')!.textContent = `${benchSide('software').length} software projects, and the lab of interface ideas.`;
@@ -1976,7 +1983,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   wallUI.hidden = true;
   wallUI.setAttribute('role', 'dialog');
   wallUI.setAttribute('aria-label', 'The diploma wall');
-  wallUI.innerHTML = `<p class="w-bench-t caps">The diploma wall</p><div class="w-bench-c"></div><button type="button" class="w-bench-x caps">Close · Esc</button>`;
+  wallUI.innerHTML = `<p class="w-bench-t caps">The diploma wall</p><div class="w-bench-c"></div><button type="button" class="w-bench-x caps">Close${esc}</button>`;
   root.append(wallUI);
   items.forEach((it, i) => {
     if (it.place !== 'Education') return;
@@ -2140,6 +2147,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     headFor(o ? doorStand.clone().normalize() : cur.group.worldToLocal(hit.point.clone()).normalize(), !!o);
     return true;
   };
+  // Within a few steps of where one stands to use it: bigger things reach a little further.
+  function inReach(s: Spot) {
+    return new Vector3().copy(s.dir).applyQuaternion(cur.q).angleTo(NORTH) * cur.R <= 4.75 + Math.max(0, s.reach - 2.2);
+  }
   // Walk to a point on the planet (a direction in its own frame), a cross marking it.
   function headFor(to: Vector3, door = false) {
     goal = to.clone();
@@ -2992,7 +3003,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const room = lerp(1, 1.24, smooth(4.5, 7, nearest.ring));
     ahead += ((walking && !down ? Math.max(0, heading.y) : 0) - ahead) * Math.min(1, dt * 2);
     camPos.lerp(w.set(0, heroY + 9.6 * n * room * (1 + 0.8 * ahead), 13 * n * room * (1 + 0.1 * ahead)), e);
-    camTarget.lerp(w.set(0, heroY + 0.5, -0.5 + 2.5 * ahead), e);
+    // a tall screen looks further ahead, so the hero stands low and what is in front shows
+    camTarget.lerp(w.set(0, heroY + 0.5, -0.5 + 2.5 * ahead - (aspect < 1 ? 3 : 0)), e);
     // Following a rocket up, the camera looks up after it.
     if (launch) {
       const t = Math.min(1, (now - launch.t0) / launch.dur);
@@ -3135,7 +3147,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         return;
       }
       const lastSlot = isFrom ? [0, 1].find((s) => !planets.some((o) => o !== p && o.slot === s)) ?? 0 : isTo ? warpSlot(p) : p.slot;
-      const s = SLOTS[lastSlot];
+      const s = (aspect < 1 ? TALL_SLOTS : SLOTS)[lastSlot];
       const slot = ndc.copy(s.far).lerp(s.near, e);
       const rd = s.radius * skyScale * lerp(1, 0.55, e);
       w.copy(inSky(slot, dist));
@@ -3150,7 +3162,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       const c = toScreen(v.copy(w));
       const r = (rd / (dist * TAN)) * (H / 2);
       skyPos[idx] = { x: c.x, y: c.y, r };
-      place(p.chip, !warp && !intro && !busy() && p.slot >= 0, c.x, c.y + r + 6);
+      // on a tall screen, close behind the hero, the world in the sky keeps its name to itself
+      place(p.chip, !warp && !intro && !busy() && p.slot >= 0 && !(aspect < 1 && e > 0.5), c.x, c.y + r + 6);
     });
 
     // Plates turn to face whoever is looking; things stay as they stand.
@@ -3167,8 +3180,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       for (const p of cur.spots) {
         w.copy(p.dir).applyQuaternion(cur.q);
         const a = w.angleTo(NORTH) * cur.R;
-        // within a few steps of where one stands to use it: bigger things reach a little further
-        if (a > 4.75 + Math.max(0, p.reach - 2.2)) continue;
+        if (!inReach(p)) continue;
         const along = (w.x * heading.x + w.z * heading.y) / (Math.hypot(w.x, w.z) || 1);
         const score = a + (1 - along) * 3.2 - (p === held ? 0.7 : 0);
         if (score < best) {
