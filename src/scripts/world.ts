@@ -56,7 +56,7 @@ import { play, setEngine, setSea } from './sound';
 import { openLab } from './lab';
 import { openPC, paintDesk } from './pc';
 
-export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
+export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string; link?: string; medium?: string; text?: string; bench?: 'software' | 'hardware' };
 export type WorldOptions = {
   root: HTMLElement;
   items: WorldItem[];
@@ -105,7 +105,7 @@ const SHOWN: Record<string, string> = { Launch: 'Launch pad' };
 // Districts of things rather than plates keep their own spacing.
 const SPREAD: Record<string, { ring: number; arc: number }> = {
   Garden: { ring: 5.6, arc: 1.75 },
-  Workshop: { ring: 9.4, arc: 1.75 },
+  Workshop: { ring: 6, arc: 1.0 },
   Launch: { ring: 3.4, arc: 0 },
 };
 
@@ -1867,6 +1867,11 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   }
   function visit(s: Spot) {
     if (busy()) return;
+    // Only what is within reach, ringed on the ground, opens; anything further
+    // off is walked to first. (Tab still brings a thing to the hero.)
+    if (s !== chosen && !tabbing) {
+      return headFor(v.copy(s.dir).multiplyScalar(cur.R).addScaledVector(s.inward, s.reach * 0.85).normalize());
+    }
     play('tap');
     const it = items[s.i];
     // The web opens now, while the click still counts as one.
@@ -1884,9 +1889,47 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   benchUI.hidden = true;
   benchUI.setAttribute('role', 'dialog');
   benchUI.setAttribute('aria-label', 'The workbench');
-  benchUI.innerHTML = `<p class="w-bench-t caps">The workbench</p><div class="w-bench-c"><button type="button" class="w-bench-o" data-side="hardware"><span class="caps">Hardware</span><b>Soldering, servos, the oscilloscope</b><em>Haskarm, the servo arm that follows a face, and the solder log. Being tidied up.</em></button><button type="button" class="w-bench-o" data-side="software"><span class="caps">Software</span><b>The lab, on the laptop</b><em>A bench for trying out interface ideas: dials, wallets, receipts, signatures.</em></button></div><button type="button" class="w-bench-x caps">Stand up · Esc</button>`;
+  // The projects live here: software in the laptop, hardware on the bench itself.
+  const benchSide = (side: 'software' | 'hardware') => items.filter((it) => it.bench === side);
+  const hwNames = benchSide('hardware').map((it) => it.title).join(', ');
+  benchUI.innerHTML = `<p class="w-bench-t caps">The workbench</p><div class="w-bench-c"><button type="button" class="w-bench-o" data-side="hardware"><span class="caps">Hardware</span><b>On the bench</b><em></em></button><button type="button" class="w-bench-o" data-side="software"><span class="caps">Software</span><b>On the laptop</b><em></em></button></div><div class="w-bench-hw" hidden></div><button type="button" class="w-bench-x caps">Stand up · Esc</button>`;
   root.append(benchUI);
+  benchUI.querySelector('[data-side="hardware"] em')!.textContent = `${hwNames}, with the soldering iron, the scope and the servos.`;
+  benchUI.querySelector('[data-side="software"] em')!.textContent = `${benchSide('software').length} software projects, and the lab of interface ideas.`;
   const benchHw = benchUI.querySelector<HTMLElement>('[data-side="hardware"]')!;
+  const benchChoice = benchUI.querySelector<HTMLElement>('.w-bench-c')!;
+  const hwView = benchUI.querySelector<HTMLElement>('.w-bench-hw')!;
+  benchSide('hardware').forEach((it) => {
+    const row = document.createElement('article');
+    row.className = 'w-hw';
+    row.innerHTML = `<img width="64" height="80" alt="" /><div><b></b><span class="caps"></span><p></p></div>`;
+    row.querySelector('img')!.src = `/img/s-${it.slug}.png`;
+    row.querySelector('b')!.textContent = it.title;
+    row.querySelector('span')!.textContent = `${it.year} · ${it.medium ?? ''}`;
+    row.querySelector('p')!.textContent = it.text ?? '';
+    if (it.href) {
+      const a = document.createElement('a');
+      a.href = it.href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = `${it.link ?? 'Open'} ↗`;
+      row.querySelector('div')!.append(a);
+    }
+    hwView.append(row);
+  });
+  const hwBack = document.createElement('button');
+  hwBack.type = 'button';
+  hwBack.className = 'w-hw-back caps';
+  hwBack.textContent = '← Hardware or software';
+  hwView.prepend(hwBack);
+  const showSides = () => {
+    hwView.hidden = true;
+    benchChoice.hidden = false;
+  };
+  hwBack.addEventListener('click', () => {
+    showSides();
+    benchHw.focus({ preventScroll: true });
+  });
   function sitAtBench(s: Spot) {
     if (bench) return;
     bench = { s, out: false };
@@ -1903,6 +1946,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (!bench) return;
     bench.out = true;
     benchUI.hidden = true;
+    showSides();
     canvas.focus({ preventScroll: true });
   }
   benchUI.querySelector('[data-side="software"]')!.addEventListener('click', () => {
@@ -1911,18 +1955,20 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       if (!bench || bench.out) return;
       benchUI.hidden = false;
       benchUI.querySelector<HTMLButtonElement>('[data-side="software"]')!.focus({ preventScroll: true });
-    });
+    }, benchSide('software') as Parameters<typeof openLab>[1]);
   });
   benchHw.addEventListener('click', () => {
-    benchHw.classList.remove('nudge');
-    void benchHw.offsetWidth;
-    benchHw.classList.add('nudge');
-    play('squeak');
+    play('open');
+    benchChoice.hidden = true;
+    hwView.hidden = false;
+    hwBack.focus({ preventScroll: true });
   });
   benchUI.querySelector('.w-bench-x')!.addEventListener('click', standUp);
   benchUI.addEventListener('keydown', (e) => {
     e.stopPropagation();
-    if (e.key === 'Escape') standUp();
+    if (e.key !== 'Escape') return;
+    if (!hwView.hidden) return hwBack.click();
+    standUp();
   });
   // ── The diploma wall: studies and service, each opening its card ──
   const wallUI = document.createElement('div');
@@ -2088,12 +2134,16 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     aim(cx, cy);
     const hit = ray.intersectObject(cur.group, true).find((h) => (h.object as Mesh).isMesh && h.object.visible && h.object !== goalMark.children[0] && h.object.parent !== goalMark);
     if (!hit) return false;
-    goal = cur.group.worldToLocal(hit.point.clone()).normalize();
     // the house itself: walk to its front door, and go in on arriving
     let o: Object3D | null = hit.object;
     while (o && o !== casa) o = o.parent;
-    goalDoor = !!o;
-    if (goalDoor) goal = doorStand.clone().normalize();
+    headFor(o ? doorStand.clone().normalize() : cur.group.worldToLocal(hit.point.clone()).normalize(), !!o);
+    return true;
+  };
+  // Walk to a point on the planet (a direction in its own frame), a cross marking it.
+  function headFor(to: Vector3, door = false) {
+    goal = to.clone();
+    goalDoor = door;
     goalLeft = Infinity;
     goalStall = 0;
     goalAt = performance.now();
@@ -2106,8 +2156,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     goalMat.opacity = 1;
     play('tap');
     touch();
-    return true;
-  };
+  }
   let lastPtr = { x: -1, y: -1 };
   const heading = new Vector2(0, -1); // where the hero last walked; into the screen on arrival
   const aim = (cx: number, cy: number) => {

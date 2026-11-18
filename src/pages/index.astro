@@ -1920,6 +1920,67 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     border-color: var(--ink);
     outline: none;
   }
+  /* The hardware side: what is on the bench, in rows */
+  :global(.w-bench-hw) {
+    display: grid;
+    gap: 0.6rem;
+  }
+  :global(.w-bench-hw[hidden]),
+  :global(.w-bench-c[hidden]) {
+    display: none;
+  }
+  :global(.w-hw-back) {
+    justify-self: start;
+    padding: 0;
+    border: 0;
+    color: var(--ink-2);
+    background: none;
+    font: inherit;
+    font-size: 0.6875rem;
+    cursor: pointer;
+  }
+  :global(.w-hw-back:hover),
+  :global(.w-hw-back:focus-visible) {
+    color: var(--ink);
+  }
+  :global(.w-hw) {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 0.7rem;
+  }
+  :global(.w-hw img) {
+    width: 4rem;
+    height: 5rem;
+    border-radius: 0.2rem;
+    image-rendering: pixelated;
+  }
+  :global(.w-hw b) {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  :global(.w-hw span) {
+    display: block;
+    margin: 0.15rem 0 0.4rem;
+    color: var(--dot);
+    font-size: 0.6875rem;
+  }
+  :global(.w-hw p) {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+  :global(.w-hw a) {
+    display: inline-block;
+    margin-top: 0.4rem;
+    color: var(--ink);
+    font-size: 0.8125rem;
+    text-underline-offset: 0.2em;
+  }
   :global(.w-bench-o.nudge) {
     animation: w-nudge 0.4s;
   }

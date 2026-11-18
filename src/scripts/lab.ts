@@ -1,6 +1,6 @@
 // ═══ The lab ═══
-// The software side of the workbench: a small studio of interface experiments,
-// shown on the laptop's screen. Each panel is one idea to touch: a dial, a
+// The software side of the workbench, on the laptop's screen: the software
+// projects first, then a small studio of interface experiments. Each panel is one idea to touch: a dial, a
 // wallet of cards, a spacing inspector, a status tooltip, a receipt printer, a
 // signature pad, a hold-to-publish button and a voice note.
 
@@ -88,6 +88,16 @@ const CSS = `
 .lab-bars i{width:3px;border-radius:2px;background:#555;transition:background .1s}
 .lab-bars i.on{background:#fff}
 .lab-voice time{min-width:3ch;font-size:12px;opacity:.7}
+/* projects */
+.lab-projs{display:grid;gap:12px;margin:0 0 56px}
+.lab-proj{display:grid;grid-template-columns:80px minmax(0,1fr);gap:18px;padding:16px;border:1px solid #d6d6d1;border-radius:6px;background:#f5f5f3}
+.lab-proj img{width:80px;height:100px;border-radius:2px;image-rendering:pixelated}
+.lab-proj h3{margin:0;font-size:18px;font-weight:500;letter-spacing:-.01em}
+.lab-proj h3 small{margin-left:.5em;color:#8a8a85;font-size:12px;font-weight:400}
+.lab-proj .lab-mono{margin:4px 0 8px;color:#777;font-size:11px}
+.lab-proj p{margin:0;color:#333;font-size:14px;line-height:1.5}
+.lab-proj a{display:inline-block;margin-top:8px;color:#c95a40;font-size:12px;text-underline-offset:.2em}
+@media (max-width:560px){.lab-proj{grid-template-columns:56px minmax(0,1fr);gap:12px}.lab-proj img{width:56px;height:70px}}
 @media (prefers-reduced-motion:reduce){.lab-veil *{transition:none!important}}
 `;
 
@@ -98,7 +108,10 @@ const el = (html: string) => {
   return t.content.firstElementChild as HTMLElement;
 };
 
-export function openLab(onClose?: () => void) {
+export type LabProject = { slug: string; title: string; year: string; medium: string; text: string; href?: string; link?: string };
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+export function openLab(onClose?: () => void, projects: LabProject[] = []) {
   if (!styled) {
     const s = document.createElement('style');
     s.textContent = CSS;
@@ -108,11 +121,21 @@ export function openLab(onClose?: () => void) {
   const veil = el(`<div class="lab-veil" role="dialog" aria-modal="true" aria-label="Lab"><div class="lab-laptop"><div class="lab-lid"><div class="lab-cam"></div><div class="lab-screen" tabindex="-1"><main class="lab-page"></main></div></div><div class="lab-base"></div></div></div>`);
   const page = veil.querySelector<HTMLElement>('.lab-page')!;
   const screen = veil.querySelector<HTMLElement>('.lab-screen')!;
-  page.append(
-    el(`<button type="button" class="lab-back lab-mono">← zumodeia.com</button>`),
-    el(`<p class="lab-kicker lab-mono"><i></i>LAB</p>`),
-    el(`<h2 class="lab-h">A bench for trying out interface ideas</h2>`),
-  );
+  page.append(el(`<button type="button" class="lab-back lab-mono">← zumodeia.com</button>`));
+  if (projects.length) {
+    const list = el(`<div class="lab-projs"></div>`);
+    projects.forEach((p) =>
+      list.append(
+        el(
+          `<article class="lab-proj"><img src="/img/s-${esc(p.slug)}.png" width="80" height="100" alt="" /><div><h3>${esc(p.title)}<small>${esc(p.year)}</small></h3><p class="lab-mono">${esc(p.medium)}</p><p>${esc(p.text)}</p>${
+            p.href ? `<a class="lab-mono" href="${esc(p.href)}" target="_blank" rel="noopener">${esc(p.link ?? 'Open')} ↗</a>` : ''
+          }</div></article>`,
+        ),
+      ),
+    );
+    page.append(el(`<p class="lab-kicker lab-mono"><i></i>PROJECTS</p>`), el(`<h2 class="lab-h">Software made at this bench</h2>`), list);
+  }
+  page.append(el(`<p class="lab-kicker lab-mono"><i></i>LAB</p>`), el(`<h2 class="lab-h">A bench for trying out interface ideas</h2>`));
   const panel = (name: string, hint = '') => {
     const p = el(`<section class="lab-panel"><h3 class="lab-mono">${name}</h3><div class="lab-stage"></div>${hint ? `<p class="lab-hint lab-mono">${hint}</p>` : ''}</section>`);
     page.append(p);
