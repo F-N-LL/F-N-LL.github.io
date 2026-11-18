@@ -1,8 +1,9 @@
 // ═══ The computer ═══
 // What the camera dives into on the desk: a small 8-bit desktop with one
-// folder per job. A folder opens into a window that draws the work as a
-// factory: machines joined by belts, documents riding along them, and an
-// inspector underneath that says what each machine does and what it gave.
+// folder per job. A folder opens into a window that draws the work as a game
+// screen, a factory (machines joined by belts, documents riding along them)
+// or a world map (levels along a road, students walking it), with an
+// inspector in the corner that says what each piece is and what it gave.
 // The same desktop, in miniature, is what the monitor shows from outside.
 
 import { play } from './sound';
@@ -27,6 +28,14 @@ const ICONS: Record<Machine['icon'], string[]> = {
   people: ['........', '.##..##.', '.##..##.', '........', '###..###', '###..###', '###..###', '........'],
   chat: ['#######.', '#.....#.', '#.#.#.#.', '#.....#.', '#######.', '##......', '#.......', '........'],
   crate: ['........', '..####..', '.#.##.#.', '########', '#.#..#.#', '########', '.######.', '........'],
+  flag: ['#.......', '#####...', '#######.', '#####...', '#.......', '#.......', '#.......', '##......'],
+  book: ['.######.', '#......#', '#.####.#', '#......#', '#.###..#', '#......#', '.######.', '........'],
+  atom: ['...##...', '.#.##.#.', '#.#..#.#', '.######.', '.######.', '#.#..#.#', '.#.##.#.', '...##...'],
+  trophy: ['########', '#.####.#', '#.####.#', '.######.', '..####..', '...##...', '..####..', '.######.'],
+  branch: ['.#......', '.#...##.', '.#...##.', '.#....#.', '.#...#..', '.#.##...', '.##.....', '.#......'],
+  hex: ['...##...', '.##..##.', '#......#', '#.#..#.#', '#.####.#', '#......#', '.##..##.', '...##...'],
+  check: ['........', '.......#', '......##', '#....##.', '##..##..', '.####...', '..##....', '........'],
+  rocket: ['...##...', '..####..', '..#..#..', '..####..', '..####..', '.######.', '##.##.##', '#..##..#'],
 };
 const FOLDER_ICON = ['.#####..........', '#.....#.........', '################', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '#..............#', '################'];
 const bitmap = (rows: string[], px: number, fill: string, x = 0, y = 0) =>
@@ -80,6 +89,9 @@ const CSS = `
 .pc-belt-run.slow{animation-duration:1.6s}
 @keyframes pc-run{to{stroke-dashoffset:-16}}
 .pc-led{animation:pc-blink 1.2s steps(1) infinite}
+.pc-road{animation:pc-run 1.4s linear infinite}
+.pc-bob{animation:pc-bob .5s steps(1) infinite}
+@keyframes pc-bob{50%{transform:translateY(-3px)}}
 @keyframes pc-blink{50%{opacity:.2}}
 .pc-plant{position:relative}
 .pc-insp{position:absolute;left:${(INSP.x / GRID.w) * 100}%;top:${(INSP.y / GRID.h) * 100}%;width:${(INSP.w / GRID.w) * 100}%;height:${(INSP.h / GRID.h) * 100}%;overflow:auto;box-sizing:border-box;padding:10px 12px;border:3px solid ${rgb('cream')};background:${rgb('ink')};box-shadow:6px 6px 0 rgb(0 0 0/.35);font-size:clamp(11px,1vw,14px);line-height:1.35;scrollbar-width:none}
@@ -166,12 +178,79 @@ function floor(f: Folder, reduced: boolean) {
   </svg>`;
 }
 
+// ── A world map: the worlds as tinted ground, the levels on a road, students walking it ──
+function worldMap(f: Folder, reduced: boolean) {
+  const { worlds, levels, road, sides, walkers } = f.map!;
+  const W = GRID.w * CELL;
+  const H = GRID.h * CELL;
+  const pts = (path: [number, number][]) => `M${path.map(([x, y]) => `${x * CELL},${y * CELL}`).join(' L')}`;
+  const worldsSvg = worlds
+    .map(({ name, sub, x, y, w, h, tone }) => {
+      const [X, Y] = [x * CELL, y * CELL];
+      // a few stepped hills, the same ones every time
+      const hills = [0.18, 0.5, 0.8]
+        .map((t, i) => {
+          const hx = X + t * w * CELL;
+          const hy = Y + h * CELL - 22 - (i % 2) * 70;
+          return `<rect x="${hx - 18}" y="${hy}" width="36" height="8" fill="${rgb(tone, 0.32)}"/><rect x="${hx - 10}" y="${hy - 8}" width="20" height="8" fill="${rgb(tone, 0.32)}"/><rect x="${hx - 4}" y="${hy - 14}" width="8" height="6" fill="${rgb(tone, 0.32)}"/>`;
+        })
+        .join('');
+      return `<rect x="${X}" y="${Y}" width="${w * CELL}" height="${h * CELL}" fill="${rgb(tone, 0.13)}" stroke="${rgb(tone, 0.6)}" stroke-width="3" stroke-dasharray="12 8"/>${hills}
+        <text x="${X + 14}" y="${Y + 26}" fill="${rgb(tone)}" font-size="18">${esc(name)}</text><text x="${X + 14}" y="${Y + 44}" fill="${rgb('cream', 0.7)}" font-size="12">${esc(sub)}</text>`;
+    })
+    .join('');
+  const roadD = pts(road);
+  const roadSvg = `${sides.map((p) => `<path d="${pts(p)}" fill="none" stroke="${rgb('cream', 0.3)}" stroke-width="4" stroke-dasharray="4 8"/>`).join('')}
+    <path d="${roadD}" fill="none" stroke="#151a21" stroke-width="18"/>
+    <path class="pc-road" d="${roadD}" fill="none" stroke="${rgb('ochre')}" stroke-width="6" stroke-dasharray="6 10"/>`;
+  const shirts: (keyof typeof PIGMENTS)[] = ['red', 'blue', 'cream', 'olive', 'ochre'];
+  const skins = ['#f1c9a0', '#c98e5c', '#8a5a3a', '#e8b48a'];
+  const walkersSvg = reduced
+    ? ''
+    : Array.from({ length: walkers }, (_, i) => {
+        const dur = 22;
+        return `<g><g class="pc-bob" style="animation-delay:-${(i * 0.13) % 0.5}s"><rect x="-4" y="-22" width="8" height="8" fill="${skins[i % skins.length]}" stroke="${rgb('ink')}" stroke-width="2"/><rect x="-5" y="-14" width="10" height="9" fill="${rgb(shirts[i % shirts.length])}" stroke="${rgb('ink')}" stroke-width="2"/><rect x="-4" y="-5" width="3" height="5" fill="${rgb('ink')}"/><rect x="1" y="-5" width="3" height="5" fill="${rgb('ink')}"/></g><animateMotion dur="${dur}s" begin="${(-(i / walkers) * dur).toFixed(2)}s" repeatCount="indefinite" path="${roadD}"/></g>`;
+      }).join('');
+  const levelsSvg = levels
+    .map((m, k) => {
+      const w = (m.w ?? 2) * CELL;
+      const h = (m.h ?? 2) * CELL;
+      const x = m.x * CELL;
+      const y = m.y * CELL;
+      const tone = m.tone ?? 'ochre';
+      const ink = tone === 'cream' || tone === 'ochre' ? rgb('ink') : rgb('cream');
+      const big = w > 2 * CELL;
+      const px = big ? 7 : 5;
+      // the last level is a castle: battlements along its top
+      const crenels = big ? Array.from({ length: 5 }, (_, i) => `<rect x="${x + 4 + i * ((w - 20) / 4)}" y="${y - 12}" width="12" height="14" fill="${rgb(tone)}" stroke="${rgb('ink')}" stroke-width="4"/>`).join('') : '';
+      const labelW = Math.max(m.name.length * 9, m.sub.length * 7) + 18;
+      return `<g class="pc-m" data-m="${k}" tabindex="0" role="button" aria-label="${esc(`${m.name}, ${m.sub}`)}">
+        ${crenels}
+        <rect x="${x + 6}" y="${y + 6}" width="${w}" height="${h}" fill="rgb(0 0 0/.35)"/>
+        <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${rgb(tone)}" stroke="${rgb('ink')}" stroke-width="4"/>
+        <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="6" fill="rgb(255 255 255/.28)"/>
+        ${bitmap(ICONS[m.icon], px, ink, x + (w - 8 * px) / 2, y + (h - 8 * px) / 2)}
+        <rect x="${x + w / 2 - labelW / 2}" y="${y + h + 8}" width="${labelW}" height="36" fill="${rgb('ink')}" stroke="${rgb('cream', 0.5)}" stroke-width="2"/>
+        <text x="${x + w / 2}" y="${y + h + 24}" fill="${rgb('cream')}" font-size="14" text-anchor="middle">${esc(m.name)}</text>
+        <text x="${x + w / 2}" y="${y + h + 38}" fill="${rgb('cream', 0.6)}" font-size="11" text-anchor="middle">${esc(m.sub)}</text>
+        <rect class="sel" x="${x - 7}" y="${y - (big ? 19 : 7)}" width="${w + 14}" height="${h + (big ? 26 : 14)}"/>
+      </g>`;
+    })
+    .join('');
+  return `<svg class="pc-floor" viewBox="0 0 ${W} ${H}" role="group" aria-label="${esc(`The road through the work at ${f.org}`)}">
+    <rect width="${W}" height="${H}" fill="#1f2630"/>
+    <pattern id="pc-dots" width="20" height="20" patternUnits="userSpaceOnUse"><rect x="9" y="9" width="2" height="2" fill="#2d3745"/></pattern>
+    <rect width="${W}" height="${H}" fill="url(#pc-dots)"/>
+    ${worldsSvg}${roadSvg}${levelsSvg}${walkersSvg}
+  </svg>`;
+}
+
 function windowFor(f: Folder, reduced: boolean) {
   const head = `<header class="pc-head"><div><p class="pc-kick">${esc(f.org)} · ${esc(f.period)}</p><h2 class="pc-h">${esc(f.title)}</h2>${f.lead ? `<p class="pc-lead">${esc(f.lead)}</p>` : ''}</div>${
     f.stats ? `<dl class="pc-stats">${f.stats.map((s) => `<div><dt>${esc(s.label)}</dt><dd>${esc(s.value)}</dd></div>`).join('')}</dl>` : ''
   }</header>`;
-  const body = f.plant
-    ? `<div class="pc-plant">${floor(f, reduced)}<section class="pc-insp" aria-live="polite"></section></div>${f.stack ? `<ul class="pc-stack" aria-label="Stack">${f.stack.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}`
+  const body = f.plant || f.map
+    ? `<div class="pc-plant">${f.plant ? floor(f, reduced) : worldMap(f, reduced)}<section class="pc-insp" aria-live="polite"></section></div>${f.stack ? `<ul class="pc-stack" aria-label="Stack">${f.stack.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}`
     : `<div class="pc-soon"><svg width="120" height="90" viewBox="0 0 120 90" aria-hidden="true"><rect x="10" y="10" width="100" height="70" fill="none" stroke="${rgb('cream', 0.4)}" stroke-width="4" stroke-dasharray="10 8"/>${bitmap(ICONS.brain, 5, rgb('cream', 0.3), 40, 25)}</svg><p>This factory is still being laid out.</p><p>Back soon<span class="cur"></span></p></div>`;
   return el(`<section class="pc-win" role="dialog" aria-label="${esc(f.name)}"><div class="pc-title"><span>${esc(f.name.toUpperCase())}</span><i></i><button type="button" class="pc-x" aria-label="Close ${esc(f.name)}">×</button></div><div class="pc-body" tabindex="-1">${head}${body}</div></section>`);
 }
@@ -211,12 +290,12 @@ export function openPC(onClose?: () => void, reduced = false) {
     play('open');
     win.querySelector('.pc-x')!.addEventListener('click', shut);
     const insp = win.querySelector<HTMLElement>('.pc-insp');
-    const ms = f.plant?.machines ?? [];
+    const ms = f.plant?.machines ?? f.map?.levels ?? [];
     const pick = (k: number | null) => {
       if (!insp) return;
       win!.querySelectorAll('.pc-m').forEach((g, i) => g.classList.toggle('on', i === k));
       if (k === null) {
-        insp.innerHTML = `<h3>Inspector<small>click a machine</small></h3><p>Documents come in from the companies, get screened, filed and searched; the AI works on top of the archive, and the pipeline ships it all.</p>`;
+        insp.innerHTML = `<h3>Inspector<small>click a ${f.map ? 'level' : 'machine'}</small></h3><p>${esc(f.hint ?? '')}</p>`;
         return;
       }
       const m = ms[k];

@@ -1,13 +1,14 @@
 // What the computer on the desk holds: one folder per job. Opening a folder
-// shows its factory, the work laid out as machines joined by belts, the way a
-// factory game draws a production line. A folder with no `plant` yet shows a
-// placeholder.
+// shows the work as a small game screen: a `plant` is a factory, machines
+// joined by belts the way a factory game draws a production line; a `map` is a
+// world map, levels along a road that the students walk. A folder with
+// neither yet shows a placeholder.
 
 export type Machine = {
   id: string;
   name: string; // on the machine, short
   sub: string; // under it, in small type
-  icon: 'docs' | 'rust' | 'vault' | 'lens' | 'screen' | 'brain' | 'pen' | 'people' | 'chat' | 'crate';
+  icon: 'docs' | 'rust' | 'vault' | 'lens' | 'screen' | 'brain' | 'pen' | 'people' | 'chat' | 'crate' | 'flag' | 'book' | 'atom' | 'trophy' | 'branch' | 'hex' | 'check' | 'rocket';
   x: number; // grid cell of its top-left corner (the grid is 30 × 15)
   y: number;
   w?: number; // in cells, 5 if left out
@@ -18,6 +19,10 @@ export type Machine = {
 };
 // A belt runs through grid points; items ride it from the first to the last.
 export type Belt = { from: string; to: string; path: [number, number][]; slow?: boolean };
+// On a world map: the worlds are tinted ground, the levels are machines (2 × 2
+// unless told otherwise) and the road runs through them; side roads lead off it.
+export type World = { name: string; sub: string; x: number; y: number; w: number; h: number; tone: 'ochre' | 'blue' | 'olive' | 'red' };
+export type WorldMap = { worlds: World[]; levels: Machine[]; road: [number, number][]; sides: [number, number][][]; walkers: number };
 
 export type Folder = {
   slug: string;
@@ -28,7 +33,9 @@ export type Folder = {
   stack?: string[];
   lead?: string;
   stats?: { value: string; label: string }[];
+  hint?: string; // what the inspector says before anything is picked
   plant?: { machines: Machine[]; belts: Belt[] };
+  map?: WorldMap;
 };
 
 export const folders: Folder[] = [
@@ -46,6 +53,7 @@ export const folders: Folder[] = [
       { value: '1,000+', label: 'companies' },
       { value: '<200 ms', label: 'search' },
     ],
+    hint: 'Documents come in from the companies, get screened, filed and searched; the AI works on top of the archive, and the pipeline ships it all.',
     plant: {
       machines: [
         {
@@ -173,7 +181,100 @@ export const folders: Folder[] = [
       ],
     },
   },
-  { slug: 'immune', name: 'IMMUNE', title: 'Instructor, Master in Web Development', org: 'IMMUNE Technology Institute', period: 'Feb 2024 – Apr 2025' },
+  {
+    slug: 'immune',
+    name: 'IMMUNE',
+    title: 'Instructor, Master in Web Development',
+    org: 'IMMUNE Technology Institute',
+    period: 'Feb 2024 – Apr 2025',
+    stack: ['JavaScript', 'React', 'Node', 'Git', 'Testing', 'OpenAI', 'Claude', 'Mistral'],
+    lead: 'Three online modules of a month each, designed from scratch: JavaScript, React and AI for developers. Thirty students in two cohorts, of every background and age.',
+    stats: [
+      { value: '30', label: 'students' },
+      { value: '2', label: 'cohorts' },
+      { value: '3', label: 'modules' },
+      { value: '1 mo', label: 'each, online' },
+    ],
+    hint: 'The road through the master: a world a month, with stops along the way, and the final project at the end. The students are the ones walking it.',
+    map: {
+      worlds: [
+        { name: 'World 1', sub: 'JavaScript · month 1', x: 3.5, y: 1.5, w: 6.5, h: 8, tone: 'ochre' },
+        { name: 'World 2', sub: 'React · month 2', x: 10.5, y: 1.5, w: 6.5, h: 8, tone: 'blue' },
+        { name: 'World 3', sub: 'AI for devs · month 3', x: 17.5, y: 1.5, w: 6.5, h: 8, tone: 'olive' },
+      ],
+      levels: [
+        {
+          id: 'enrol',
+          name: 'Start',
+          sub: '30 students',
+          icon: 'flag',
+          x: 1,
+          y: 6,
+          tone: 'cream',
+          text: 'Thirty students in two cohorts, of every background and age, all starting from the same place.',
+          result: '2 cohorts',
+        },
+        {
+          id: 'js',
+          name: 'JavaScript',
+          sub: 'Month 1',
+          icon: 'book',
+          x: 6,
+          y: 4,
+          tone: 'ochre',
+          text: 'The language from the ground up, in a month of live online classes. Designed from scratch.',
+          result: 'The foundations',
+        },
+        {
+          id: 'react',
+          name: 'React',
+          sub: 'Month 2',
+          icon: 'atom',
+          x: 13,
+          y: 6,
+          tone: 'blue',
+          text: 'Building interfaces with React: components, state and whole applications. Designed from scratch.',
+          result: 'Real interfaces',
+        },
+        {
+          id: 'ai',
+          name: 'AI for devs',
+          sub: 'Month 3',
+          icon: 'brain',
+          x: 20,
+          y: 4,
+          tone: 'olive',
+          text: 'Working with model APIs and building apps with LLMs inside them, across OpenAI, Claude and Mistral. Designed from scratch.',
+          result: 'OpenAI · Claude · Mistral',
+        },
+        {
+          id: 'final',
+          name: 'Final project',
+          sub: 'Code review',
+          icon: 'trophy',
+          x: 25.5,
+          y: 5,
+          w: 3,
+          h: 3,
+          tone: 'red',
+          text: 'Each student’s own project, the code reviewed along the way and the work reviewed at the end.',
+          result: 'Every project reviewed',
+        },
+        { id: 'git', name: 'Git', sub: 'Along the way', icon: 'branch', x: 4, y: 11.5, tone: 'cream', text: 'Version control with Git, part of the work from the start.' },
+        { id: 'node', name: 'Node', sub: 'Along the way', icon: 'hex', x: 8, y: 11.5, tone: 'cream', text: 'JavaScript on the server, with Node.' },
+        { id: 'testing', name: 'Testing', sub: 'Along the way', icon: 'check', x: 12, y: 11.5, tone: 'cream', text: 'Testing the code they write.' },
+        { id: 'deploy', name: 'Deploy', sub: 'Along the way', icon: 'rocket', x: 16, y: 11.5, tone: 'cream', text: 'Putting their work online for others to use.' },
+      ],
+      road: [[2, 7], [4.5, 7], [4.5, 5], [7, 5], [10.5, 5], [10.5, 7], [14, 7], [17.5, 7], [17.5, 5], [21, 5], [24, 5], [24, 6.5], [27, 6.5]],
+      sides: [
+        [[5, 11.5], [5, 10.4], [4.5, 10.4], [4.5, 7]],
+        [[9, 11.5], [9, 10.4], [10.5, 10.4], [10.5, 7]],
+        [[13, 11.5], [13, 10.4], [14, 10.4], [14, 8]],
+        [[17, 11.5], [17, 10.4], [17.5, 10.4], [17.5, 7]],
+      ],
+      walkers: 8,
+    },
+  },
   { slug: 'afconsulting', name: 'AF Consulting', title: 'Software Developer', org: 'AF Consulting', period: 'Jun 2022 – Sep 2023' },
   { slug: 'fibsen', name: 'fibsen', title: 'Developer & Designer, founding team', org: 'fibsen', period: 'Jun 2019 – Jan 2020' },
 ];
