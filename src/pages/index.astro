@@ -158,13 +158,13 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   <main>
     <h1 class="sr-only">Daniel Fenoll — software engineer and designer, Alicante</h1>
 
-    <!-- World: desktop, where WebGL can carry it. The cabinet below stays as the fallback.
-         On a phone the Flow stands in for it, unless ?world asks for the world there too (a trial). -->
+    <!-- World: wherever WebGL can carry it, phones included. Where it can't, the cabinet stays
+         on a desktop and the Flow on a phone; ?floor and ?flow ask for those instead. -->
     <script is:inline>
       (function () {
         var force = /[?&]world\b/.test(location.search);
         var phone = !matchMedia('(min-width: 761px)').matches;
-        if (phone && !force) return;
+        if (phone && /[?&]flow\b/.test(location.search)) return;
         if (/[?&]floor\b/.test(location.search)) return;
         var gl = document.createElement('canvas').getContext('webgl2', { failIfMajorPerformanceCaveat: !force });
         if (gl) document.body.classList.add('world-on');
@@ -1282,7 +1282,11 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
             night: isNight(),
           });
         })
-        .catch(() => document.body.classList.remove('world-on'));
+        .catch(() => {
+          // the cabinet underneath simply stays; on a phone, the Flow takes over
+          document.body.classList.remove('world-on', 'phone-world');
+          dispatchEvent(new Event('flow-fallback'));
+        });
     }
 
     // Deep links: /#moth opens that specimen.

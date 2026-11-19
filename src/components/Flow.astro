@@ -1,5 +1,5 @@
 ---
-// Phone view: the cabinet as a vertical Cover Flow. Native scroll + snap does
+// Phone view, where the world can't run (or with ?flow): the cabinet as a vertical Cover Flow. Native scroll + snap does
 // the physics; a sticky 3D stage inside the scroller draws the cards from the
 // scroll position. When scrolling settles, the centred card dims and its
 // catalogue entry rises over it.
@@ -702,13 +702,15 @@ const starts = sections.map(({ section, slugs }) => ({
 
   start();
   phone.addEventListener('change', start);
+  // the world was meant to stand in for the flow on this phone, but could not
+  addEventListener('flow-fallback', start);
 </script>
 
 <style>
   .flow {
     display: none;
   }
-  /* a trial: the desktop's world on the phone, instead of the flow */
+  /* where the world runs on the phone, it stands in for the flow */
   :global(body.phone-world) .flow {
     display: none !important;
   }
