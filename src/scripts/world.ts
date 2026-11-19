@@ -65,7 +65,7 @@ export type WorldOptions = {
   reduced: () => boolean;
   active: () => boolean;
   night: boolean;
-  guide: { intro: string[]; back: string; places: Record<string, string> };
+  guide: { start: string; tour: { say: string; at?: string }[]; back: string; places: Record<string, string> };
 };
 export type World = { travel: (name: string) => void; zoomBy: (f: number) => void; setNight: (on: boolean) => void };
 
@@ -1742,7 +1742,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const sayTxt = bubble.querySelector<HTMLElement>('.w-say-txt')!;
   const sayN = bubble.querySelector<HTMLElement>('.w-say-n')!;
   const sayNext = bubble.querySelector<HTMLButtonElement>('.w-say-next')!;
-  let talk: { lines: string[]; k: number; shown: number; until: number; tour: boolean } | null = null;
+  // `at` turns the view to a district as that line comes up; `invite` waits to be pressed before the tour.
+  let talk: { lines: string[]; at?: (string | undefined)[]; k: number; shown: number; until: number; tour: boolean; invite?: boolean } | null = null;
   const TOURED = 'df-toured';
   const remember = () => {
     try {
@@ -1752,7 +1753,20 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   function say(lines: string[], tour: boolean, ms = 0) {
     talk = { lines, k: 0, shown: 0, until: ms ? performance.now() + ms : Infinity, tour };
     bubble.classList.toggle('tour', tour);
+    bubble.classList.remove('invite');
     sayTxt.textContent = '';
+  }
+  // The tour proper: down to the juice box, then round the planet a line at a time.
+  function tour() {
+    say(guide.tour.map((t) => t.say), true);
+    talk!.at = guide.tour.map((t) => t.at);
+    zoomGoal = 1;
+  }
+  // A first visit: the juice box waits, saying it can be pressed.
+  function invite() {
+    say([guide.start], false);
+    talk!.invite = true;
+    bubble.classList.add('invite');
   }
   function hush() {
     // the tour is given close up; when it ends, the whole planet and the name come back
@@ -1770,9 +1784,12 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (talk.k + 1 >= talk.lines.length) return hush();
     talk.k++;
     talk.shown = 0;
+    const at = talk.at?.[talk.k];
+    if (at && at !== talk.at?.[talk.k - 1]) travel(at);
   }
   bubble.addEventListener('click', (e) => {
     if ((e.target as HTMLElement).closest('.w-say-skip')) return hush();
+    if (talk?.invite) return tour();
     onward();
   });
 
@@ -2263,7 +2280,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (sky) return sky.chip.click();
     const p = pick(e.clientX, e.clientY);
     if (p) return visit(p);
-    if (onHero(e.clientX, e.clientY)) return say(guide.intro, true);
+    if (onHero(e.clientX, e.clientY)) return tour();
     walkTo(e.clientX, e.clientY);
   };
   canvas.addEventListener('pointerup', release);
@@ -2292,10 +2309,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (!active() || e.metaKey || e.ctrlKey || e.altKey) return;
     const k = keyName(e);
     const on = document.activeElement as HTMLElement | null;
-    // While the guide talks, Enter and Space are for it.
-    if (talk?.tour && (k === 'Enter' || k === ' ') && !(tabbing && on?.matches('a, button:not(.w-say-next)'))) {
+    // While the guide talks, Enter and Space are for it; waiting to start, they start it.
+    if ((talk?.tour || talk?.invite) && (k === 'Enter' || k === ' ') && !(tabbing && on?.matches('a, button:not(.w-say-next)'))) {
       e.preventDefault();
-      if (!e.repeat) onward();
+      if (!e.repeat) talk!.invite ? tour() : onward();
       return;
     }
     if (k === 'Escape' && talk) hush();
@@ -2309,7 +2326,6 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       // only ever what is marked: the nearest thing, ringed on the ground and its sign dark;
       // the mouse opens what it points at by clicking, never by Enter
       if (indoors) return;
-      if (zoom > 0.55 && nearDoor()) return enterHouse();
       if (chosen) visit(chosen);
       else if (zoom < 0.55) zoomGoal = 1; // from afar, Enter takes you down to the ground
       return;
@@ -2322,6 +2338,11 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       }
       touch();
       return;
+    }
+    // At the house's door, K goes in (anywhere else it walks, vim-style).
+    if (k === 'k' && !e.repeat && !indoors && zoom > 0.55 && nearDoor()) {
+      e.preventDefault();
+      return enterHouse();
     }
     if (!WALK[k] || busy()) return;
     e.preventDefault();
@@ -2508,7 +2529,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const inBtn = document.createElement('button');
   inBtn.type = 'button';
   inBtn.className = 'w-pet w-door caps';
-  inBtn.innerHTML = '<span>Go inside</span><kbd>Enter</kbd>';
+  inBtn.innerHTML = '<span>Go inside</span><kbd>K</kbd>';
   inBtn.addEventListener('click', () => {
     inBtn.blur();
     enterHouse();
@@ -3325,8 +3346,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       try {
         toured = localStorage.getItem(TOURED) === '1';
       } catch {}
-      say(toured ? [guide.back] : guide.intro, !toured, toured ? 5000 : 0);
-      if (!toured) zoomGoal = 1; // down to the juice box, which starts talking
+      if (toured) say([guide.back], false, 5000);
+      else invite();
     }
     if (talk && now > talk.until) talk = null;
     const speaking = !!talk && !busy() && present > 0.9;

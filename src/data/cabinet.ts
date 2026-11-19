@@ -362,18 +362,22 @@ export const elsewhere = [
 ];
 
 // What the juice box says. The tour plays once; after that, a hello.
+// The tour walks the home planet as it talks: `at` is the district the view
+// turns to for that line. The last line is how to get about, with a mouse and
+// keys, or (`touch`) with a finger.
 export const cicerone = {
-  intro: [
-    'Hi! I’m Zumo, the juice box of zumodeia, and the cicerone of this site.',
-    'I’ll show you Daniel’s universe. Here at home: the huerta, and the workshop with the diplomas and the workbench, where the projects are.',
-    'His work lives inside the computer, a folder per job. Posts, links and pictures are up on the station: take the rocket.',
-    'Drag or use the arrow keys to walk. Click a thing, or press Enter by it, to open it. Keys 1 to 5 jump around.',
-  ],
-  back: 'Welcome back! Click me for the tour again.',
-  // The same tour with a finger instead of keys, for the world on a phone.
+  start: 'Hi, I’m Zumo! Press me to start.',
+  tour: [
+    { say: 'I’m the juice box of zumodeia. Let me show you round Daniel’s little universe.' },
+    { say: 'This is the huerta: tomatoes, aubergines, courgettes, peppers, leeks and a lemon tree, each with its own notes as it grows.', at: 'Garden' },
+    { say: 'And the workshop. The projects live on the workbench: the software in the laptop, the hardware on the bench. Studies hang on the diploma wall.', at: 'Workshop' },
+    { say: 'Daniel’s jobs are inside the computer, a folder for each. Walk up to it and step in.', at: 'Workshop' },
+    { say: 'Posts, links and pictures are up on the station. The rocket on the launch pad takes you there.', at: 'Launch' },
+    { say: 'Click the ground to walk and drag to look around. A thing ringed in red opens with a click, or with Enter. Keys 1 to 5 jump between sections.' },
+  ] as { say: string; at?: string }[],
+  back: 'Welcome back! Press me for the tour again.',
   touch: {
-    last: 'Tap the ground to walk; drag to turn, and up or down to lean in or out. Tap a thing once you stand inside its ring to open it.',
-    back: 'Welcome back! Tap me for the tour again.',
+    last: 'Tap the ground to walk and drag to look around, up or down to lean in or out. A thing ringed in red opens with a tap. The bar below jumps between sections.',
   },
   places: {
     Computer: 'Inside the computer: a folder for each job.',

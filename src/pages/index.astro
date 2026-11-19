@@ -114,6 +114,7 @@ const shortcuts: [string[], string][] = [
   [['H', 'J', 'K', 'L'], 'Walk, vim-style; J K walk the index'],
   [['Space'], 'Jump'],
   [['Enter'], 'Open the thing ringed in red'],
+  [['K'], 'Go inside, at the house door'],
   [['P'], 'Pet an animal close by'],
   [['Esc'], 'Close, or see the whole world'],
   [['+', '−'], 'Zoom'],
@@ -1270,7 +1271,7 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
             items: [...S, ...extra.things.map((t: { place: string }) => ({ ...t, section: t.place }))],
             // with a finger, the tour talks about taps rather than keys
             guide: document.body.classList.contains('phone-world')
-              ? { ...extra.guide, intro: [...extra.guide.intro.slice(0, -1), extra.guide.touch.last], back: extra.guide.touch.back }
+              ? { ...extra.guide, tour: [...extra.guide.tour.slice(0, -1), { say: extra.guide.touch.last }] }
               : extra.guide,
             open: (i) => {
               soloNext = true;
@@ -1742,69 +1743,79 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
       animation-duration: 0.8s;
     }
   }
-  /* The juice box talking: a rounded bubble over its head, its name on a tab. */
+  /* The juice box talking: an 8-bit dialogue box over its head, in the pixel face,
+     with its name on a tab and a blinking arrow when there is more to read. */
   :global(.w-say) {
     position: absolute;
     top: 0;
     left: 0;
-    width: min(21rem, 42vw);
-    padding: 1.05rem 1.1rem 0.7rem;
-    border-radius: 1.1rem;
+    width: min(20rem, 42vw);
+    padding: 1.1rem 1.05rem 0.8rem;
     color: var(--ink);
     background: var(--bg);
-    box-shadow: 0 0 0 1px var(--rule);
+    box-shadow:
+      0 0 0 3px var(--ink),
+      6px 6px 0 3px rgb(38 46 58 / 0.28);
+    font-family: var(--f-pixel);
+    -webkit-font-smoothing: none;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.15s steps(3);
     cursor: pointer;
   }
   :global(.w-say.on) {
     opacity: 1;
     pointer-events: auto;
   }
+  /* the tail: a square on its corner, outlined on the two sides that show */
   :global(.w-say)::after {
     content: '';
     position: absolute;
-    bottom: -9px;
+    bottom: -8px;
     left: var(--tail, 40px);
-    width: 18px;
-    height: 18px;
-    margin-left: -9px;
+    width: 14px;
+    height: 14px;
+    margin-left: -7px;
     background: var(--bg);
-    box-shadow: 1px 1px 0 0 var(--rule);
+    box-shadow: 3px 3px 0 0 var(--ink);
     transform: rotate(45deg);
   }
   :global(.w-say.side)::after {
     top: 50%;
     bottom: auto;
     left: 0;
-    margin: -9px 0 0 -9px;
-    box-shadow: -1px 1px 0 0 var(--rule);
+    margin: -7px 0 0 -8px;
+    box-shadow: -3px 3px 0 0 var(--ink);
   }
   :global(.w-say-who) {
     position: absolute;
-    top: -0.7rem;
-    left: 0.9rem;
+    top: -0.85rem;
+    left: 0.8rem;
     margin: 0;
-    padding: 0.22rem 0.6rem 0.18rem;
-    border-radius: 99px;
-    color: var(--bg);
+    padding: 0.15rem 0.5rem 0.1rem;
+    color: #f8f0de;
     background: var(--dot);
-    font-size: 0.6875rem;
+    box-shadow: 0 0 0 3px var(--ink);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
   }
   :global(.w-say-txt) {
-    min-height: 2.6em;
+    min-height: 3.1em;
     margin: 0;
-    font-size: 1rem;
-    line-height: 1.32;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    letter-spacing: 0.02em;
     text-wrap: pretty;
   }
   :global(.w-say-foot) {
     display: none;
     align-items: center;
-    gap: 0.9rem;
-    margin: 0.6rem 0 0;
+    gap: 1rem;
+    margin: 0.7rem 0 0;
+    padding-top: 0.55rem;
+    border-top: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent);
     font-size: 0.75rem;
+    letter-spacing: 0.04em;
   }
   :global(.w-say.tour .w-say-foot) {
     display: flex;
@@ -1824,8 +1835,40 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   }
   :global(.w-say-foot .w-say-next) {
     color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 0.22em;
+  }
+  :global(.w-say-foot .w-say-next)::after {
+    content: ' ▶';
+    color: var(--dot);
+    animation: w-blink 1s steps(1) infinite;
+  }
+  /* waiting to be pressed: the box nudges up and down, and a cursor blinks after the words */
+  :global(.w-say.invite) {
+    animation: w-invite 1.4s steps(2) infinite;
+  }
+  :global(.w-say.invite .w-say-txt) {
+    min-height: 0;
+  }
+  :global(.w-say.invite .w-say-txt)::after {
+    content: ' ▶';
+    color: var(--dot);
+    animation: w-blink 1s steps(1) infinite;
+  }
+  @keyframes w-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+  @keyframes w-invite {
+    50% {
+      translate: 0 -4px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.w-say.invite),
+    :global(.w-say.invite .w-say-txt)::after,
+    :global(.w-say-foot .w-say-next)::after {
+      animation: none;
+    }
   }
   :global(.w-leave) {
     position: absolute;
@@ -3103,6 +3146,9 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     :global(body.phone-world .w-tomb .k),
     :global(body.phone-world) .detail kbd {
       display: none;
+    }
+    :global(body.phone-world .w-say) {
+      width: min(19rem, 78vw);
     }
     /* the bench and the wall: one column, and they scroll rather than run off the screen */
     :global(body.phone-world .w-bench) {
