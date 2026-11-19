@@ -158,14 +158,17 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   <main>
     <h1 class="sr-only">Daniel Fenoll — software engineer and designer, Alicante</h1>
 
-    <!-- World: desktop, where WebGL can carry it. The cabinet below stays as the fallback. -->
+    <!-- World: wherever WebGL can carry it, phones included. Where it can't, the cabinet stays
+         on a desktop and the Flow on a phone; ?floor and ?flow ask for those instead. -->
     <script is:inline>
       (function () {
-        if (!matchMedia('(min-width: 761px)').matches) return;
         var force = /[?&]world\b/.test(location.search);
+        var phone = !matchMedia('(min-width: 761px)').matches;
+        if (phone && /[?&]flow\b/.test(location.search)) return;
         if (/[?&]floor\b/.test(location.search)) return;
         var gl = document.createElement('canvas').getContext('webgl2', { failIfMajorPerformanceCaveat: !force });
         if (gl) document.body.classList.add('world-on');
+        if (gl && phone) document.body.classList.add('phone-world');
       })();
     </script>
     <div class="world" data-world>
@@ -760,6 +763,8 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     const filterBtns = $$<HTMLButtonElement>('[data-filter]');
     function applyFilter(name: string) {
       filterBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filter === name)));
+      // on a phone the bar scrolls: keep the section it is on in sight
+      if (document.body.classList.contains('phone-world')) filterBtns.find((b) => b.dataset.filter === name)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
       document.body.dataset.filter = name;
       cards.forEach((c) => c.classList.toggle('dim', name !== 'all' && c.dataset.section !== name));
 
@@ -1263,18 +1268,25 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
             root: $('[data-world]'),
             // the cabinet first, so an index here is an index there; then what only the worlds have
             items: [...S, ...extra.things.map((t: { place: string }) => ({ ...t, section: t.place }))],
-            guide: extra.guide,
+            // with a finger, the tour talks about taps rather than keys
+            guide: document.body.classList.contains('phone-world')
+              ? { ...extra.guide, intro: [...extra.guide.intro.slice(0, -1), extra.guide.touch.last], back: extra.guide.touch.back }
+              : extra.guide,
             open: (i) => {
               soloNext = true;
               open(i, null);
             },
             select: (name) => applyFilter(name),
             reduced: () => reducedQ.matches,
-            active: () => desktop.matches && !document.body.classList.contains('modal') && indexEl.hidden,
+            active: () => (desktop.matches || document.body.classList.contains('phone-world')) && !document.body.classList.contains('modal') && indexEl.hidden,
             night: isNight(),
           });
         })
-        .catch(() => document.body.classList.remove('world-on'));
+        .catch(() => {
+          // the cabinet underneath simply stays; on a phone, the Flow takes over
+          document.body.classList.remove('world-on', 'phone-world');
+          dispatchEvent(new Event('flow-fallback'));
+        });
     }
 
     // Deep links: /#moth opens that specimen.
@@ -1919,6 +1931,67 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
   :global(.w-bench-o:focus-visible) {
     border-color: var(--ink);
     outline: none;
+  }
+  /* The hardware side: what is on the bench, in rows */
+  :global(.w-bench-hw) {
+    display: grid;
+    gap: 0.6rem;
+  }
+  :global(.w-bench-hw[hidden]),
+  :global(.w-bench-c[hidden]) {
+    display: none;
+  }
+  :global(.w-hw-back) {
+    justify-self: start;
+    padding: 0;
+    border: 0;
+    color: var(--ink-2);
+    background: none;
+    font: inherit;
+    font-size: 0.6875rem;
+    cursor: pointer;
+  }
+  :global(.w-hw-back:hover),
+  :global(.w-hw-back:focus-visible) {
+    color: var(--ink);
+  }
+  :global(.w-hw) {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 0.7rem;
+  }
+  :global(.w-hw img) {
+    width: 4rem;
+    height: 5rem;
+    border-radius: 0.2rem;
+    image-rendering: pixelated;
+  }
+  :global(.w-hw b) {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  :global(.w-hw span) {
+    display: block;
+    margin: 0.15rem 0 0.4rem;
+    color: var(--dot);
+    font-size: 0.6875rem;
+  }
+  :global(.w-hw p) {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+  :global(.w-hw a) {
+    display: inline-block;
+    margin-top: 0.4rem;
+    color: var(--ink);
+    font-size: 0.8125rem;
+    text-underline-offset: 0.2em;
   }
   :global(.w-bench-o.nudge) {
     animation: w-nudge 0.4s;
@@ -2961,19 +3034,90 @@ const layout = { COLS, ROWS, PANEL, rows: sectionRows.map((b) => ({ row: b.row, 
     }
   }
 
-  /* Phones get the Flow instead (components/Flow.astro). */
+  /* Phones get the Flow instead (components/Flow.astro), unless trying the world there. */
   @media (max-width: 760px) {
     .bar,
     .stage,
     .foot,
     .index,
-    .detail,
     .info,
     .keys,
-    .scrim,
     .skip,
     .kchip {
       display: none !important;
+    }
+    :global(body:not(.phone-world)) .detail,
+    :global(body:not(.phone-world)) .scrim {
+      display: none !important;
+    }
+    /* The world on a phone: the whole screen but a bar along the bottom, the words narrower and smaller */
+    :global(body.phone-world) .world {
+      inset: 0 0 calc(3.25rem + env(safe-area-inset-bottom));
+    }
+    /* The bar comes down to where the thumb is, with only the sections, the sound and the night */
+    :global(body.phone-world) .bar {
+      inset: auto 0 0;
+      display: flex !important;
+      align-items: center;
+      gap: 0.75rem;
+      height: calc(3.25rem + env(safe-area-inset-bottom));
+      padding: 0 var(--margin) env(safe-area-inset-bottom);
+      background: var(--bg);
+      border-top: 1px solid var(--rule);
+      font-size: 0.6875rem;
+    }
+    :global(body.phone-world) .b-name,
+    :global(body.phone-world) .b-right > :not(.b-theme) {
+      display: none;
+    }
+    :global(body.phone-world) .b-filters {
+      flex: 1;
+      gap: 1.1rem;
+      align-items: center;
+      align-self: stretch;
+      overflow-x: auto;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to right, #000 85%, transparent);
+    }
+    :global(body.phone-world) .b-filters button {
+      flex: none;
+      padding: 0.9rem 0;
+    }
+    :global(body.phone-world) .b-filters button::after {
+      bottom: 0.45rem;
+    }
+    :global(body.phone-world) .b-right {
+      gap: 1.4rem;
+      align-items: center;
+    }
+    :global(body.phone-world) .b-right .b-theme {
+      margin-left: 0;
+    }
+    :global(body.phone-world) .w-id {
+      top: 1rem;
+      width: calc(100vw - 2 * var(--margin));
+      font-size: 0.8em;
+    }
+    /* the name and the two links are enough up there; and no keys to press */
+    :global(body.phone-world) .w-line,
+    :global(body.phone-world .w-tomb .k),
+    :global(body.phone-world) .detail kbd {
+      display: none;
+    }
+    /* the bench and the wall: one column, and they scroll rather than run off the screen */
+    :global(body.phone-world .w-bench) {
+      max-height: 72svh;
+      overflow-y: auto;
+    }
+    :global(body.phone-world .w-bench-c) {
+      grid-template-columns: 1fr;
+    }
+    :global(body.phone-world) .detail {
+      grid-template-columns: 1fr;
+      grid-auto-rows: auto;
+      align-content: start;
+      overflow-y: auto;
+      padding: 1rem var(--margin) 2rem;
     }
   }
 

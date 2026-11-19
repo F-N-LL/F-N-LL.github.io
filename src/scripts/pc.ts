@@ -117,7 +117,8 @@ const CSS = `
 @media (max-width:760px){
   .pc{font-size:14px}
   .pc-bar{gap:14px}
-  .pc-desk{padding:0}
+  .pc-desk{padding:28px 16px}
+  .pc-icons{grid-template-columns:repeat(2,1fr);width:auto;gap:22px 8px;justify-items:center}
   .pc-win,.pc.solo .pc-win{inset:8px 6px 6px;box-shadow:none}
   .pc-body{padding:16px 14px 20px}
   .pc-head{grid-template-columns:1fr;gap:14px}

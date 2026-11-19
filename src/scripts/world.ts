@@ -56,7 +56,7 @@ import { play, setEngine, setSea } from './sound';
 import { openLab } from './lab';
 import { openPC, paintDesk } from './pc';
 
-export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string };
+export type WorldItem = { slug: string; title: string; kind: string; year: string; section: string; place?: string; room?: string; href?: string; link?: string; medium?: string; text?: string; bench?: 'software' | 'hardware' };
 export type WorldOptions = {
   root: HTMLElement;
   items: WorldItem[];
@@ -105,7 +105,7 @@ const SHOWN: Record<string, string> = { Launch: 'Launch pad' };
 // Districts of things rather than plates keep their own spacing.
 const SPREAD: Record<string, { ring: number; arc: number }> = {
   Garden: { ring: 5.6, arc: 1.75 },
-  Workshop: { ring: 9.4, arc: 1.75 },
+  Workshop: { ring: 6, arc: 1.2 },
   Launch: { ring: 3.4, arc: 0 },
 };
 
@@ -771,6 +771,11 @@ type Planet = {
 };
 
 // Where the other world hangs, in screen space (overview, then seen from the ground).
+// On a tall screen the planet fills the width: the others hang below it.
+const TALL_SLOTS = [
+  { far: new Vector2(0.5, -0.84), near: new Vector2(0.6, -0.86), radius: 5.6 },
+  { far: new Vector2(-0.5, -0.82), near: new Vector2(-0.62, -0.88), radius: 4.2 },
+];
 const SLOTS = [
   { far: new Vector2(-0.56, -0.42), near: new Vector2(-0.8, 0.8), radius: 7.6 },
   { far: new Vector2(-0.24, -0.76), near: new Vector2(-0.58, 0.86), radius: 4.8 },
@@ -1011,7 +1016,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       all.push(spot);
     };
     // Along the arc each takes room by its width: a desk wants more than a plate.
-    const widthOf = (it: WorldItem) => (it.slug === 'computer' || it.slug === 'workbench' ? 4.2 : BUILD[it.slug] ? 3 : 2.3);
+    // the diploma wall keeps a little apart, so it is not in the way of the computer
+    const widthOf = (it: WorldItem) => (it.slug === 'diplomas' ? 6 : it.slug === 'computer' || it.slug === 'workbench' ? 4.2 : BUILD[it.slug] ? 3 : 2.3);
     ds.forEach((z, zi) => {
       const here = items.map((_, i) => i).filter((i) => districtOf(items[i]) === z.section);
       const ws = here.map((i) => widthOf(items[i]));
@@ -1867,6 +1873,11 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   }
   function visit(s: Spot) {
     if (busy()) return;
+    // Only what is within reach, ringed on the ground, opens; anything further
+    // off is walked to first. (Tab still brings a thing to the hero.)
+    if (s !== chosen && !tabbing && !inReach(s)) {
+      return headFor(v.copy(s.dir).multiplyScalar(cur.R).addScaledVector(s.inward, s.reach * 0.85).normalize());
+    }
     play('tap');
     const it = items[s.i];
     // The web opens now, while the click still counts as one.
@@ -1884,9 +1895,49 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   benchUI.hidden = true;
   benchUI.setAttribute('role', 'dialog');
   benchUI.setAttribute('aria-label', 'The workbench');
-  benchUI.innerHTML = `<p class="w-bench-t caps">The workbench</p><div class="w-bench-c"><button type="button" class="w-bench-o" data-side="hardware"><span class="caps">Hardware</span><b>Soldering, servos, the oscilloscope</b><em>Haskarm, the servo arm that follows a face, and the solder log. Being tidied up.</em></button><button type="button" class="w-bench-o" data-side="software"><span class="caps">Software</span><b>The lab, on the laptop</b><em>A bench for trying out interface ideas: dials, wallets, receipts, signatures.</em></button></div><button type="button" class="w-bench-x caps">Stand up · Esc</button>`;
+  // The projects live here: software in the laptop, hardware on the bench itself.
+  const benchSide = (side: 'software' | 'hardware') => items.filter((it) => it.bench === side);
+  const hwNames = benchSide('hardware').map((it) => it.title).join(', ');
+  // with a finger there is no Esc to mention
+  const esc = matchMedia('(pointer: coarse)').matches ? '' : ' · Esc';
+  benchUI.innerHTML = `<p class="w-bench-t caps">The workbench</p><div class="w-bench-c"><button type="button" class="w-bench-o" data-side="hardware"><span class="caps">Hardware</span><b>On the bench</b><em></em></button><button type="button" class="w-bench-o" data-side="software"><span class="caps">Software</span><b>On the laptop</b><em></em></button></div><div class="w-bench-hw" hidden></div><button type="button" class="w-bench-x caps">Stand up${esc}</button>`;
   root.append(benchUI);
+  benchUI.querySelector('[data-side="hardware"] em')!.textContent = `${hwNames}, with the soldering iron, the scope and the servos.`;
+  benchUI.querySelector('[data-side="software"] em')!.textContent = `${benchSide('software').length} software projects, and the lab of interface ideas.`;
   const benchHw = benchUI.querySelector<HTMLElement>('[data-side="hardware"]')!;
+  const benchChoice = benchUI.querySelector<HTMLElement>('.w-bench-c')!;
+  const hwView = benchUI.querySelector<HTMLElement>('.w-bench-hw')!;
+  benchSide('hardware').forEach((it) => {
+    const row = document.createElement('article');
+    row.className = 'w-hw';
+    row.innerHTML = `<img width="64" height="80" alt="" /><div><b></b><span class="caps"></span><p></p></div>`;
+    row.querySelector('img')!.src = `/img/s-${it.slug}.png`;
+    row.querySelector('b')!.textContent = it.title;
+    row.querySelector('span')!.textContent = `${it.year} · ${it.medium ?? ''}`;
+    row.querySelector('p')!.textContent = it.text ?? '';
+    if (it.href) {
+      const a = document.createElement('a');
+      a.href = it.href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = `${it.link ?? 'Open'} ↗`;
+      row.querySelector('div')!.append(a);
+    }
+    hwView.append(row);
+  });
+  const hwBack = document.createElement('button');
+  hwBack.type = 'button';
+  hwBack.className = 'w-hw-back caps';
+  hwBack.textContent = '← Hardware or software';
+  hwView.prepend(hwBack);
+  const showSides = () => {
+    hwView.hidden = true;
+    benchChoice.hidden = false;
+  };
+  hwBack.addEventListener('click', () => {
+    showSides();
+    benchHw.focus({ preventScroll: true });
+  });
   function sitAtBench(s: Spot) {
     if (bench) return;
     bench = { s, out: false };
@@ -1903,6 +1954,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (!bench) return;
     bench.out = true;
     benchUI.hidden = true;
+    showSides();
     canvas.focus({ preventScroll: true });
   }
   benchUI.querySelector('[data-side="software"]')!.addEventListener('click', () => {
@@ -1911,18 +1963,20 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       if (!bench || bench.out) return;
       benchUI.hidden = false;
       benchUI.querySelector<HTMLButtonElement>('[data-side="software"]')!.focus({ preventScroll: true });
-    });
+    }, benchSide('software') as Parameters<typeof openLab>[1]);
   });
   benchHw.addEventListener('click', () => {
-    benchHw.classList.remove('nudge');
-    void benchHw.offsetWidth;
-    benchHw.classList.add('nudge');
-    play('squeak');
+    play('open');
+    benchChoice.hidden = true;
+    hwView.hidden = false;
+    hwBack.focus({ preventScroll: true });
   });
   benchUI.querySelector('.w-bench-x')!.addEventListener('click', standUp);
   benchUI.addEventListener('keydown', (e) => {
     e.stopPropagation();
-    if (e.key === 'Escape') standUp();
+    if (e.key !== 'Escape') return;
+    if (!hwView.hidden) return hwBack.click();
+    standUp();
   });
   // ── The diploma wall: studies and service, each opening its card ──
   const wallUI = document.createElement('div');
@@ -1930,7 +1984,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   wallUI.hidden = true;
   wallUI.setAttribute('role', 'dialog');
   wallUI.setAttribute('aria-label', 'The diploma wall');
-  wallUI.innerHTML = `<p class="w-bench-t caps">The diploma wall</p><div class="w-bench-c"></div><button type="button" class="w-bench-x caps">Close · Esc</button>`;
+  wallUI.innerHTML = `<p class="w-bench-t caps">The diploma wall</p><div class="w-bench-c"></div><button type="button" class="w-bench-x caps">Close${esc}</button>`;
   root.append(wallUI);
   items.forEach((it, i) => {
     if (it.place !== 'Education') return;
@@ -2077,23 +2131,40 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   let goalAt = 0;
   let goalDoor = false;
   const goalMat = new MeshBasicMaterial({ color: hex('cream'), transparent: true, opacity: 0, depthWrite: false });
+  // a thick green edge under the cream, so the mark reads on pale ground too
+  const goalEdge = new MeshBasicMaterial({ color: hex('olive'), transparent: true, opacity: 0, depthWrite: false });
+  const edged = (geo: BufferGeometry, edge: BufferGeometry) => {
+    const top = new Mesh(geo, goalMat);
+    const under = new Mesh(edge, goalEdge);
+    top.renderOrder = 1;
+    return [under, top];
+  };
   const goalMark = new Group();
   [Math.PI / 4, -Math.PI / 4].forEach((a) => {
-    const bar = new Mesh(new BoxGeometry(0.9, 0.04, 0.16), goalMat);
-    bar.rotation.y = a;
-    goalMark.add(bar);
+    edged(new BoxGeometry(0.9, 0.04, 0.16), new BoxGeometry(1.08, 0.03, 0.34)).forEach((bar) => {
+      bar.rotation.y = a;
+      goalMark.add(bar);
+    });
   });
-  goalMark.add(new Mesh(new RingGeometry(0.62, 0.74, 28).rotateX(-Math.PI / 2), goalMat));
+  goalMark.add(...edged(new RingGeometry(0.62, 0.74, 28).rotateX(-Math.PI / 2), new RingGeometry(0.53, 0.83, 28).rotateX(-Math.PI / 2)));
   const walkTo = (cx: number, cy: number) => {
     aim(cx, cy);
     const hit = ray.intersectObject(cur.group, true).find((h) => (h.object as Mesh).isMesh && h.object.visible && h.object !== goalMark.children[0] && h.object.parent !== goalMark);
     if (!hit) return false;
-    goal = cur.group.worldToLocal(hit.point.clone()).normalize();
     // the house itself: walk to its front door, and go in on arriving
     let o: Object3D | null = hit.object;
     while (o && o !== casa) o = o.parent;
-    goalDoor = !!o;
-    if (goalDoor) goal = doorStand.clone().normalize();
+    headFor(o ? doorStand.clone().normalize() : cur.group.worldToLocal(hit.point.clone()).normalize(), !!o);
+    return true;
+  };
+  // Within a few steps of where one stands to use it: bigger things reach a little further.
+  function inReach(s: Spot) {
+    return new Vector3().copy(s.dir).applyQuaternion(cur.q).angleTo(NORTH) * cur.R <= 4.75 + Math.max(0, s.reach - 2.2);
+  }
+  // Walk to a point on the planet (a direction in its own frame), a cross marking it.
+  function headFor(to: Vector3, door = false) {
+    goal = to.clone();
+    goalDoor = door;
     goalLeft = Infinity;
     goalStall = 0;
     goalAt = performance.now();
@@ -2103,11 +2174,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     if (goalMark.parent !== cur.group) cur.group.add(goalMark);
     goalMark.position.copy(goal).multiplyScalar(cur.R + Math.max(cur.height(goal), SEA) + 0.08);
     goalMark.quaternion.setFromUnitVectors(axisY, goal);
-    goalMat.opacity = 1;
+    goalMat.opacity = goalEdge.opacity = 1;
     play('tap');
     touch();
-    return true;
-  };
+  }
   let lastPtr = { x: -1, y: -1 };
   const heading = new Vector2(0, -1); // where the hero last walked; into the screen on arrival
   const aim = (cx: number, cy: number) => {
@@ -2420,9 +2490,10 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
   const inFoot = new Vector3();
   const inMark = new Group();
   [Math.PI / 4, -Math.PI / 4].forEach((a) => {
-    const bar = new Mesh(new BoxGeometry(0.6, 0.03, 0.11), goalMat);
-    bar.rotation.y = a;
-    inMark.add(bar);
+    edged(new BoxGeometry(0.6, 0.03, 0.11), new BoxGeometry(0.74, 0.02, 0.24)).forEach((bar) => {
+      bar.rotation.y = a;
+      inMark.add(bar);
+    });
   });
   inMark.position.y = 0.04;
   // the rooms' names, floating over each one (made when the flat is opened)
@@ -2602,6 +2673,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     flat!.lamps.forEach((l) => (l.intensity = (l.userData.power as number) * lerp(0.22, 1.3, dusk)));
     flat!.windows.color.copy(hex('blue')).lerp(hex(dusk > 0.5 ? 'ink' : 'cream'), dusk > 0.5 ? 0.6 : 0.3);
     goalMat.opacity = inGoal ? Math.min(1, goalMat.opacity + dt * 6) : Math.max(0, goalMat.opacity - dt * 3);
+    goalEdge.opacity = goalMat.opacity;
     inMark.visible = goalMat.opacity > 0.01;
     inMark.scale.setScalar(1 + Math.sin(now * 0.008) * 0.08);
     // the view: from above and in front, following, turned by dragging
@@ -2928,18 +3000,23 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     const aspect = W / H;
     // only home leaves room for the words on the left
     const homeness = warp ? lerp(warp.from === home ? 1 : 0, warp.to === home ? 1 : 0, f) : cur === home ? 1 : 0;
-    const D = 88 * k * lerp(1.18, 1, homeness); // small worlds, seen from a little further off
+    // a tall screen (a phone) is narrow: back off until the planet fits across it
+    const tall = aspect < 1 ? Math.min(2.4, 0.9 / aspect) : 1;
+    const D = 88 * k * lerp(1.18, 1, homeness) * tall; // small worlds, seen from a little further off
     const halfW = D * TAN * aspect;
     const sx = Math.max(0, rEff - 0.1 * halfW) * (aspect > 1.15 ? 1 : 0.2) * homeness;
-    camPos.set(-sx, 0, 0).addScaledVector(CAM_DIR, D);
-    camTarget.set(-sx, 0, 0);
-    const n = Math.min(1, 0.6 + 0.4 * k);
+    // on a tall screen the words sit above the planet rather than beside it
+    const lift = tall > 1 ? rEff * 0.45 * homeness : 0;
+    camPos.set(-sx, lift, 0).addScaledVector(CAM_DIR, D);
+    camTarget.set(-sx, lift, 0);
+    const n = Math.min(1, 0.6 + 0.4 * k) * (aspect < 1 ? 1 + (1 - aspect) * 0.8 : 1);
     // a wider district needs the camera a little further back
     const nearest = cur.ds.reduce((a, b) => (under.angleTo(a.dir) < under.angleTo(b.dir) ? a : b));
     const room = lerp(1, 1.24, smooth(4.5, 7, nearest.ring));
     ahead += ((walking && !down ? Math.max(0, heading.y) : 0) - ahead) * Math.min(1, dt * 2);
     camPos.lerp(w.set(0, heroY + 9.6 * n * room * (1 + 0.8 * ahead), 13 * n * room * (1 + 0.1 * ahead)), e);
-    camTarget.lerp(w.set(0, heroY + 0.5, -0.5 + 2.5 * ahead), e);
+    // a tall screen looks further ahead, so the hero stands low and what is in front shows
+    camTarget.lerp(w.set(0, heroY + 0.5, -0.5 + 2.5 * ahead - (aspect < 1 ? 3 : 0)), e);
     // Following a rocket up, the camera looks up after it.
     if (launch) {
       const t = Math.min(1, (now - launch.t0) / launch.dur);
@@ -3082,7 +3159,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
         return;
       }
       const lastSlot = isFrom ? [0, 1].find((s) => !planets.some((o) => o !== p && o.slot === s)) ?? 0 : isTo ? warpSlot(p) : p.slot;
-      const s = SLOTS[lastSlot];
+      const s = (aspect < 1 ? TALL_SLOTS : SLOTS)[lastSlot];
       const slot = ndc.copy(s.far).lerp(s.near, e);
       const rd = s.radius * skyScale * lerp(1, 0.55, e);
       w.copy(inSky(slot, dist));
@@ -3097,7 +3174,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       const c = toScreen(v.copy(w));
       const r = (rd / (dist * TAN)) * (H / 2);
       skyPos[idx] = { x: c.x, y: c.y, r };
-      place(p.chip, !warp && !intro && !busy() && p.slot >= 0, c.x, c.y + r + 6);
+      // on a tall screen, close behind the hero, the world in the sky keeps its name to itself
+      place(p.chip, !warp && !intro && !busy() && p.slot >= 0 && !(aspect < 1 && e > 0.5), c.x, c.y + r + 6);
     });
 
     // Plates turn to face whoever is looking; things stay as they stand.
@@ -3114,8 +3192,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
       for (const p of cur.spots) {
         w.copy(p.dir).applyQuaternion(cur.q);
         const a = w.angleTo(NORTH) * cur.R;
-        // within a few steps of where one stands to use it: bigger things reach a little further
-        if (a > 4.75 + Math.max(0, p.reach - 2.2)) continue;
+        if (!inReach(p)) continue;
         const along = (w.x * heading.x + w.z * heading.y) / (Math.hypot(w.x, w.z) || 1);
         const score = a + (1 - along) * 3.2 - (p === held ? 0.7 : 0);
         if (score < best) {
@@ -3138,6 +3215,7 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     mark.visible = markMat.opacity > 0.01;
     // the cross where the hero is heading: it pops in, breathes, and fades on arrival
     goalMat.opacity = goal ? Math.min(1, goalMat.opacity + dt * 6) : Math.max(0, goalMat.opacity - dt * 3);
+    goalEdge.opacity = goalMat.opacity;
     goalMark.visible = goalMat.opacity > 0.01 && goalMark.parent === cur.group;
     if (goalMark.visible) goalMark.scale.setScalar(1 + Math.sin(now * 0.008) * 0.08 + Math.max(0, 1 - (now - goalAt) / 250) * 0.6);
     {

@@ -14,6 +14,7 @@ export type Specimen = {
   room?: string; // this card is a door: it leads to that section instead of opening
   place?: string; // on the desktop, the district it stands in when that is not its section
   plants?: { name: string; stage: string }[]; // the huerta, one entry per plant, for progress notes
+  bench?: 'software' | 'hardware'; // a project, kept at the workbench: in the laptop, or on the bench itself
 };
 
 // One entry per plant, all starting out the same; progress gets written here.
@@ -23,7 +24,8 @@ const sown = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => 
 // happened, what grows at home, what got seen and written. Slugs in reading
 // order, grouped by section. The phone opens on the introduction before all of them.
 // On the desktop the same sections are spread over two worlds and a computer:
-// the home planet (Garden, and the Workshop with the projects and a wall of
+// the home planet (Garden, and the Workshop: the workbench, which keeps the
+// projects, software in its laptop and hardware on the bench, and a wall of
 // diplomas), the desktop inside the computer (Experience, one folder per job,
 // from src/data/work.ts) and the station in orbit (Posts, Links, Gallery).
 export const flow: { section: string; slugs: string[] }[] = [
@@ -57,7 +59,7 @@ export const specimens: Specimen[] = [
     year: '2026',
     medium: 'Kotlin, Android, on-device OCR · private',
     text: 'A light PDF reader for an e-ink Boox. Scanned book pages are split at the fold, deskewed and reflowed at a larger size, or turned into an EPUB with offline OCR.',
-    place: 'Workshop',
+    bench: 'software',
   },
   {
     slug: 'new_dumb_iPhone',
@@ -68,7 +70,7 @@ export const specimens: Specimen[] = [
     text: 'An old iPhone 4S turned into a quiet phone: a black screen, a big clock and a list of words. One script and one cable, plus a small Go bridge that brings WhatsApp back to iOS 9.',
     href: 'https://github.com/F-N-LL/new_dumb_iPhone',
     link: 'View source',
-    place: 'Workshop',
+    bench: 'software',
   },
   {
     slug: 'campanile',
@@ -79,7 +81,7 @@ export const specimens: Specimen[] = [
     text: 'The hours of prayer in the Mac menu bar: a reminder at each hour, a cross that fills in when one is due, and a quiet reader for the traditional Office, rendered daily on CI.',
     href: 'https://f-n-ll.github.io/campanile-office/',
     link: 'Visit',
-    place: 'Workshop',
+    bench: 'software',
   },
   {
     slug: 'trackpad-curve',
@@ -90,7 +92,7 @@ export const specimens: Specimen[] = [
     text: 'Speed-dependent cursor and two-finger scroll curves for Niri on Linux. Slow movements stay precise; fast ones travel farther. Nothing in the system is replaced.',
     href: 'https://github.com/F-N-LL/trackpad-curve',
     link: 'View source',
-    place: 'Workshop',
+    bench: 'software',
   },
   {
     slug: 'haskarm',
@@ -101,7 +103,7 @@ export const specimens: Specimen[] = [
     text: 'A camera finds your hand; a servo turns to follow it. Python sees, Haskell decides, an ESP32 moves.',
     href: 'https://github.com/F-N-LL/haskarm',
     link: 'View source',
-    place: 'Workshop',
+    bench: 'hardware',
   },
   {
     slug: 'dino_ML',
@@ -112,7 +114,7 @@ export const specimens: Specimen[] = [
     text: 'The Chrome dino runner, rebuilt with learning layers to crack the high score.',
     href: 'https://github.com/F-N-LL/dino_ML',
     link: 'View source',
-    place: 'Workshop',
+    bench: 'software',
   },
   {
     slug: 'HTTPServer_C',
@@ -123,7 +125,7 @@ export const specimens: Specimen[] = [
     text: 'An HTTP server written from scratch in C: structs, sockets, parsing, responses, and every error along the way.',
     href: 'https://github.com/F-N-LL/HTTPServer_C',
     link: 'View source',
-    place: 'Workshop',
+    bench: 'software',
   },
   {
     slug: 'ui-ai',
@@ -363,11 +365,16 @@ export const elsewhere = [
 export const cicerone = {
   intro: [
     'Hi! I’m Zumo, the juice box of zumodeia, and the cicerone of this site.',
-    'I’ll show you Daniel’s universe. Here at home: the huerta, and the workshop with the projects, the workbench and the diplomas.',
+    'I’ll show you Daniel’s universe. Here at home: the huerta, and the workshop with the diplomas and the workbench, where the projects are.',
     'His work lives inside the computer, a folder per job. Posts, links and pictures are up on the station: take the rocket.',
     'Drag or use the arrow keys to walk. Click a thing, or press Enter by it, to open it. Keys 1 to 5 jump around.',
   ],
   back: 'Welcome back! Click me for the tour again.',
+  // The same tour with a finger instead of keys, for the world on a phone.
+  touch: {
+    last: 'Tap the ground to walk; drag to turn, and up or down to lean in or out. Tap a thing once you stand inside its ring to open it.',
+    back: 'Welcome back! Tap me for the tour again.',
+  },
   places: {
     Computer: 'Inside the computer: a folder for each job.',
     Station: 'The station: posts, links and the gallery. The rocket takes you home.',
@@ -377,7 +384,7 @@ export const cicerone = {
   phone: {
     intro: 'Hi, I’m Zumo! Swipe up to walk through Daniel’s universe.',
     pc: 'Inside the computer: a folder for each job.',
-    home: 'At home: the projects, the huerta and the workbench.',
+    home: 'At home: the projects on the workbench, and the huerta.',
     station: 'Up on the station: pictures and posts.',
   } as Record<string, string>,
 };
