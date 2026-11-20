@@ -57,8 +57,10 @@ export const specimens: Specimen[] = [
     title: 'Ligero',
     kind: 'Work',
     year: '2026',
-    medium: 'Kotlin, Android, on-device OCR · private',
+    medium: 'Kotlin, Android, on-device OCR',
     text: 'A light PDF reader for an e-ink Boox. Scanned book pages are split at the fold, deskewed and reflowed at a larger size, or turned into an EPUB with offline OCR.',
+    href: 'https://github.com/F-N-LL/ligero-releases/releases',
+    link: 'Download',
     bench: 'software',
   },
   {
