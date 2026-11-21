@@ -53,6 +53,7 @@ export const projects = [
     year: '2026',
     lang: 'Kotlin',
     medium: 'Kotlin, Android, on-device OCR',
+    href: 'https://github.com/F-N-LL/ligero-releases/releases',
     note: 'A light PDF reader for e-ink Android: reflows scanned pages, converts them to EPUB with offline OCR.',
   },
   {
