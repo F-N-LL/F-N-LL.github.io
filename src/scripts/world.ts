@@ -1769,11 +1769,8 @@ export function mountWorld({ root, items, open, select, reduced, active, night: 
     bubble.classList.add('invite');
   }
   function hush() {
-    // the tour is given close up; when it ends, the whole planet and the name come back
-    if (talk?.tour) {
-      remember();
-      if (cur === home && !busy()) overview();
-    }
+    // the tour is given close up; when it ends (or is skipped) the view stays where it is
+    if (talk?.tour) remember();
     talk = null;
   }
   // Finish the line being typed, or go on to the next one.
