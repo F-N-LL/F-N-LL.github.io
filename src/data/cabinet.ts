@@ -29,7 +29,7 @@ const sown = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => 
 // diplomas), the desktop inside the computer (Experience, one folder per job,
 // from src/data/work.ts) and the station in orbit (Posts, Links, Gallery).
 export const flow: { section: string; slugs: string[] }[] = [
-  { section: 'Projects', slugs: ['ligero', 'new_dumb_iPhone', 'campanile', 'trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
+  { section: 'Projects', slugs: ['amon-din', 'riemann-paso-a-paso', 'ligero', 'new_dumb_iPhone', 'campanile', 'trackpad-curve', 'haskarm', 'dino_ML', 'HTTPServer_C'] },
   { section: 'Experience', slugs: ['tui', 'immune', 'afconsulting', 'fibsen', 'nuclio', 'mitx', 'uv', 'uned', 'sfl', 'caritas'] },
   { section: 'Garden', slugs: ['tomatoes', 'eggplant', 'zucchini', 'pepper', 'leek', 'lemon', 'workbench', 'drawings'] },
   { section: 'Gallery', slugs: ['pyrenees', 'moth', 'sketch-montgo', 'sketch-lemon'] },
@@ -52,6 +52,26 @@ export const worldOnly: Thing[] = [
 ];
 
 export const specimens: Specimen[] = [
+  {
+    slug: 'amon-din',
+    title: 'Amon Dîn',
+    kind: 'Work',
+    year: '2026',
+    medium: 'Rust (Embassy, ESP32-C6), Go, MQTT, TimescaleDB, RTL-SDR',
+    text: 'A ground segment at home scale: a fleet of sensor nodes in Rust that report without losing a reading, a Go ingest with at-least-once delivery into TimescaleDB, and a small station that works out satellite passes to pull weather images out of the sky.',
+    bench: 'hardware',
+  },
+  {
+    slug: 'riemann-paso-a-paso',
+    title: 'Riemann, paso a paso',
+    kind: 'Work',
+    year: '2026',
+    medium: 'HTML, JavaScript, canvas, Vercel',
+    text: 'The Riemann Hypothesis for people who are not mathematicians: sixteen animated scenes, from sieving primes to the zeros on the line of one half, and what the November 2026 claim of a proof says. In Spanish and English, one page, no libraries.',
+    href: 'https://riemann-101.vercel.app',
+    link: 'Visit',
+    bench: 'software',
+  },
   {
     slug: 'ligero',
     title: 'Ligero',

@@ -77,6 +77,33 @@ const compositions = {
     <path d="M80 50 V38 M75 43 H85" stroke="${c('charcoal')}" stroke-width="2.5"/>
     ${[146, 166].map((y) => `<rect x="76" y="${y}" width="8" height="12" fill="${c('olive')}"/>`).join('')}`,
 
+  // A dish on a roof aimed at a passing satellite, and a sensor node below.
+  'amon-din': `
+    <defs>${grad('g', 'charcoal', 'aegean')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    ${[[20, 24], [52, 14], [140, 30], [100, 20], [30, 70], [146, 84]].map(([x, y]) => `<rect x="${x}" y="${y}" width="2" height="2" fill="${c('cream')}"/>`).join('')}
+    <path d="M14 96 Q80 18 150 70" stroke="${c('cream')}" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+    <rect x="112" y="40" width="14" height="10" fill="${c('ochre')}"/>
+    <path d="M100 45 H112 M126 45 H138" stroke="${c('ochre')}" stroke-width="3"/>
+    <path d="M44 132 A30 30 0 0 0 92 100 Z" fill="${c('cream')}"/>
+    <path d="M68 116 L112 52" stroke="${c('red')}" stroke-width="1.5" stroke-dasharray="2 3"/>
+    <path d="M66 118 V150" stroke="${c('cream')}" stroke-width="4"/>
+    <rect x="20" y="150" width="120" height="50" fill="${c('charcoal')}"/>
+    <rect x="98" y="164" width="26" height="18" fill="${c('olive')}"/>
+    <circle cx="104" cy="170" r="2" fill="${c('red')}"/>
+    <path d="M118 164 V156" stroke="${c('olive')}" stroke-width="2"/>`,
+
+  // The prime-counting staircase, and the critical line where the zeros sit.
+  'riemann-paso-a-paso': `
+    <defs>${grad('g', 'cream', 'ochre')}</defs>
+    <rect width="160" height="200" fill="url(#g)"/>
+    <path d="M18 176 H146 M18 176 V24" stroke="${c('charcoal')}" stroke-width="1.5" fill="none"/>
+    <path d="M18 176 H30 V164 H40 V152 H58 V140 H66 V128 H86 V116 H96 V104 H118 V92 H128 V80 H146" stroke="${c('charcoal')}" stroke-width="3" fill="none"/>
+    <path d="M18 174 C60 150 100 106 146 76" stroke="${c('red')}" stroke-width="2" fill="none"/>
+    <path d="M118 24 V60" stroke="${c('aegean')}" stroke-width="1.5" stroke-dasharray="3 2"/>
+    ${[30, 40, 47, 54].map((y) => `<circle cx="118" cy="${y}" r="2.5" fill="${c('aegean')}"/>`).join('')}
+    ${mono(98, 48, '½', 'charcoal', 12)}`,
+
   haskarm: `
     <defs><radialGradient id="g" cx=".7" cy=".25" r=".9"><stop offset="0" stop-color="${c('olive')}"/><stop offset="1" stop-color="${c('charcoal')}"/></radialGradient></defs>
     <rect width="160" height="200" fill="url(#g)"/>
