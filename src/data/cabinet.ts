@@ -58,7 +58,9 @@ export const specimens: Specimen[] = [
     kind: 'Work',
     year: '2026',
     medium: 'Rust (Embassy, ESP32-C6), Go, MQTT, TimescaleDB, RTL-SDR',
-    text: 'A ground segment at home scale: a fleet of sensor nodes in Rust that report without losing a reading, a Go ingest with at-least-once delivery into TimescaleDB, and a small station that works out satellite passes to pull weather images out of the sky.',
+    text: 'A ground segment at home scale: a fleet of sensor nodes in Rust that report without losing a reading, a Go ingest with at-least-once delivery into TimescaleDB, and a small station that works out satellite passes to pull weather images out of the sky. The live station asks for an access code: write to me at dfenollapps@gmail.com and I will send you one.',
+    href: 'https://amon-din.vercel.app',
+    link: 'Visit',
     bench: 'hardware',
   },
   {
