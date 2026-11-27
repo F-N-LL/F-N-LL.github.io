@@ -17,3 +17,14 @@ Work on `dev`, check it on f-n-ll.github.io, then merge `dev` → `main` to rele
 npm install
 npm run dev
 ```
+
+## At a glance
+
+```mermaid
+flowchart TD
+  DATA["src/data<br/>content and pixel art"] --> AS["Astro build"]
+  ST["src/styles<br/>palette and type"] --> AS
+  AS --> GA["GitHub Actions · deploy.yml"]
+  GA -->|"push to dev"| DEV["GitHub Pages<br/>f-n-ll.github.io · test"]
+  GA -->|"merge dev → main"| PROD["S3 + CloudFront<br/>zumodeia.com"]
+```
